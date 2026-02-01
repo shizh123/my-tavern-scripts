@@ -25,6 +25,7 @@ export function chunkBy<T>(array: T[], predicate: (lhs: T, rhs: T) => boolean): 
   return chunks;
 }
 
+<<<<<<< HEAD
 export function regexFromString(input: string): RegExp | null {
   if (!input) {
     return null;
@@ -36,13 +37,36 @@ export function regexFromString(input: string): RegExp | null {
     }
     if (match[2] && !/^(?!.*?(.).*?\1)[gmixXsuUAJ]+$/.test(match[3])) {
       return new RegExp(input, 'i');
+=======
+export function regexFromString(input: string, replace_macros?: boolean): RegExp | null {
+  if (!input) {
+    return null;
+  }
+  const makeRegex = (pattern: string, flags: string) => {
+    if (replace_macros) {
+      pattern = substitudeMacros(pattern);
+    }
+    return new RegExp(pattern, flags);
+  };
+  try {
+    const match = input.match(/\/(.+)\/([a-z]*)/i);
+    if (!match) {
+      return makeRegex(_.escapeRegExp(input), 'i');
+    }
+    if (match[2] && !/^(?!.*?(.).*?\1)[gmixXsuUAJ]+$/.test(match[3])) {
+      return makeRegex(input, 'i');
+>>>>>>> 16edc141e7d72f16a6a44f9c15b766d155937e2d
     }
     let flags = match[2] ?? '';
     _.pull(flags, 'g');
     if (flags.indexOf('i') === -1) {
       flags = flags + 'i';
     }
+<<<<<<< HEAD
     return new RegExp(match[1], flags);
+=======
+    return makeRegex(match[1], flags);
+>>>>>>> 16edc141e7d72f16a6a44f9c15b766d155937e2d
   } catch {
     return null;
   }
