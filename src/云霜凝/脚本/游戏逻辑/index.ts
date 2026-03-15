@@ -229,11 +229,22 @@ $(() => {
         }
 
         // ── Phase 2: 注入状态快照（使用已更新的 data，确保 _神魂空间已进入过 等状态正确）──
-        // 统一push到chat尾部：快照作为AI生成前最后看到的指令，确保互动模式切换（如神魂空间）被正确执行
-        // Gemini的<thinking>前缀是酒馆的assistant prefill，不在chat数组中，不受影响
+        // 插入到最后一条 assistant 消息（prefill）之前，确保快照是 AI 生成前最后看到的系统指令。
+        // 不能用 chat.push()：Gemini 的 prefill 是 chat 数组末尾的 assistant 消息，
+        // push 会把快照放到 prefill 之后，被 Gemini 视为已输出内容而忽略。
         const snapshot = getStatusSnapshot(data);
         if (snapshot) {
-          chat.push({ role: 'system', content: snapshot });
+          let inserted = false;
+          for (let i = chat.length - 1; i >= 0; i--) {
+            if (chat[i].role === 'assistant') {
+              chat.splice(i, 0, { role: 'system', content: snapshot });
+              inserted = true;
+              break;
+            }
+          }
+          if (!inserted) {
+            chat.push({ role: 'system', content: snapshot });
+          }
         }
 
         // ── Phase 3: 注入事件文本到玩家消息 + 特殊场景触发 ──
