@@ -423,24 +423,11 @@ $(() => {
         // 清除系统操作标记（本轮已处理完毕）
         data._系统操作中 = false;
 
-        // 恢复脚本管理的只读字段（防止 AI 在 stat_data 中覆盖按钮设置的值）
-        data._当前互动模式 = _protectedMode;
-        data._神魂空间激活中 = _protectedSoulActive;
-
-        // ── 神魂空间楼层解锁（第二次AI回复=楼层4，chat.length>=5）──
-        {
-          const floor = SillyTavern.chat?.length ?? 0;
-          if (floor >= 5 && !data._神魂空间已解锁) {
-            data._神魂空间已解锁 = true;
-            data._当前互动模式 = '神魂空间';
-            data._神魂空间激活中 = true;
-            data._待发送道具事件 = '__神魂空间引导__';
-            // 同步更新保护快照，防止下轮被覆盖回日常
-            _protectedMode = '神魂空间';
-            _protectedSoulActive = true;
-            console.info('[云霜凝] 楼层>=5，神魂空间已解锁，引导事件已注入');
-          }
-        }
+        // 脚本管理字段的硬保护已移至 stateValidation.ts（VARIABLE_UPDATE_ENDED 同步执行），
+        // 不再需要在此处恢复，避免覆盖 VARIABLE_UPDATE_ENDED 中的解锁逻辑。
+        // 更新保护快照：从当前 MVU 数据读取最新状态（包含解锁等变更）
+        _protectedMode = data._当前互动模式;
+        _protectedSoulActive = data._神魂空间激活中;
 
         // 写回变量
         await Mvu.replaceMvuData(_.set(_.cloneDeep(raw), 'stat_data', data), { type: 'message', message_id: -1 });
