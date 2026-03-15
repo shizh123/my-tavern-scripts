@@ -40,9 +40,11 @@ import {
 // 初始化
 // ────────────────────────────────────────────────────────
 
-// 脚本管理的只读字段快照（防止 AI 在 stat_data 中覆盖按钮设置的值）
-let _protectedMode = '日常';
-let _protectedSoulActive = false;
+// 硬保护快照：在 CHAT_COMPLETION_PROMPT_READY 从最新消息捕获（包含前端写入），
+// 在 VARIABLE_UPDATE_ENDED 用作回滚基准。比旧变量更可靠——旧变量可能是新消息的默认值，
+// 不包含前端在两次 AI 回复之间的修改（灵石扣款、模式切换等）。
+import type { ProtectionSnapshot } from './stateValidation';
+let _protSnapshot: ProtectionSnapshot | null = null;
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
@@ -323,9 +325,18 @@ $(() => {
           Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
           console.info('[云霜凝] 苗喧碎片已更新至状态栏');
         }
-        // ── 快照脚本管理的只读字段（供 MESSAGE_RECEIVED 恢复，防 AI 覆盖）──
-        _protectedMode = data._当前互动模式;
-        _protectedSoulActive = data._神魂空间激活中;
+        // ── 捕获硬保护快照（包含前端写入，用作 VARIABLE_UPDATE_ENDED 回滚基准）──
+        _protSnapshot = {
+          灵石: data.系统.灵石,
+          第几天: data.时间.第几天,
+          当前小时: data.时间.当前小时,
+          神魂空间已解锁: data._神魂空间已解锁,
+          神魂空间已进入过: data._神魂空间已进入过,
+          当前互动模式: data._当前互动模式,
+          神魂空间激活中: data._神魂空间激活中,
+          疑心值: data.苗广.疑心值,
+          心态: data.苗广.心态,
+        };
       } catch (e) {
         console.error('[云霜凝] CHAT_COMPLETION_PROMPT_READY 处理失败:', e);
       }
@@ -343,7 +354,8 @@ $(() => {
         const currentFloor = SillyTavern.chat?.length ?? 0;
 
         // 状态自动计算（治疗阶段、苗广心态、灵石里程碑、各种限制、天花板clamp）
-        validateAndRecalcState(newData, oldData, currentFloor);
+        // _protSnapshot 包含前端写入（灵石扣款、模式切换等），旧变量可能是新消息默认值
+        validateAndRecalcState(newData, oldData, currentFloor, _protSnapshot);
         processNewlyActivatedItems(newData, oldData, currentFloor);
 
         // 处理装备卸下（使用中→已购买）
@@ -423,11 +435,18 @@ $(() => {
         // 清除系统操作标记（本轮已处理完毕）
         data._系统操作中 = false;
 
-        // 脚本管理字段的硬保护已移至 stateValidation.ts（VARIABLE_UPDATE_ENDED 同步执行），
-        // 不再需要在此处恢复，避免覆盖 VARIABLE_UPDATE_ENDED 中的解锁逻辑。
-        // 更新保护快照：从当前 MVU 数据读取最新状态（包含解锁等变更）
-        _protectedMode = data._当前互动模式;
-        _protectedSoulActive = data._神魂空间激活中;
+        // 更新保护快照：从当前 MVU 数据读取最新状态（包含 VARIABLE_UPDATE_ENDED 的计算结果）
+        _protSnapshot = {
+          灵石: data.系统.灵石,
+          第几天: data.时间.第几天,
+          当前小时: data.时间.当前小时,
+          神魂空间已解锁: data._神魂空间已解锁,
+          神魂空间已进入过: data._神魂空间已进入过,
+          当前互动模式: data._当前互动模式,
+          神魂空间激活中: data._神魂空间激活中,
+          疑心值: data.苗广.疑心值,
+          心态: data.苗广.心态,
+        };
 
         // 写回变量
         await Mvu.replaceMvuData(_.set(_.cloneDeep(raw), 'stat_data', data), { type: 'message', message_id: -1 });

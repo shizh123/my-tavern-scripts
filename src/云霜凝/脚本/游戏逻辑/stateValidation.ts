@@ -2,6 +2,25 @@ import type { Schema as SchemaType } from '../../schema';
 import { applyLockRetreat } from './shopSystem';
 
 /**
+ * 硬保护快照类型
+ *
+ * 在 CHAT_COMPLETION_PROMPT_READY 从最新消息捕获（包含前端写入），
+ * 作为 VARIABLE_UPDATE_ENDED 中硬保护的回滚基准。
+ * 比旧变量更可靠——旧变量可能是新消息的默认值，不含前端修改。
+ */
+export interface ProtectionSnapshot {
+  灵石: number;
+  第几天: number;
+  当前小时: number;
+  神魂空间已解锁: boolean;
+  神魂空间已进入过: boolean;
+  当前互动模式: string;
+  神魂空间激活中: boolean;
+  疑心值: number;
+  心态: string;
+}
+
+/**
  * 基于楼层号的确定性伪随机（防止重新生成绕过随机事件）
  * 同一楼层无论重新生成多少次，返回值相同（0~1）
  */
@@ -135,18 +154,52 @@ export function getFloorCeiling(floor: number): {
  * 执行一轮全量状态验证与自动计算
  * 在 VARIABLE_UPDATE_ENDED 中调用
  */
-export function validateAndRecalcState(新变量: SchemaType, 旧变量: SchemaType, currentFloor?: number): void {
+export function validateAndRecalcState(
+  新变量: SchemaType,
+  旧变量: SchemaType,
+  currentFloor?: number,
+  snapshot?: ProtectionSnapshot | null,
+): void {
   // ── 0. 硬保护 ──────────────────────────────────────
-  // 灵石：AI篡改无条件回滚，脚本重新计算
-  新变量.系统.灵石 = 旧变量.系统.灵石;
-  // 天数+小时：AI篡改无条件回滚，时间推进完全由脚本控制（在 VARIABLE_UPDATE_ENDED 中调用 advanceTimeFromText）
-  新变量.时间.第几天 = 旧变量.时间.第几天;
-  新变量.时间.当前小时 = 旧变量.时间.当前小时;
-  // 脚本管理字段：AI不得修改，无条件回滚到旧值（由按钮/脚本控制）
-  新变量._神魂空间已解锁 = 旧变量._神魂空间已解锁;
-  新变量._神魂空间已进入过 = 旧变量._神魂空间已进入过;
-  新变量._当前互动模式 = 旧变量._当前互动模式;
-  新变量._神魂空间激活中 = 旧变量._神魂空间激活中;
+  // 使用 PROMPT_READY 捕获的快照作为基准（包含前端写入：灵石扣款、模式切换等）。
+  // 旧变量可能是新消息的默认值，不含前端修改，导致前端操作被回滚。
+  // 无快照时降级使用旧变量（首次加载/重新生成等边界情况）。
+  const base = snapshot
+    ? {
+        灵石: snapshot.灵石,
+        第几天: snapshot.第几天,
+        当前小时: snapshot.当前小时,
+        神魂空间已解锁: snapshot.神魂空间已解锁,
+        神魂空间已进入过: snapshot.神魂空间已进入过,
+        当前互动模式: snapshot.当前互动模式,
+        神魂空间激活中: snapshot.神魂空间激活中,
+        疑心值: snapshot.疑心值,
+        心态: snapshot.心态,
+      }
+    : {
+        灵石: 旧变量.系统.灵石,
+        第几天: 旧变量.时间.第几天,
+        当前小时: 旧变量.时间.当前小时,
+        神魂空间已解锁: 旧变量._神魂空间已解锁,
+        神魂空间已进入过: 旧变量._神魂空间已进入过,
+        当前互动模式: 旧变量._当前互动模式,
+        神魂空间激活中: 旧变量._神魂空间激活中,
+        疑心值: 旧变量.苗广.疑心值,
+        心态: 旧变量.苗广.心态,
+      };
+
+  // 灵石：回滚到快照值（包含前端购买扣款），脚本在后续步骤中叠加奖励
+  新变量.系统.灵石 = base.灵石;
+  // 天数+小时：时间推进完全由脚本控制（advanceTimeFromText）
+  新变量.时间.第几天 = base.第几天;
+  新变量.时间.当前小时 = base.当前小时;
+  // 脚本管理字段：AI不得修改，回滚到快照值（前端按钮/脚本控制）
+  新变量._神魂空间已解锁 = base.神魂空间已解锁;
+  新变量._神魂空间已进入过 = base.神魂空间已进入过;
+  新变量._当前互动模式 = base.当前互动模式 as SchemaType['_当前互动模式'];
+  新变量._神魂空间激活中 = base.神魂空间激活中;
+  // 疑心值：脚本全权管理（被动增长在后续步骤中计算），AI不得修改
+  新变量.苗广.疑心值 = base.疑心值;
 
   // ── 0b. 神魂空间自动解锁（floor>=5 时首次触发）──────────
   // 必须在硬保护之后执行：先恢复旧值防止AI篡改，再判断是否需要解锁
