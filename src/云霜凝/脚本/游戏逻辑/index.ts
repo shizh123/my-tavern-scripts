@@ -43,8 +43,9 @@ import {
 // 硬保护快照：在 CHAT_COMPLETION_PROMPT_READY 从最新消息捕获（包含前端写入），
 // 在 VARIABLE_UPDATE_ENDED 用作回滚基准。比旧变量更可靠——旧变量可能是新消息的默认值，
 // 不包含前端在两次 AI 回复之间的修改（灵石扣款、模式切换等）。
-import type { ProtectionSnapshot } from './stateValidation';
+import type { ProtectionSnapshot, FreezeBaseline } from './stateValidation';
 let _protSnapshot: ProtectionSnapshot | null = null;
+let _freezeBaseline: FreezeBaseline | null = null;
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
@@ -258,8 +259,18 @@ $(() => {
           for (let i = chat.length - 1; i >= 0; i--) {
             if (chat[i].role === 'user') {
               if (isInterruption) {
-                // 打断事件完全替换玩家输入，防止AI延续之前的剧情
-                chat[i].content = richEvent;
+                // 打断事件：在 user 消息前插入 system 场景切换指令，截断上文影响
+                const sceneBreak = items.includes('__打断治疗_神魂__')
+                  ? `【系统指令：场景强制切换】
+以上所有神魂空间内的对话和描写已经结束。神魂连接已被外力强制切断，神魂空间已关闭。
+从此刻起，场景回到现实世界。严禁继续描写、引用或延续神魂空间内的任何内容。
+下方是本轮必须演绎的强制事件。`
+                  : `【系统指令：场景强制切换】
+以上治疗互动已被打断。苗广介入，场景发生剧变。
+严禁继续延续之前的治疗互动剧情。下方是本轮必须演绎的强制事件。`;
+                chat.splice(i, 0, { role: 'system', content: sceneBreak });
+                // 替换玩家输入（splice 后 user 消息在 i+1）
+                chat[i + 1].content = richEvent;
               } else {
                 const content = chat[i].content;
                 chat[i].content = typeof content === 'string' ? richEvent + '\n' + content : richEvent;
@@ -355,7 +366,8 @@ $(() => {
 
         // 状态自动计算（治疗阶段、苗广心态、灵石里程碑、各种限制、天花板clamp）
         // _protSnapshot 包含前端写入（灵石扣款、模式切换等），旧变量可能是新消息默认值
-        validateAndRecalcState(newData, oldData, currentFloor, _protSnapshot);
+        // _freezeBaseline: 打断触发时捕获的治疗基线，冻结期间用作回滚基准
+        _freezeBaseline = validateAndRecalcState(newData, oldData, currentFloor, _protSnapshot, _freezeBaseline);
         processNewlyActivatedItems(newData, oldData, currentFloor);
 
         // 处理装备卸下（使用中→已购买）
@@ -447,6 +459,23 @@ $(() => {
           疑心值: data.苗广.疑心值,
           心态: data.苗广.心态,
         };
+
+        // 更新冻结基线：冻结期间累积三把锁等效果，冻结结束后清除
+        if (_freezeBaseline) {
+          if (data._打断冻结至楼层 > 0) {
+            // 冻结仍在生效：用当前治疗数值更新基线（含三把锁回退效果）
+            _freezeBaseline = {
+              信任度: data.云霜凝.信任度,
+              心理防线: data.云霜凝.心理防线,
+              完成度: data.治疗.完成度,
+              身体开发: { ...data.云霜凝.身体开发 },
+            };
+          } else {
+            // 冻结已结束：清除基线
+            _freezeBaseline = null;
+            console.info('[云霜凝] 打断冻结基线已清除');
+          }
+        }
 
         // 写回变量
         await Mvu.replaceMvuData(_.set(_.cloneDeep(raw), 'stat_data', data), { type: 'message', message_id: -1 });

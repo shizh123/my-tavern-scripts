@@ -21,6 +21,17 @@ export interface ProtectionSnapshot {
 }
 
 /**
+ * 打断冻结基线：打断触发时捕获治疗数值，冻结期间用作回滚基准。
+ * MESSAGE_RECEIVED 中更新（累积三把锁等效果），冻结结束时清除。
+ */
+export interface FreezeBaseline {
+  信任度: number;
+  心理防线: number;
+  完成度: number;
+  身体开发: { 小嘴: number; 胸部: number; 小屄: number; 屁穴: number };
+}
+
+/**
  * 基于楼层号的确定性伪随机（防止重新生成绕过随机事件）
  * 同一楼层无论重新生成多少次，返回值相同（0~1）
  */
@@ -159,7 +170,8 @@ export function validateAndRecalcState(
   旧变量: SchemaType,
   currentFloor?: number,
   snapshot?: ProtectionSnapshot | null,
-): void {
+  freezeBaseline?: FreezeBaseline | null,
+): FreezeBaseline | null {
   // ── 0. 硬保护 ──────────────────────────────────────
   // 使用 PROMPT_READY 捕获的快照作为基准（包含前端写入：灵石扣款、模式切换等）。
   // 旧变量可能是新消息的默认值，不含前端修改，导致前端操作被回滚。
@@ -375,7 +387,7 @@ export function validateAndRecalcState(
     新变量.苗广.心态 = '愤怒';
     新变量.苗广.疑心值 = 旧变量.苗广.疑心值;
     console.warn('[状态验证] ⚠️ 坏结局已锁定，所有数值冻结');
-    return; // 跳过后续所有计算
+    return freezeBaseline ?? null; // 跳过后续所有计算
   }
   if (新变量.苗广.心态 === '愤怒') {
     新变量._坏结局已触发 = true;
@@ -384,7 +396,7 @@ export function validateAndRecalcState(
     const event = '__坏结局_愤怒__';
     新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
     console.warn('[状态验证] ⚠️ 苗广愤怒→坏结局触发！游戏锁死');
-    return;
+    return freezeBaseline ?? null;
   }
 
   // ── 6. 身体开发幅度限制（脚本二次限制） ──────────────
@@ -424,17 +436,8 @@ export function validateAndRecalcState(
       console.warn(`[状态验证] 心理防线降幅过大(${defDelta})，限制至 -${MAX_DEF_DELTA}`);
     }
   }
-  {
-    const suspDelta = 新变量.苗广.疑心值 - 旧变量.苗广.疑心值;
-    const MAX_SUSP_DELTA = 20;
-    if (suspDelta > MAX_SUSP_DELTA) {
-      新变量.苗广.疑心值 = 旧变量.苗广.疑心值 + MAX_SUSP_DELTA;
-      console.warn(`[状态验证] 疑心值增幅过大(+${suspDelta})，限制至 +${MAX_SUSP_DELTA}`);
-    } else if (suspDelta < -MAX_SUSP_DELTA) {
-      新变量.苗广.疑心值 = 旧变量.苗广.疑心值 - MAX_SUSP_DELTA;
-      console.warn(`[状态验证] 疑心值降幅过大(${suspDelta})，限制至 -${MAX_SUSP_DELTA}`);
-    }
-  }
+  // 疑心值 delta clamp 已移除：疑心值由硬保护+脚本全权管理，AI无法修改，
+  // 脚本增量（第4节）每轮不超过6，无需额外限制。
   {
     const compDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
     const MAX_COMP_DELTA = 2;
@@ -492,6 +495,13 @@ export function validateAndRecalcState(
       const roll = seededRandom(floor);
       if (roll < prob) {
         新变量._打断冻结至楼层 = floor + 4;
+        // 打断触发时捕获治疗数值基线（冻结期间用作回滚基准）
+        freezeBaseline = {
+          信任度: 新变量.云霜凝.信任度,
+          心理防线: 新变量.云霜凝.心理防线,
+          完成度: 新变量.治疗.完成度,
+          身体开发: { ...新变量.云霜凝.身体开发 },
+        };
         let events = '';
         if (新变量._当前互动模式 === '神魂空间') {
           // 强制退出神魂空间：立即改变量，确保下一轮AI不会继续神魂空间剧情
@@ -583,16 +593,21 @@ export function validateAndRecalcState(
   {
     const floor = currentFloor ?? 0;
     if (新变量._打断冻结至楼层 > 0 && floor > 0 && floor < 新变量._打断冻结至楼层) {
-      // 冻结期间 → 回滚治疗数值
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度;
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线;
-      新变量.治疗.完成度 = 旧变量.治疗.完成度;
-      新变量.云霜凝.身体开发.小嘴 = 旧变量.云霜凝.身体开发.小嘴;
-      新变量.云霜凝.身体开发.胸部 = 旧变量.云霜凝.身体开发.胸部;
-      新变量.云霜凝.身体开发.小屄 = 旧变量.云霜凝.身体开发.小屄;
-      新变量.云霜凝.身体开发.屁穴 = 旧变量.云霜凝.身体开发.屁穴;
-      新变量.治疗.阶段 = calcHealingStage(新变量.治疗.完成度);
-      console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），治疗数值已回滚`);
+      if (freezeBaseline) {
+        // 冻结期间 → 回滚到基线（打断触发时捕获，每轮由 MESSAGE_RECEIVED 更新含三把锁效果）
+        新变量.云霜凝.信任度 = freezeBaseline.信任度;
+        新变量.云霜凝.心理防线 = freezeBaseline.心理防线;
+        新变量.治疗.完成度 = freezeBaseline.完成度;
+        新变量.云霜凝.身体开发.小嘴 = freezeBaseline.身体开发.小嘴;
+        新变量.云霜凝.身体开发.胸部 = freezeBaseline.身体开发.胸部;
+        新变量.云霜凝.身体开发.小屄 = freezeBaseline.身体开发.小屄;
+        新变量.云霜凝.身体开发.屁穴 = freezeBaseline.身体开发.屁穴;
+        新变量.治疗.阶段 = calcHealingStage(新变量.治疗.完成度);
+        console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），治疗数值已回滚至基线`);
+      } else {
+        // 无基线（边界情况：页面刷新后冻结仍在生效）→ 仅阻止AI推进，不回滚
+        console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），无基线，跳过回滚`);
+      }
     }
   }
 
@@ -609,6 +624,9 @@ export function validateAndRecalcState(
     新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
     console.info('[状态验证] 地仙境突破剧情触发！阶段3+且在现实互动中');
   }
+
+  // 返回 freezeBaseline（新创建或透传），由 index.ts 管理生命周期
+  return freezeBaseline ?? null;
 }
 
 /**

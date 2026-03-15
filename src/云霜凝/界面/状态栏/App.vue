@@ -40,8 +40,11 @@
         <template v-if="store.data._当前互动模式 === '神魂空间'">
           <button class="mode-btn soul-btn active" @click="exitSoulSpace">⟨ 退出神魂 ⟩</button>
         </template>
-        <template v-else-if="store.data._神魂空间已解锁">
+        <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining <= 0">
           <button class="mode-btn soul-btn" @click="enterSoulSpace">⟨ 进入神魂 ⟩</button>
+        </template>
+        <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining > 0">
+          <button class="mode-btn soul-btn locked" disabled>⟨ 监视中({{ freeze_remaining }}楼) ⟩</button>
         </template>
         <template v-else>
           <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
