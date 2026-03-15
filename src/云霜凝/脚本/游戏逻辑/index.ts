@@ -229,23 +229,11 @@ $(() => {
         }
 
         // ── Phase 2: 注入状态快照（使用已更新的 data，确保 _神魂空间已进入过 等状态正确）──
-        // Claude: push到chat尾部（Claude对尾部system消息处理好）
-        // 非Claude(Gemini/GPT): 插入到最后一条user消息之前，避免干扰Gemini的<thinking>前缀机制
+        // 统一push到chat尾部：快照作为AI生成前最后看到的指令，确保互动模式切换（如神魂空间）被正确执行
+        // Gemini的<thinking>前缀是酒馆的assistant prefill，不在chat数组中，不受影响
         const snapshot = getStatusSnapshot(data);
         if (snapshot) {
-          if (isClaudeModel()) {
-            chat.push({ role: 'system', content: snapshot });
-          } else {
-            let inserted = false;
-            for (let i = chat.length - 1; i >= 0; i--) {
-              if (chat[i].role === 'user') {
-                chat.splice(i, 0, { role: 'system', content: snapshot });
-                inserted = true;
-                break;
-              }
-            }
-            if (!inserted) chat.push({ role: 'system', content: snapshot });
-          }
+          chat.push({ role: 'system', content: snapshot });
         }
 
         // ── Phase 3: 注入事件文本到玩家消息 + 特殊场景触发 ──
