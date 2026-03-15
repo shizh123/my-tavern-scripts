@@ -172,12 +172,12 @@ $font-sans: 'Roboto', sans-serif;
     radial-gradient(circle at 50% 50%, rgba($c-gold, 0.03), transparent 60%),
     // 织物暗纹
     repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 1px,
-      rgba(255, 255, 255, 0.02) 1px,
-      rgba(255, 255, 255, 0.02) 2px
-    ),
+        45deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.02) 1px,
+        rgba(255, 255, 255, 0.02) 2px
+      ),
     repeating-linear-gradient(
       -45deg,
       transparent,

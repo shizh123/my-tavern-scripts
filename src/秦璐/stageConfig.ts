@@ -602,10 +602,7 @@ export function getStageStory(stage: number): StageStoryConfig | undefined {
 /**
  * 生成阶段突破注入文本
  */
-export function generateStageBreakthroughInjection(
-  character: '秦璐' | '苏梦',
-  newStage: number,
-): string {
+export function generateStageBreakthroughInjection(character: '秦璐' | '苏梦', newStage: number): string {
   const storyConfig = getStageStory(newStage);
   if (!storyConfig) return '';
 
@@ -656,10 +653,7 @@ ${story.详细要求}
 /**
  * 生成阶段突破的Prefill
  */
-export function generateStageBreakthroughPrefill(
-  character: '秦璐' | '苏梦',
-  newStage: number,
-): string {
+export function generateStageBreakthroughPrefill(character: '秦璐' | '苏梦', newStage: number): string {
   return `【阶段突破·${getStageTitle(newStage)}】
 
 （${character}的内心深处，某种变化正在发生...）

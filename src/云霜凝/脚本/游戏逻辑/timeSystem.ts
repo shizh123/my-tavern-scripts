@@ -82,11 +82,7 @@ function hasSimileHint(sentence: string): boolean {
  * 例：当前 21:00，AI 写"夜晚"(20.0)，差 1h → 同一天，不跨日。
  * 例：当前 20:00，AI 写"清晨"(5.5)，差 14.5h → 跨日。
  */
-function resolveTimeUpdate(
-  currentDay: number,
-  currentHour: number,
-  newHour: number,
-): { day: number; hour: number } {
+function resolveTimeUpdate(currentDay: number, currentHour: number, newHour: number): { day: number; hour: number } {
   if (newHour >= currentHour) {
     return { day: currentDay, hour: newHour };
   }

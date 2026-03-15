@@ -95,8 +95,8 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
 
     console.info(`[念头成熟] ${characterKey} 当前时间: ${now}, 念头数: ${thoughts.length}`);
 
-    const matureThoughts: Array<{ thought: typeof thoughts[0]; index: number; difficulty: string }> = [];
-    const expiredThoughts: Array<{ thought: typeof thoughts[0]; index: number; difficulty: string }> = [];
+    const matureThoughts: Array<{ thought: (typeof thoughts)[0]; index: number; difficulty: string }> = [];
+    const expiredThoughts: Array<{ thought: (typeof thoughts)[0]; index: number; difficulty: string }> = [];
 
     thoughts.forEach((thought, index) => {
       const expired = isThoughtExpired(thought, now);
@@ -106,7 +106,7 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
 
       console.info(
         `[念头成熟] ${characterKey} 念头[${index}]: "${thought.念头内容}" ` +
-        `进度=${thought.开发进度}/${thought.需要时间} 待判定=${thought.待判定} 过期=${expired} 成熟=${isMature}`
+          `进度=${thought.开发进度}/${thought.需要时间} 待判定=${thought.待判定} 过期=${expired} 成熟=${isMature}`,
       );
 
       if (expired) {
@@ -122,10 +122,7 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
       matureCount += matureThoughts.length;
 
       matureThoughts.forEach(m => {
-        const rewards = calculateRewards(
-          m.difficulty as '简单' | '中等' | '困难',
-          character.对主角依存度,
-        );
+        const rewards = calculateRewards(m.difficulty as '简单' | '中等' | '困难', character.对主角依存度);
 
         console.info(`[念头成熟] ${characterKey} 处理成熟念头: "${m.thought.念头内容}"`);
 
@@ -139,7 +136,9 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
         // 【习惯淡化机制】超过上限时，删除最旧的习惯
         if (character.习惯列表.length > HABIT_LIMIT) {
           const removedHabit = character.习惯列表.shift(); // 删除第一个（最旧的）
-          console.info(`[念头成熟] ${characterKey} 习惯数量超过上限(${HABIT_LIMIT})，最旧习惯淡化消失: "${removedHabit?.内容}"`);
+          console.info(
+            `[念头成熟] ${characterKey} 习惯数量超过上限(${HABIT_LIMIT})，最旧习惯淡化消失: "${removedHabit?.内容}"`,
+          );
         }
 
         console.info(`[念头成熟] ${characterKey} 新增习惯, 当前习惯数: ${character.习惯列表.length}`);
@@ -157,10 +156,10 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
 
         console.info(
           `[念头成熟] ${characterKey} 数值变化: ` +
-          `道德${oldMoral}→${character.道德底线}, ` +
-          `主角依存${oldSubin}→${character.对主角依存度}, ` +
-          `苏文依存${oldSuwen}→${character.对苏文依存度}, ` +
-          `侵蚀度${oldCorruption}→${character.潜意识侵蚀度}`
+            `道德${oldMoral}→${character.道德底线}, ` +
+            `主角依存${oldSubin}→${character.对主角依存度}, ` +
+            `苏文依存${oldSuwen}→${character.对苏文依存度}, ` +
+            `侵蚀度${oldCorruption}→${character.潜意识侵蚀度}`,
         );
 
         // 检查阶段提升（5阶段系统）
@@ -171,7 +170,9 @@ export function checkMatureThoughts(data: SchemaType): ThoughtCheckResult {
         if (newStage > oldStage) {
           character.当前阶段 = newStage;
           character.阶段标题 = getStageTitle(newStage);
-          console.info(`[念头成熟] ${characterKey} 阶段提升: ${oldStage}(${getStageTitle(oldStage)}) → ${newStage}(${getStageTitle(newStage)})`);
+          console.info(
+            `[念头成熟] ${characterKey} 阶段提升: ${oldStage}(${getStageTitle(oldStage)}) → ${newStage}(${getStageTitle(newStage)})`,
+          );
           stageChanges.push({ character: characterName, oldStage, newStage });
         }
       });

@@ -32,11 +32,7 @@ $(async () => {
   await waitGlobalInitialized('Mvu');
 
   // 世界时间字段（始终保护，AI不可修改）
-  const WORLD_PROTECTED_FIELDS: string[] = [
-    '世界.时间',
-    '世界.日期',
-    '世界.星期',
-  ];
+  const WORLD_PROTECTED_FIELDS: string[] = ['世界.时间', '世界.日期', '世界.星期'];
 
   // 需要保护的角色字段（秦璐和苏梦都适用）
   const CHARACTER_PROTECTED_FIELDS = [
@@ -49,11 +45,7 @@ $(async () => {
   ];
 
   // 念头系统保护字段（这些由脚本自动计算，AI不应修改）
-  const THOUGHT_PROTECTED_FIELDS = [
-    '开发进度',
-    '需要时间',
-    '过期时间',
-  ];
+  const THOUGHT_PROTECTED_FIELDS = ['开发进度', '需要时间', '过期时间'];
 
   // 角色前缀
   const CHARACTER_PREFIXES = ['秦璐状态', '苏梦状态'];

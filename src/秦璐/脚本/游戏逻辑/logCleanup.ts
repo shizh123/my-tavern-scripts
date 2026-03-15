@@ -104,9 +104,13 @@ export function cleanupForcedEventLogs(data: SchemaType, currentFloor: number): 
     const shouldKeep = floorDiff <= 3;
 
     if (shouldKeep) {
-      console.info(`[强制事件清理] 保留已通知日志(${floorDiff}楼内): ${log.事件类型} - ${log.角色} - 楼层${log.触发楼层}`);
+      console.info(
+        `[强制事件清理] 保留已通知日志(${floorDiff}楼内): ${log.事件类型} - ${log.角色} - 楼层${log.触发楼层}`,
+      );
     } else {
-      console.info(`[强制事件清理] 删除已通知日志(${floorDiff}楼外): ${log.事件类型} - ${log.角色} - 楼层${log.触发楼层}`);
+      console.info(
+        `[强制事件清理] 删除已通知日志(${floorDiff}楼外): ${log.事件类型} - ${log.角色} - 楼层${log.触发楼层}`,
+      );
     }
 
     return shouldKeep;

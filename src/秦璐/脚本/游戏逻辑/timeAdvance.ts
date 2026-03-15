@@ -13,10 +13,10 @@ import type { SchemaType } from '../../schema';
 // ========== 时间跳跃关键词配置 ==========
 interface TimeJumpRule {
   keywords: string[];
-  hours?: number;        // 固定小时数
-  days?: number;         // 固定天数
-  targetHour?: number;   // 目标时间点（如早上8点）
-  nextDay?: boolean;     // 是否跳到下一天
+  hours?: number; // 固定小时数
+  days?: number; // 固定天数
+  targetHour?: number; // 目标时间点（如早上8点）
+  nextDay?: boolean; // 是否跳到下一天
 }
 
 const TIME_JUMP_RULES: TimeJumpRule[] = [
@@ -79,11 +79,28 @@ function detectTimeJump(userInput: string, currentHour: number): number {
   // 这避免了"住院一天"、"第二天还在医院"、"安眠药效果持续几小时"等描述误触发时间跳跃
   const specialItemPatterns = [
     // 住院相关
-    '头孢.*酒', '酒.*头孢', '住院', '紧急送医', '双硫仑',
-    '头孢菌素', '喂头孢', '服用头孢', '吃头孢',
+    '头孢.*酒',
+    '酒.*头孢',
+    '住院',
+    '紧急送医',
+    '双硫仑',
+    '头孢菌素',
+    '喂头孢',
+    '服用头孢',
+    '吃头孢',
     // 安眠药相关
-    '安眠药', '安眠藥', '服用安眠', '吃下安眠', '喂安眠', '餵安眠',
-    '下药', '下藥', '迷药', '迷藥', '睡眠药', '睡眠藥',
+    '安眠药',
+    '安眠藥',
+    '服用安眠',
+    '吃下安眠',
+    '喂安眠',
+    '餵安眠',
+    '下药',
+    '下藥',
+    '迷药',
+    '迷藥',
+    '睡眠药',
+    '睡眠藥',
   ];
   const hasSpecialItemKeyword = specialItemPatterns.some(pattern => {
     const regex = new RegExp(pattern, 'i');
@@ -193,18 +210,28 @@ const SLEEPING_PILL_COOLDOWN_HOURS = 48;
 // ========== 头孢+酒关键词配置（终极隐藏模式） ==========
 const HOSPITALIZATION_KEYWORDS = [
   // 头孢类抗生素 + 酒的组合
-  '头孢.*酒', '酒.*头孢',
-  '頭孢.*酒', '酒.*頭孢',
-  '头孢菌素.*酒', '酒.*头孢菌素',
+  '头孢.*酒',
+  '酒.*头孢',
+  '頭孢.*酒',
+  '酒.*頭孢',
+  '头孢菌素.*酒',
+  '酒.*头孢菌素',
   // 直接触发词
-  '喂头孢', '喂酒.*头孢', '头孢.*喝酒',
-  '吃头孢.*喝酒', '喝酒.*吃头孢',
-  '服用头孢.*饮酒', '饮酒.*服用头孢',
+  '喂头孢',
+  '喂酒.*头孢',
+  '头孢.*喝酒',
+  '吃头孢.*喝酒',
+  '喝酒.*吃头孢',
+  '服用头孢.*饮酒',
+  '饮酒.*服用头孢',
   // 双硫仑反应相关
-  '双硫仑', '雙硫侖',
+  '双硫仑',
+  '雙硫侖',
   // 简化触发词（用户可能直接写）
-  '头孢加酒', '酒加头孢',
-  '头孢配酒', '酒配头孢',
+  '头孢加酒',
+  '酒加头孢',
+  '头孢配酒',
+  '酒配头孢',
 ];
 
 // 住院时间（天数）- 15天
@@ -238,7 +265,12 @@ function detectHospitalization(text: string): boolean {
  * @param currentFloor 当前消息楼层ID（用于ROLL检测）
  * @returns 是否成功激活
  */
-function activateHospitalization(data: SchemaType, currentDate: string, currentTime: string, currentFloor: number): boolean {
+function activateHospitalization(
+  data: SchemaType,
+  currentDate: string,
+  currentTime: string,
+  currentFloor: number,
+): boolean {
   const hospState = data.苏文状态.住院状态;
   const lastTriggerFloor = hospState?.触发楼层 ?? -1;
 
@@ -287,7 +319,9 @@ function activateHospitalization(data: SchemaType, currentDate: string, currentT
     冻结结束时间: freezeEndTime,
   };
 
-  console.info(`[头孢+酒] 终极隐藏模式触发！苏文因头孢+酒反应紧急住院，将于 ${data.苏文状态.住院状态.住院结束时间} 出院`);
+  console.info(
+    `[头孢+酒] 终极隐藏模式触发！苏文因头孢+酒反应紧急住院，将于 ${data.苏文状态.住院状态.住院结束时间} 出院`,
+  );
   console.info(`[头孢+酒] 疑心值冻结15天，秦璐/苏梦可全阶段植入念头`);
   return true;
 }
@@ -361,7 +395,12 @@ function isSleepingPillCooldownOver(lastUseTime: string, currentDate: string, cu
  * @param currentFloor 当前消息楼层ID（用于ROLL检测）
  * @returns 是否成功激活（冷却未过则返回false）
  */
-function activateSleepingPill(data: SchemaType, currentDate: string, currentTime: string, currentFloor: number): boolean {
+function activateSleepingPill(
+  data: SchemaType,
+  currentDate: string,
+  currentTime: string,
+  currentFloor: number,
+): boolean {
   const pillState = data.苏文状态.安眠药状态;
   const lastUseTime = pillState.上次使用时间;
   const lastTriggerFloor = pillState.触发楼层 ?? -1;
@@ -587,7 +626,8 @@ const PATROL_CONFIG = {
 function getTimeModifier(hour: number): number {
   const { timeModifiers } = PATROL_CONFIG;
   if (hour >= timeModifiers.morning.start && hour < timeModifiers.morning.end) return timeModifiers.morning.modifier;
-  if (hour >= timeModifiers.afternoon.start && hour < timeModifiers.afternoon.end) return timeModifiers.afternoon.modifier;
+  if (hour >= timeModifiers.afternoon.start && hour < timeModifiers.afternoon.end)
+    return timeModifiers.afternoon.modifier;
   if (hour >= timeModifiers.evening.start && hour < timeModifiers.evening.end) return timeModifiers.evening.modifier;
   return timeModifiers.night.modifier;
 }
@@ -814,7 +854,7 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
   // 直接从 世界.地点 读取位置（AI 通过 MVU 命令更新，比从 AI 文本匹配更可靠）
   const worldLocation = data.世界?.地点 || '';
   const isInSonRoom = worldLocation.includes('主角房间');
-  const currentLocationFromWorld = isInSonRoom ? '主角房间' : (worldLocation.split(' - ').pop() || '客厅');
+  const currentLocationFromWorld = isInSonRoom ? '主角房间' : worldLocation.split(' - ').pop() || '客厅';
 
   const oldLocation = tracking.当前所在位置;
   if (oldLocation !== currentLocationFromWorld) {
@@ -884,14 +924,16 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
   const suwenStatus = data.苏文状态.当前状态;
 
   console.info(`[疑心值追踪] 时间: ${oldDate} ${oldTime} → ${newDate} ${newTime}`);
-  console.info(`[疑心值追踪] 当前角色="${currentCharacter}", 当前位置="${currentLocation}", 苏文位置="${suwenLocation}", 苏文状态="${suwenStatus}"`);
+  console.info(
+    `[疑心值追踪] 当前角色="${currentCharacter}", 当前位置="${currentLocation}", 苏文位置="${suwenLocation}", 苏文状态="${suwenStatus}"`,
+  );
 
   // 【关键】初始化角色独立的危险时间累计（兼容旧数据）
   if (tracking.秦璐危险时间累计 === undefined) {
-    tracking.秦璐危险时间累计 = currentCharacter === '秦璐' ? (tracking.危险时间累计 || 0) : 0;
+    tracking.秦璐危险时间累计 = currentCharacter === '秦璐' ? tracking.危险时间累计 || 0 : 0;
   }
   if (tracking.苏梦危险时间累计 === undefined) {
-    tracking.苏梦危险时间累计 = currentCharacter === '苏梦' ? (tracking.危险时间累计 || 0) : 0;
+    tracking.苏梦危险时间累计 = currentCharacter === '苏梦' ? tracking.危险时间累计 || 0 : 0;
   }
 
   // 只对当前激活角色进行危险判定（因为只有当前角色在主角房间才会有互动）
@@ -929,7 +971,9 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
         等待借口: false,
         借口结果: '待定',
       };
-      console.info(`[疑心值追踪] ${currentCharacter} 累积达到 ${tracking[dangerTimeField]} 小时，疑心值 +10，触发打断事件`);
+      console.info(
+        `[疑心值追踪] ${currentCharacter} 累积达到 ${tracking[dangerTimeField]} 小时，疑心值 +10，触发打断事件`,
+      );
 
       // 【关键】写入强制事件日志（支持ROLL后重新触发）
       const currentFloor = getLastMessageId();
@@ -961,20 +1005,20 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
         // 窗口关闭：如果累积 < 2 小时，则作废
         if (currentDangerTime < 2) {
           console.warn(
-            `[疑心值追踪] ${currentCharacter} 窗口关闭（苏文状态="${data.苏文状态.当前状态}"），累积不足2小时（${currentDangerTime}h），累积作废`
+            `[疑心值追踪] ${currentCharacter} 窗口关闭（苏文状态="${data.苏文状态.当前状态}"），累积不足2小时（${currentDangerTime}h），累积作废`,
           );
           tracking[dangerTimeField] = 0;
         } else {
           // 累积已经触发过疑心值增长，保留结果并清零累积
           console.info(
-            `[疑心值追踪] ${currentCharacter} 窗口关闭（苏文状态="${data.苏文状态.当前状态}"），累积已达标（${currentDangerTime}h），保留结果并清零`
+            `[疑心值追踪] ${currentCharacter} 窗口关闭（苏文状态="${data.苏文状态.当前状态}"），累积已达标（${currentDangerTime}h），保留结果并清零`,
           );
           tracking[dangerTimeField] = 0;
         }
       } else {
         // 角色离开主角房间但窗口仍开启：累积暂停，不清零
         console.info(
-          `[疑心值追踪] ${currentCharacter} 角色离开主角房间（当前位置="${currentLocation}"），累积暂停但保留（${currentDangerTime}h）`
+          `[疑心值追踪] ${currentCharacter} 角色离开主角房间（当前位置="${currentLocation}"），累积暂停但保留（${currentDangerTime}h）`,
         );
       }
     }
@@ -1015,7 +1059,7 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
   (['秦璐状态', '苏梦状态'] as const).forEach(characterKey => {
     const character = data[characterKey];
     if (!character) return;
-    character.念头培育区.forEach((thought) => {
+    character.念头培育区.forEach(thought => {
       // 【关键】时间跳跃时，念头当做完成1小时的进展，避免因过期时间被跳过而全部消失
       // 同时延长过期时间，使其相对于新时间仍有剩余时间
       if (isTimeJump) {
@@ -1035,7 +1079,7 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
 
         console.info(
           `[念头开发] 时间跳跃处理 ${characterKey}: "${thought.念头内容}" ` +
-          `进度 ${oldProgress} → ${thought.开发进度}, 过期时间延长至 ${thought.过期时间}`
+            `进度 ${oldProgress} → ${thought.开发进度}, 过期时间延长至 ${thought.过期时间}`,
         );
       } else {
         // 正常时间推进：根据相关性增加进度
@@ -1097,9 +1141,7 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
   if (patrolEvent.待触发 && patrolEvent.已通知AI && patrolEvent.离开期限) {
     // 【关键】从强制事件日志中获取巡逻事件触发时的角色，而不是使用当前角色
     let patrolCharacter: '秦璐' | '苏梦' = currentCharacter;
-    const patrolLog = tracking.强制事件日志?.find(
-      (log: any) => log.事件类型 === '苏文巡逻' && log.已通知AI
-    );
+    const patrolLog = tracking.强制事件日志?.find((log: any) => log.事件类型 === '苏文巡逻' && log.已通知AI);
     if (patrolLog) {
       patrolCharacter = patrolLog.角色 as '秦璐' | '苏梦';
       console.info(`[巡逻事件] 从日志获取触发角色: ${patrolCharacter}`);
@@ -1180,9 +1222,7 @@ export function advanceTime(data: SchemaType, userText: string, aiText: string):
   if (interruptionEvent.待触发 && interruptionEvent.已通知AI && interruptionEvent.借口结果 !== '待定') {
     // 【关键】从强制事件日志中获取打断事件触发时的角色
     let interruptionCharacter: '秦璐' | '苏梦' = currentCharacter;
-    const interruptionLog = tracking.强制事件日志?.find(
-      (log: any) => log.事件类型 === '苏文打断' && log.已通知AI
-    );
+    const interruptionLog = tracking.强制事件日志?.find((log: any) => log.事件类型 === '苏文打断' && log.已通知AI);
     if (interruptionLog) {
       interruptionCharacter = interruptionLog.角色 as '秦璐' | '苏梦';
       console.info(`[打断事件] 从日志获取触发角色: ${interruptionCharacter}`);

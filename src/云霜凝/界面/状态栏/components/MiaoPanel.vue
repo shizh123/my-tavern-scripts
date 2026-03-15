@@ -1,6 +1,5 @@
 <template>
   <div class="miao-panel">
-
     <!-- 苗广状态卡 -->
     <div class="card card-main">
       <div class="section-title"><span class="decor-line"></span><span>苗广</span><span class="decor-line"></span></div>
@@ -15,13 +14,13 @@
         <div class="track">
           <div class="fill sus" :class="susClass" :style="{ width: store.data.苗广.疑心值 + '%' }"></div>
           <template v-if="isBackHalf">
-            <div class="tick" style="left:40%"></div>
-            <div class="tick" style="left:75%"></div>
+            <div class="tick" style="left: 40%"></div>
+            <div class="tick" style="left: 75%"></div>
           </template>
           <template v-else>
-            <div class="tick" style="left:25%"></div>
-            <div class="tick" style="left:50%"></div>
-            <div class="tick" style="left:70%"></div>
+            <div class="tick" style="left: 25%"></div>
+            <div class="tick" style="left: 50%"></div>
+            <div class="tick" style="left: 70%"></div>
           </template>
         </div>
         <span class="stat-num">{{ store.data.苗广.疑心值 }}</span>
@@ -30,11 +29,7 @@
 
       <!-- 净灵铃摇铃按钮 -->
       <div v-if="jllEquipped" class="jll-actions">
-        <button
-          class="qj-btn qj-btn-jll"
-          :disabled="!jllCanUse"
-          @click="ringBell"
-        >⟨ 摇铃 ⟩</button>
+        <button class="qj-btn qj-btn-jll" :disabled="!jllCanUse" @click="ringBell">⟨ 摇铃 ⟩</button>
         <span v-if="jllOnCooldown" class="jll-cd">冷却中</span>
       </div>
     </div>
@@ -44,14 +39,14 @@
       <div class="qj-row">
         <span class="qj-lbl">千晶幻术</span>
         <span v-if="qj.认知改写完成" class="qj-state qj-done">已完成</span>
-        <span v-else-if="qj.激活中" class="qj-state qj-on">施术中 · 第{{ qjCurrentRound }}/{{ qjMaxRoundsDisplay }}轮</span>
+        <span v-else-if="qj.激活中" class="qj-state qj-on"
+          >施术中 · 第{{ qjCurrentRound }}/{{ qjMaxRoundsDisplay }}轮</span
+        >
         <span v-else-if="!qjUnlocked" class="qj-locked">阶段≥7 · 苗广≥屈辱</span>
         <span v-else-if="qjCooling" class="qj-cd">冷却 {{ qjCdRemain }} 楼</span>
         <span v-else class="qj-state">就绪</span>
 
-        <span v-if="qj.已使用次数 > 0 && !qj.认知改写完成" class="qj-uses">
-          {{ qj.已使用次数 }}/5次
-        </span>
+        <span v-if="qj.已使用次数 > 0 && !qj.认知改写完成" class="qj-uses"> {{ qj.已使用次数 }}/5次 </span>
       </div>
 
       <!-- 施术/退出按钮 -->
@@ -60,11 +55,7 @@
           <button class="qj-btn qj-btn-exit" @click="exitQianjing">⟨ 退出幻术 ⟩</button>
         </template>
         <template v-else>
-          <button
-            class="qj-btn qj-btn-cast"
-            :disabled="!qjCanCast"
-            @click="castQianjing"
-          >⟨ 施术 ⟩</button>
+          <button class="qj-btn qj-btn-cast" :disabled="!qjCanCast" @click="castQianjing">⟨ 施术 ⟩</button>
         </template>
       </div>
 
@@ -75,16 +66,19 @@
 
     <!-- 心理活动 -->
     <template v-if="store.data.苗广.心理活动">
-      <div class="section-title sec-thought"><span class="decor-line"></span><span>苗广心理</span><span class="decor-line"></span></div>
+      <div class="section-title sec-thought">
+        <span class="decor-line"></span><span>苗广心理</span><span class="decor-line"></span>
+      </div>
       <div class="thought-box">{{ store.data.苗广.心理活动 }}</div>
     </template>
 
     <!-- 苗喧碎片 -->
     <template v-if="store.data._苗喧碎片">
-      <div class="section-title sec-miaoxuan"><span class="decor-line"></span><span>苗喧·碎片</span><span class="decor-line"></span></div>
+      <div class="section-title sec-miaoxuan">
+        <span class="decor-line"></span><span>苗喧·碎片</span><span class="decor-line"></span>
+      </div>
       <div class="thought-box miaoxuan-box">{{ store.data._苗喧碎片 }}</div>
     </template>
-
   </div>
 </template>
 
@@ -125,18 +119,16 @@ function ringBell() {
 // ── 苗广心态 ──
 const mindClass = computed(() => ({
   'mind-normal': store.data.苗广.心态 === '正常',
-  'mind-doubt':  store.data.苗广.心态 === '疑惑',
-  'mind-aware':  store.data.苗广.心态 === '察觉',
-  'danger':      store.data.苗广.心态 === '愤怒',
+  'mind-doubt': store.data.苗广.心态 === '疑惑',
+  'mind-aware': store.data.苗广.心态 === '察觉',
+  danger: store.data.苗广.心态 === '愤怒',
   'mind-humble': store.data.苗广.心态 === '屈辱',
   'mind-permit': store.data.苗广.心态 === '默许',
-  'mind-sink':   store.data.苗广.心态 === '沉溺',
+  'mind-sink': store.data.苗广.心态 === '沉溺',
 }));
 
 // 后半程判定：屈辱/默许/沉溺
-const isBackHalf = computed(() =>
-  ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态)
-);
+const isBackHalf = computed(() => ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态));
 
 const susClass = computed(() => {
   const v = store.data.苗广.疑心值;
@@ -171,10 +163,7 @@ function getCurrentFloor(): number {
   return (window as any).SillyTavern?.chat?.length ?? 0;
 }
 
-const qjUnlocked = computed(() =>
-  store.data.治疗.阶段 >= 7 &&
-  ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态)
-);
+const qjUnlocked = computed(() => store.data.治疗.阶段 >= 7 && ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态));
 
 const qjCooling = computed(() => {
   const cd = qj.value.冷却结束楼层;
@@ -185,12 +174,7 @@ const qjCdRemain = computed(() => {
   return Math.max(0, qj.value.冷却结束楼层 - getCurrentFloor());
 });
 
-const qjCanCast = computed(() =>
-  qjUnlocked.value &&
-  !qj.value.激活中 &&
-  !qjCooling.value &&
-  qj.value.已使用次数 < 5
-);
+const qjCanCast = computed(() => qjUnlocked.value && !qj.value.激活中 && !qjCooling.value && qj.value.已使用次数 < 5);
 
 // ── 千晶幻术轮次配置（与 promptInjection.ts QIANJING_SESSIONS 一致） ──
 const QJ_MAX_ROUNDS = [4, 4, 5, 5, 6]; // 第1~5次施术的最大轮数
@@ -247,19 +231,23 @@ function exitQianjing() {
 
 <style lang="scss" scoped>
 // ── 色彩系统（绛红主题） ──
-$c-bg:     #0c0406;
-$c-pri:    #c03050;
-$c-pri-d:  #8a2038;
-$c-acc:    #ff6080;
-$c-frost:  #ffd0d8;
-$c-text:   #ffe8ec;
-$c-sub:    #a07080;
-$c-good:   #40c880;
-$c-gold:   #e8be58;
-$c-warn:   #d4b030;
+$c-bg: #0c0406;
+$c-pri: #c03050;
+$c-pri-d: #8a2038;
+$c-acc: #ff6080;
+$c-frost: #ffd0d8;
+$c-text: #ffe8ec;
+$c-sub: #a07080;
+$c-good: #40c880;
+$c-gold: #e8be58;
+$c-warn: #d4b030;
 $c-danger: #e05050;
 
-.miao-panel { display: flex; flex-direction: column; gap: 10px; }
+.miao-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
 // ── 卡片容器 ──
 .card {
@@ -275,28 +263,47 @@ $c-danger: #e05050;
   &::before {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba($c-gold, 0.1), transparent);
     pointer-events: none;
   }
 
-  &:hover { border-color: rgba($c-gold, 0.18); }
+  &:hover {
+    border-color: rgba($c-gold, 0.18);
+  }
 }
-.card-main { display: flex; flex-direction: column; gap: 10px; }
-.card-qj { display: flex; flex-direction: column; gap: 8px; }
+.card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card-qj {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
 // ── 区域标题 ──
 .section-title {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 0.82rem; color: rgba($c-gold, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: rgba($c-gold, 0.85);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
 }
-.sec-thought { color: rgba($c-frost, 0.7); margin-bottom: 2px; }
+.sec-thought {
+  color: rgba($c-frost, 0.7);
+  margin-bottom: 2px;
+}
 .decor-line {
-  flex: 1; height: 1px;
+  flex: 1;
+  height: 1px;
   background: linear-gradient(90deg, transparent, rgba($c-gold, 0.25), transparent);
 }
 .sec-thought .decor-line {
@@ -304,12 +311,19 @@ $c-danger: #e05050;
 }
 
 // ── 徽章 ──
-.badges-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.badges-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .badge {
-  font-size: 0.82rem; font-weight: bold;
-  padding: 5px 14px; border-radius: 14px;
-  border: 1px solid; letter-spacing: 0.8px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  padding: 5px 14px;
+  border-radius: 14px;
+  border: 1px solid;
+  letter-spacing: 0.8px;
   transition: all 0.3s;
 }
 .neutral {
@@ -325,8 +339,13 @@ $c-danger: #e05050;
   animation: dangerPulse 2s ease-in-out infinite;
 }
 @keyframes dangerPulse {
-  0%, 100% { box-shadow: 0 0 10px rgba($c-danger, 0.15); }
-  50% { box-shadow: 0 0 16px rgba($c-danger, 0.25); }
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba($c-danger, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba($c-danger, 0.25);
+  }
 }
 .mind-normal {
   color: rgba($c-sub, 0.65);
@@ -365,34 +384,52 @@ $c-danger: #e05050;
 }
 
 // ── 疑心值进度条 ──
-.stat-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .stat-lbl {
-  width: 50px; font-size: 0.88rem; color: rgba($c-gold, 0.85);
-  flex-shrink: 0; letter-spacing: 0.5px; font-weight: 600;
+  width: 50px;
+  font-size: 0.88rem;
+  color: rgba($c-gold, 0.85);
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 .stat-num {
-  width: 30px; text-align: right;
-  font-size: 1rem; font-weight: 900; color: $c-frost;
+  width: 30px;
+  text-align: right;
+  font-size: 1rem;
+  font-weight: 900;
+  color: $c-frost;
   text-shadow: 0 0 8px rgba($c-acc, 0.2);
   font-variant-numeric: tabular-nums;
 }
 .track {
-  flex: 1; height: 8px;
+  flex: 1;
+  height: 8px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba($c-pri, 0.15);
   border-radius: 5px;
-  position: relative; overflow: visible;
+  position: relative;
+  overflow: visible;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   min-width: 80px;
 }
 .fill {
-  position: absolute; left: 0; top: 0; bottom: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   border-radius: 5px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
   &::after {
     content: '';
-    position: absolute; inset: 0;
+    position: absolute;
+    inset: 0;
     background: linear-gradient(180deg, rgba(#fff, 0.2) 0%, rgba(#fff, 0.05) 40%, transparent 60%);
     border-radius: 5px;
   }
@@ -422,43 +459,84 @@ $c-danger: #e05050;
   box-shadow: 0 0 10px rgba($c-acc, 0.3);
 }
 .tick {
-  position: absolute; top: -4px; bottom: -4px;
-  width: 1px; background: rgba($c-frost, 0.2);
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: rgba($c-frost, 0.2);
   transform: translateX(-50%);
 
   &::after {
     content: '';
     position: absolute;
-    top: -1px; left: -1px;
-    width: 3px; height: 3px;
+    top: -1px;
+    left: -1px;
+    width: 3px;
+    height: 3px;
     border-radius: 50%;
     background: rgba($c-frost, 0.3);
   }
 }
 .sus-stage {
-  font-size: 0.66rem; font-weight: 600;
-  min-width: 52px; letter-spacing: 0.5px;
-  padding: 2px 6px; border-radius: 8px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  min-width: 52px;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 8px;
 
-  &.sus-low { color: rgba($c-sub, 0.7); background: transparent; box-shadow: none; }
-  &.sus-mid { color: $c-warn; background: rgba($c-warn, 0.06); box-shadow: none; }
-  &.sus-high { color: #d05040; background: rgba(#d05040, 0.06); box-shadow: none; }
-  &.sus-max { color: $c-danger; background: rgba($c-danger, 0.08); box-shadow: none;
-    animation: dangerPulse 2s ease-in-out infinite; }
-  &.sus-permit { color: $c-good; background: rgba($c-good, 0.06); box-shadow: none; }
-  &.sus-sink { color: $c-acc; background: rgba($c-acc, 0.06); box-shadow: none; }
+  &.sus-low {
+    color: rgba($c-sub, 0.7);
+    background: transparent;
+    box-shadow: none;
+  }
+  &.sus-mid {
+    color: $c-warn;
+    background: rgba($c-warn, 0.06);
+    box-shadow: none;
+  }
+  &.sus-high {
+    color: #d05040;
+    background: rgba(#d05040, 0.06);
+    box-shadow: none;
+  }
+  &.sus-max {
+    color: $c-danger;
+    background: rgba($c-danger, 0.08);
+    box-shadow: none;
+    animation: dangerPulse 2s ease-in-out infinite;
+  }
+  &.sus-permit {
+    color: $c-good;
+    background: rgba($c-good, 0.06);
+    box-shadow: none;
+  }
+  &.sus-sink {
+    color: $c-acc;
+    background: rgba($c-acc, 0.06);
+    box-shadow: none;
+  }
 }
 
 // ── 千晶幻术 ──
 .qj-row {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.88rem; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  flex-wrap: wrap;
 }
-.qj-lbl { color: rgba($c-gold, 0.75); letter-spacing: 0.5px; font-weight: 600; }
+.qj-lbl {
+  color: rgba($c-gold, 0.75);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
 .qj-state {
-  padding: 3px 10px; border-radius: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
   border: 1px solid rgba($c-sub, 0.2);
-  color: rgba($c-sub, 0.65); font-size: 0.7rem;
+  color: rgba($c-sub, 0.65);
+  font-size: 0.7rem;
   font-weight: 600;
 }
 .qj-on {
@@ -469,15 +547,23 @@ $c-danger: #e05050;
   animation: qjPulse 2.5s ease-in-out infinite;
 }
 @keyframes qjPulse {
-  0%, 100% { box-shadow: 0 0 8px rgba($c-acc, 0.15); }
-  50% { box-shadow: 0 0 14px rgba($c-acc, 0.3); }
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgba($c-acc, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba($c-acc, 0.3);
+  }
 }
 .qj-cd {
-  color: $c-warn; font-size: 0.68rem; font-weight: 600;
+  color: $c-warn;
+  font-size: 0.68rem;
+  font-weight: 600;
   text-shadow: 0 0 4px rgba($c-warn, 0.15);
 }
 .qj-locked {
-  color: rgba($c-sub, 0.45); font-size: 0.64rem;
+  color: rgba($c-sub, 0.45);
+  font-size: 0.64rem;
   letter-spacing: 0.5px;
   padding: 2px 6px;
   border: 1px solid rgba($c-sub, 0.1);
@@ -490,7 +576,9 @@ $c-danger: #e05050;
   box-shadow: 0 0 8px rgba($c-good, 0.12);
 }
 .qj-uses {
-  color: rgba($c-frost, 0.7); font-size: 0.68rem; font-weight: 600;
+  color: rgba($c-frost, 0.7);
+  font-size: 0.68rem;
+  font-weight: 600;
   padding: 2px 6px;
   border: 1px solid rgba($c-acc, 0.15);
   border-radius: 8px;
@@ -498,12 +586,16 @@ $c-danger: #e05050;
 
 // ── 千晶幻术按钮 ──
 .qj-actions {
-  display: flex; justify-content: center; padding: 2px 0;
+  display: flex;
+  justify-content: center;
+  padding: 2px 0;
 }
 .qj-btn {
-  font-size: 0.76rem; font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 700;
   letter-spacing: 1.5px;
-  padding: 6px 24px; border-radius: 16px;
+  padding: 6px 24px;
+  border-radius: 16px;
   border: 1px solid;
   cursor: pointer;
   transition: all 0.3s;
@@ -542,8 +634,11 @@ $c-danger: #e05050;
 
 // ── 净灵铃 ──
 .jll-actions {
-  display: flex; align-items: center; gap: 10px;
-  justify-content: center; padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 2px 0;
 }
 .qj-btn-jll {
   color: $c-gold;
@@ -558,7 +653,9 @@ $c-danger: #e05050;
   }
 }
 .jll-cd {
-  color: rgba($c-sub, 0.6); font-size: 0.68rem; font-weight: 600;
+  color: rgba($c-sub, 0.6);
+  font-size: 0.68rem;
+  font-weight: 600;
 }
 
 // ── 千晶幻境内容 ──
@@ -570,7 +667,10 @@ $c-danger: #e05050;
 }
 
 // ── 苗喧碎片 ──
-.sec-miaoxuan { color: rgba(#88aacc, 0.7); margin-bottom: 2px; }
+.sec-miaoxuan {
+  color: rgba(#88aacc, 0.7);
+  margin-bottom: 2px;
+}
 .sec-miaoxuan .decor-line {
   background: linear-gradient(90deg, transparent, rgba(#88aacc, 0.2), transparent);
 }
@@ -580,7 +680,9 @@ $c-danger: #e05050;
   background: linear-gradient(135deg, rgba(#88aacc, 0.06) 0%, rgba($c-bg, 0.3) 100%);
   color: rgba(#b8ccdd, 0.9);
 
-  &::before { color: rgba(#88aacc, 0.08); }
+  &::before {
+    color: rgba(#88aacc, 0.08);
+  }
 }
 
 // ── 心理活动 ──
@@ -588,16 +690,21 @@ $c-danger: #e05050;
   background: linear-gradient(135deg, rgba($c-pri, 0.08) 0%, rgba($c-bg, 0.4) 100%);
   border: 1px solid rgba($c-gold, 0.15);
   border-left: 3px solid rgba($c-gold, 0.35);
-  border-radius: 10px; padding: 14px 16px;
-  font-size: 0.88rem; line-height: 1.7;
-  color: rgba($c-frost, 0.9); font-style: italic; white-space: pre-wrap;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: rgba($c-frost, 0.9);
+  font-style: italic;
+  white-space: pre-wrap;
   backdrop-filter: blur(4px);
   position: relative;
 
   &::before {
     content: '\201C';
     position: absolute;
-    top: 4px; left: 10px;
+    top: 4px;
+    left: 10px;
     font-size: 1.8rem;
     color: rgba($c-gold, 0.08);
     font-family: Georgia, serif;
@@ -607,7 +714,11 @@ $c-danger: #e05050;
 
 // ── 响应式 ──
 @media (max-width: 360px) {
-  .card { padding: 10px 12px; }
-  .badges-row { gap: 6px; }
+  .card {
+    padding: 10px 12px;
+  }
+  .badges-row {
+    gap: 6px;
+  }
 }
 </style>

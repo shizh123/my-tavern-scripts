@@ -108,7 +108,9 @@ function checkAndFixAppearanceConstraints(
       bodyMod.穿刺.阴唇环 ||
       bodyMod.永久标记.length > 0
     ) {
-      console.warn(`[阶段外观更新] ${characterName} 阶段${stage}(${config.阶段标题}) 不允许身体改造，但检测到改造项，保留但记录警告`);
+      console.warn(
+        `[阶段外观更新] ${characterName} 阶段${stage}(${config.阶段标题}) 不允许身体改造，但检测到改造项，保留但记录警告`,
+      );
       // 不强制移除，只记录警告，因为可能是剧情需要
     }
   }
@@ -161,7 +163,9 @@ export function checkAndUpdateAppearance(data: SchemaType): AppearanceUpdateResu
   console.info(`[阶段外观调试] 秦璐: 当前阶段=${qinStage}, 上次记录=${lastQinStage}, 是否新阶段=${qinIsNewStage}`);
 
   if (qinIsNewStage && qinStage >= 1 && qinStage <= 5) {
-    console.info(`[阶段外观更新] ✅ 秦璐阶段变化: ${lastQinStage}(${getStageTitle(lastQinStage)}) → ${qinStage}(${getStageTitle(qinStage)})`);
+    console.info(
+      `[阶段外观更新] ✅ 秦璐阶段变化: ${lastQinStage}(${getStageTitle(lastQinStage)}) → ${qinStage}(${getStageTitle(qinStage)})`,
+    );
     result.qinluStageChanged = true;
 
     // 设置待更新标记，等待合适的剧情时机
@@ -225,7 +229,9 @@ export function checkAndUpdateAppearance(data: SchemaType): AppearanceUpdateResu
   console.info(`[阶段外观调试] 苏梦: 当前阶段=${suStage}, 上次记录=${lastSuStage}, 是否新阶段=${suIsNewStage}`);
 
   if (suIsNewStage && suStage >= 1 && suStage <= 5) {
-    console.info(`[阶段外观更新] ✅ 苏梦阶段变化: ${lastSuStage}(${getStageTitle(lastSuStage)}) → ${suStage}(${getStageTitle(suStage)})`);
+    console.info(
+      `[阶段外观更新] ✅ 苏梦阶段变化: ${lastSuStage}(${getStageTitle(lastSuStage)}) → ${suStage}(${getStageTitle(suStage)})`,
+    );
     result.sumengStageChanged = true;
 
     // 设置待更新标记

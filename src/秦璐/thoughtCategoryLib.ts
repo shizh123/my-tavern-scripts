@@ -33,25 +33,55 @@ export type ThoughtCategory =
  */
 export type DetailedThoughtType =
   // 思维类
-  | '禁忌话题讨论' | '观念开放' | '道德模糊' | '快感优先' | '羞耻淡化' | '主动索取' | '自我认同'
+  | '禁忌话题讨论'
+  | '观念开放'
+  | '道德模糊'
+  | '快感优先'
+  | '羞耻淡化'
+  | '主动索取'
+  | '自我认同'
   // 身体类 - 基础接触
-  | '身体接触' | '敏感部位触碰' | '裸露展示'
+  | '身体接触'
+  | '敏感部位触碰'
+  | '裸露展示'
   // 身体类 - 口交相关
-  | '口交服务' | '舔舐服务' | '精液处理'
+  | '口交服务'
+  | '舔舐服务'
+  | '精液处理'
   // 身体类 - 性交相关
-  | '性行为接受' | '体位姿势' | '特殊性行为' | '后庭开发' | '多人行为'
+  | '性行为接受'
+  | '体位姿势'
+  | '特殊性行为'
+  | '后庭开发'
+  | '多人行为'
   // 身体类 - 自慰相关
-  | '自慰行为' | '道具使用'
+  | '自慰行为'
+  | '道具使用'
   // 身体类 - 改造类
-  | '身体改造' | '特殊装饰'
+  | '身体改造'
+  | '特殊装饰'
   // BDSM类
-  | '轻度束缚' | '调教训练' | '惩罚责罚' | '言语羞辱' | '极端玩法' | '支配服从'
+  | '轻度束缚'
+  | '调教训练'
+  | '惩罚责罚'
+  | '言语羞辱'
+  | '极端玩法'
+  | '支配服从'
   // 行为类 - 着装
-  | '着装改变' | '情趣服饰' | '妆容调整'
+  | '着装改变'
+  | '情趣服饰'
+  | '妆容调整'
   // 行为类 - 社会行为
-  | '说谎隐瞒' | '主动诱惑' | '公开场合' | '背叛丈夫' | '拍摄记录'
+  | '说谎隐瞒'
+  | '主动诱惑'
+  | '公开场合'
+  | '背叛丈夫'
+  | '拍摄记录'
   // 特殊类
-  | '角色扮演' | '禁忌关系认同' | '怀孕相关' | '体液相关';
+  | '角色扮演'
+  | '禁忌关系认同'
+  | '怀孕相关'
+  | '体液相关';
 
 /**
  * 细分类型配置
@@ -158,7 +188,26 @@ export const DETAILED_THOUGHT_TYPES: DetailedTypeConfig[] = [
   // ============ 身体类 - 性交相关 ============
   {
     type: '性行为接受',
-    keywords: ['做爱', '性行为', '插入', '交合', '肏', '操我', '干我', '屄', '逼', '小穴', '肉穴', '被上', '被操', '被艹', '挺入', '顶入', '捅进', '被捅'],
+    keywords: [
+      '做爱',
+      '性行为',
+      '插入',
+      '交合',
+      '肏',
+      '操我',
+      '干我',
+      '屄',
+      '逼',
+      '小穴',
+      '肉穴',
+      '被上',
+      '被操',
+      '被艹',
+      '挺入',
+      '顶入',
+      '捅进',
+      '被捅',
+    ],
     parentCategory: '性行为',
     recommendedStage: { min: 2, max: 3 },
   },
@@ -347,13 +396,34 @@ export const LOCAL_KEYWORDS: Record<ThoughtCategory, string[]> = (() => {
     性行为: ['做爱', '性行为', '插入', '高潮', '交合'],
     身份认同: ['属于你', '归属', '你的人', '你的女人'],
     绝对服从: [
-      '服从命令', '跪下', '主人', '奴隶',
+      '服从命令',
+      '跪下',
+      '主人',
+      '奴隶',
       // 精神洗脑类关键词
-      '融合', '即存在', '即是', '全是', '一切都是', '世界是',
-      '存在即', '空间与时间', '我是你', '你是我', '合为一体',
-      '思想属于', '心属于', '完全属于', '彻底属于',
+      '融合',
+      '即存在',
+      '即是',
+      '全是',
+      '一切都是',
+      '世界是',
+      '存在即',
+      '空间与时间',
+      '我是你',
+      '你是我',
+      '合为一体',
+      '思想属于',
+      '心属于',
+      '完全属于',
+      '彻底属于',
       // 神化/崇拜类关键词
-      '信仰', '崇拜', '神明', '膜拜', '供奉', '朝拜', '救世主',
+      '信仰',
+      '崇拜',
+      '神明',
+      '膜拜',
+      '供奉',
+      '朝拜',
+      '救世主',
     ],
     家庭替代: ['取代', '赶走', '离婚', '抛弃', '不要苏文', '真正的丈夫', '苏文滚'],
   };
@@ -409,16 +479,7 @@ export const STAGE_REQUIREMENTS: Record<number, StageRequirement> = {
     },
   },
   4: {
-    allowed: [
-      '陪伴交流',
-      '情感依赖',
-      '肢体亲近',
-      '暧昧互动',
-      '亲密接触',
-      '身体开放',
-      '性行为',
-      '身份认同',
-    ],
+    allowed: ['陪伴交流', '情感依赖', '肢体亲近', '暧昧互动', '亲密接触', '身体开放', '性行为', '身份认同'],
     extra: {
       性行为: { 依存度: 65, 道德底线: 50 },
       身份认同: { 依存度: 70, 道德底线: 40 },
@@ -456,9 +517,7 @@ export interface LocalJudgeResult {
  */
 export function matchDetailedType(content: string): DetailedTypeConfig | null {
   // 按推荐阶段从高到低排序（越极端的类型优先匹配）
-  const sortedTypes = [...DETAILED_THOUGHT_TYPES].sort(
-    (a, b) => b.recommendedStage.min - a.recommendedStage.min
-  );
+  const sortedTypes = [...DETAILED_THOUGHT_TYPES].sort((a, b) => b.recommendedStage.min - a.recommendedStage.min);
 
   for (const config of sortedTypes) {
     for (const keyword of config.keywords) {
@@ -601,9 +660,8 @@ export function checkThoughtAllowed(
   cheatOptions: CheatModeOptions | boolean = false,
 ): ThoughtJudgeResult {
   // 兼容旧API：如果传入boolean，视为安眠药状态
-  const options: CheatModeOptions = typeof cheatOptions === 'boolean'
-    ? { isSleepingPillActive: cheatOptions }
-    : cheatOptions;
+  const options: CheatModeOptions =
+    typeof cheatOptions === 'boolean' ? { isSleepingPillActive: cheatOptions } : cheatOptions;
 
   const { isSleepingPillActive = false, isHospitalized = false } = options;
 
@@ -639,12 +697,8 @@ export function checkThoughtAllowed(
   // 检查额外数值要求（安眠药生效时降低数值门槛10点）
   const extraReq = stageConfig.extra?.[category];
   if (extraReq) {
-    const dependencyThreshold = isSleepingPillActive
-      ? Math.max(0, (extraReq.依存度 || 0) - 10)
-      : extraReq.依存度;
-    const moralThreshold = isSleepingPillActive
-      ? Math.min(100, (extraReq.道德底线 || 100) + 10)
-      : extraReq.道德底线;
+    const dependencyThreshold = isSleepingPillActive ? Math.max(0, (extraReq.依存度 || 0) - 10) : extraReq.依存度;
+    const moralThreshold = isSleepingPillActive ? Math.min(100, (extraReq.道德底线 || 100) + 10) : extraReq.道德底线;
 
     if (dependencyThreshold !== undefined && dependency < dependencyThreshold) {
       return {
@@ -700,9 +754,8 @@ export function judgeThought(
   cheatOptions: CheatModeOptions | boolean = false,
 ): ThoughtJudgeResult & { needAI: boolean } {
   // 兼容旧API：如果传入boolean，视为安眠药状态
-  const options: CheatModeOptions = typeof cheatOptions === 'boolean'
-    ? { isSleepingPillActive: cheatOptions }
-    : cheatOptions;
+  const options: CheatModeOptions =
+    typeof cheatOptions === 'boolean' ? { isSleepingPillActive: cheatOptions } : cheatOptions;
 
   // 第一步：本地快速判定
   const localResult = localJudgeCategory(content);

@@ -9,9 +9,7 @@ $(async () => {
   try {
     await Promise.race([
       waitGlobalInitialized('Mvu'),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('MVU 初始化超时（5秒）')), 5000)
-      ),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('MVU 初始化超时（5秒）')), 5000)),
     ]);
     console.info('[念头植入界面] MVU 已就绪');
   } catch (err) {
@@ -34,7 +32,7 @@ $(async () => {
           return false;
         }
       },
-      { timeout: 3000, intervalBetweenAttempts: 100 }
+      { timeout: 3000, intervalBetweenAttempts: 100 },
     );
     console.info('[念头植入界面] stat_data 已就绪');
   } catch (err) {

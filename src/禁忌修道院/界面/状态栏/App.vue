@@ -73,7 +73,9 @@
               <div class="bar-shine"></div>
             </div>
           </div>
-          <span class="bar-num">{{ teresaData.堕落值 }}<span class="bar-cap">/{{ corruptionCap }}</span></span>
+          <span class="bar-num"
+            >{{ teresaData.堕落值 }}<span class="bar-cap">/{{ corruptionCap }}</span></span
+          >
         </div>
       </div>
 
@@ -88,13 +90,7 @@
           <span class="sn-max">/20</span>
         </div>
         <div class="stage-dots">
-          <div
-            v-for="n in 20"
-            :key="n"
-            class="dot"
-            :class="dotClass(n)"
-            :title="getDotTitle(n)"
-          ></div>
+          <div v-for="n in 20" :key="n" class="dot" :class="dotClass(n)" :title="getDotTitle(n)"></div>
         </div>
         <div class="stage-range-labels">
           <span>圣洁</span>
@@ -216,23 +212,29 @@ const showMod = ref(false);
 const isDataLoaded = computed(() => data.value !== undefined);
 
 // ── 世界状态 ──────────────────────────────────
-const worldData = computed(() => data.value?.世界状态 ?? {
-  当前日期: '加载中',
-  当前时间: '--:--',
-  当前场景: '未知场景',
-  近期事务: {},
-});
+const worldData = computed(
+  () =>
+    data.value?.世界状态 ?? {
+      当前日期: '加载中',
+      当前时间: '--:--',
+      当前场景: '未知场景',
+      近期事务: {},
+    },
+);
 
 // ── 特蕾莎状态 ────────────────────────────────
-const teresaData = computed(() => data.value?.特蕾莎状态 ?? {
-  好感度: 0,
-  堕落值: 0,
-  当前阶段: 1,
-  着装: {},
-  纹身: {},
-  身体改造: {},
-  阶段特征: {},
-});
+const teresaData = computed(
+  () =>
+    data.value?.特蕾莎状态 ?? {
+      好感度: 0,
+      堕落值: 0,
+      当前阶段: 1,
+      着装: {},
+      纹身: {},
+      身体改造: {},
+      阶段特征: {},
+    },
+);
 
 // ── 阶段特征 ──────────────────────────────────
 const stageTraits = computed((): StageCharacteristics => {
@@ -298,10 +300,26 @@ function dotClass(n: number) {
 
 // ── 阶段点提示 ────────────────────────────────
 const stageTitlesMap: Record<number, string> = {
-  1: '圣洁威严', 2: '暗流涌动', 3: '心湖微澜', 4: '欲念萌芽', 5: '理智动摇',
-  6: '欲火初燃', 7: '情欲觉醒', 8: '沉沦边缘', 9: '肉欲支配', 10: '欲望臣服',
-  11: '淫欲放纵', 12: '完全沉沦', 13: '欲海沉浮', 14: '灵肉献祭', 15: '极致淫乱',
-  16: '肉体烙印', 17: '深度改造', 18: '极限蜕变', 19: '超越凡俗', 20: '返璞归真',
+  1: '圣洁威严',
+  2: '暗流涌动',
+  3: '心湖微澜',
+  4: '欲念萌芽',
+  5: '理智动摇',
+  6: '欲火初燃',
+  7: '情欲觉醒',
+  8: '沉沦边缘',
+  9: '肉欲支配',
+  10: '欲望臣服',
+  11: '淫欲放纵',
+  12: '完全沉沦',
+  13: '欲海沉浮',
+  14: '灵肉献祭',
+  15: '极致淫乱',
+  16: '肉体烙印',
+  17: '深度改造',
+  18: '极限蜕变',
+  19: '超越凡俗',
+  20: '返璞归真',
 };
 function getDotTitle(n: number) {
   return `阶段${n}：${stageTitlesMap[n] ?? ''}`;
@@ -310,11 +328,41 @@ function getDotTitle(n: number) {
 
 <style scoped>
 /* ══ CSS 变量（主题） ══════════════════════════════════════ */
-.th-holy    { --pri: #c9a84c; --sec: #8b6a2a; --acc: #f5d87a; --bg1: #120d06; --bg2: #1e1509; }
-.th-waver   { --pri: #9f6fc9; --sec: #6a4a8b; --acc: #d4a8f5; --bg1: #100a18; --bg2: #1a1228; }
-.th-fall    { --pri: #c96fa0; --sec: #8b4a70; --acc: #f5a8d0; --bg1: #180a12; --bg2: #281220; }
-.th-corrupt { --pri: #c040c0; --sec: #802080; --acc: #f050f0; --bg1: #140814; --bg2: #201020; }
-.th-beyond  { --pri: #7050d0; --sec: #4a3098; --acc: #a080ff; --bg1: #080514; --bg2: #120a28; }
+.th-holy {
+  --pri: #c9a84c;
+  --sec: #8b6a2a;
+  --acc: #f5d87a;
+  --bg1: #120d06;
+  --bg2: #1e1509;
+}
+.th-waver {
+  --pri: #9f6fc9;
+  --sec: #6a4a8b;
+  --acc: #d4a8f5;
+  --bg1: #100a18;
+  --bg2: #1a1228;
+}
+.th-fall {
+  --pri: #c96fa0;
+  --sec: #8b4a70;
+  --acc: #f5a8d0;
+  --bg1: #180a12;
+  --bg2: #281220;
+}
+.th-corrupt {
+  --pri: #c040c0;
+  --sec: #802080;
+  --acc: #f050f0;
+  --bg1: #140814;
+  --bg2: #201020;
+}
+.th-beyond {
+  --pri: #7050d0;
+  --sec: #4a3098;
+  --acc: #a080ff;
+  --bg1: #080514;
+  --bg2: #120a28;
+}
 
 /* ══ 容器 ══════════════════════════════════════════════════ */
 .monastery-wrap {
@@ -333,23 +381,64 @@ function getDotTitle(n: number) {
   position: absolute;
   inset: 0;
   background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255,255,255,0.02) 28px, rgba(255,255,255,0.02) 29px),
-    repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(255,255,255,0.015) 28px, rgba(255,255,255,0.015) 29px);
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 28px,
+      rgba(255, 255, 255, 0.02) 28px,
+      rgba(255, 255, 255, 0.02) 29px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 28px,
+      rgba(255, 255, 255, 0.015) 28px,
+      rgba(255, 255, 255, 0.015) 29px
+    );
   pointer-events: none;
   z-index: 0;
 }
 
-.monastery-wrap > * { position: relative; z-index: 1; }
+.monastery-wrap > * {
+  position: relative;
+  z-index: 1;
+}
 
 /* 加载态 */
-.monastery-wrap.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
-.load-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 0; }
-.cross-icon { font-size: 28px; color: #c9a84c; animation: holy-pulse 2s ease-in-out infinite; }
-.load-text { font-size: 14px; color: #a0906a; letter-spacing: 2px; animation: holy-pulse 2s ease-in-out infinite; }
+.monastery-wrap.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.load-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0;
+}
+.cross-icon {
+  font-size: 28px;
+  color: #c9a84c;
+  animation: holy-pulse 2s ease-in-out infinite;
+}
+.load-text {
+  font-size: 14px;
+  color: #a0906a;
+  letter-spacing: 2px;
+  animation: holy-pulse 2s ease-in-out infinite;
+}
 
 @keyframes holy-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ══ 装饰横线 ══════════════════════════════════════════════ */
@@ -373,8 +462,14 @@ function getDotTitle(n: number) {
   background: var(--bg1);
   padding: 0 4px;
 }
-.orn-line.top::before, .orn-line.bottom::before { left: 8px; }
-.orn-line.top::after, .orn-line.bottom::after   { right: 8px; }
+.orn-line.top::before,
+.orn-line.bottom::before {
+  left: 8px;
+}
+.orn-line.top::after,
+.orn-line.bottom::after {
+  right: 8px;
+}
 
 /* ══ 头部 ══════════════════════════════════════════════════ */
 .hd {
@@ -392,8 +487,14 @@ function getDotTitle(n: number) {
   color: #907060;
   letter-spacing: 0.5px;
 }
-.hd-sep { color: var(--pri); opacity: 0.5; }
-.hd-date, .hd-time { color: #b09070; }
+.hd-sep {
+  color: var(--pri);
+  opacity: 0.5;
+}
+.hd-date,
+.hd-time {
+  color: #b09070;
+}
 
 /* 阶段徽章 */
 .stage-badge {
@@ -412,13 +513,26 @@ function getDotTitle(n: number) {
   color: var(--acc);
   line-height: 1;
 }
-.badge-title { color: var(--pri); letter-spacing: 1px; }
+.badge-title {
+  color: var(--pri);
+  letter-spacing: 1px;
+}
 
-.badge-holy    { background: rgba(201,168,76,0.12); }
-.badge-waver   { background: rgba(159,111,201,0.12); }
-.badge-fall    { background: rgba(201,111,160,0.12); }
-.badge-corrupt { background: rgba(192,64,192,0.12); }
-.badge-beyond  { background: rgba(112,80,208,0.12); }
+.badge-holy {
+  background: rgba(201, 168, 76, 0.12);
+}
+.badge-waver {
+  background: rgba(159, 111, 201, 0.12);
+}
+.badge-fall {
+  background: rgba(201, 111, 160, 0.12);
+}
+.badge-corrupt {
+  background: rgba(192, 64, 192, 0.12);
+}
+.badge-beyond {
+  background: rgba(112, 80, 208, 0.12);
+}
 
 /* ══ 场景行 ═══════════════════════════════════════════════ */
 .location-row {
@@ -426,20 +540,32 @@ function getDotTitle(n: number) {
   align-items: center;
   gap: 8px;
   padding: 5px 10px;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   border-left: 2px solid var(--pri);
   margin-bottom: 8px;
   font-size: 13px;
 }
-.loc-icon { font-size: 14px; }
-.loc-name { color: var(--acc); font-weight: bold; flex: 1; }
+.loc-icon {
+  font-size: 14px;
+}
+.loc-name {
+  color: var(--acc);
+  font-weight: bold;
+  flex: 1;
+}
 .scene-pill {
   padding: 1px 8px;
   border-radius: 10px;
   font-size: 11px;
 }
-.scene-pill.pub  { background: rgba(60,120,60,0.3); color: #90d090; }
-.scene-pill.priv { background: rgba(120,40,60,0.35); color: #e09090; }
+.scene-pill.pub {
+  background: rgba(60, 120, 60, 0.3);
+  color: #90d090;
+}
+.scene-pill.priv {
+  background: rgba(120, 40, 60, 0.35);
+  color: #e09090;
+}
 
 /* ══ 角色名 ═══════════════════════════════════════════════ */
 .char-name {
@@ -453,12 +579,15 @@ function getDotTitle(n: number) {
   gap: 10px;
   margin-bottom: 10px;
 }
-.char-cross { font-size: 12px; opacity: 0.6; }
+.char-cross {
+  font-size: 12px;
+  opacity: 0.6;
+}
 
 /* ══ 数值面板 ════════════════════════════════════════════ */
 .stats-panel {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 8px;
@@ -479,9 +608,15 @@ function getDotTitle(n: number) {
   font-size: 12px;
   color: #a09080;
 }
-.stat-icon { font-size: 13px; }
-.aff-icon { color: #e87090; }
-.cor-icon { color: #a060d0; }
+.stat-icon {
+  font-size: 13px;
+}
+.aff-icon {
+  color: #e87090;
+}
+.cor-icon {
+  color: #a060d0;
+}
 
 .bar-wrap {
   flex: 1;
@@ -493,9 +628,9 @@ function getDotTitle(n: number) {
 .bar-track {
   flex: 1;
   height: 10px;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   border-radius: 5px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
   overflow: visible;
 }
@@ -508,8 +643,12 @@ function getDotTitle(n: number) {
   overflow: hidden;
 }
 
-.aff-fill { background: linear-gradient(90deg, #c0405a, #f08090); }
-.cor-fill { background: linear-gradient(90deg, #7030a0, #c060e0); }
+.aff-fill {
+  background: linear-gradient(90deg, #c0405a, #f08090);
+}
+.cor-fill {
+  background: linear-gradient(90deg, #7030a0, #c060e0);
+}
 
 .bar-shine {
   position: absolute;
@@ -517,13 +656,18 @@ function getDotTitle(n: number) {
   left: -100%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
   animation: shine 3s ease-in-out infinite;
 }
 
 @keyframes shine {
-  0%   { left: -60%; }
-  60%, 100% { left: 120%; }
+  0% {
+    left: -60%;
+  }
+  60%,
+  100% {
+    left: 120%;
+  }
 }
 
 /* 上限标记 */
@@ -534,7 +678,7 @@ function getDotTitle(n: number) {
   width: 2px;
   background: #ffd700;
   border-radius: 1px;
-  box-shadow: 0 0 5px rgba(255,215,0,0.7);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
   z-index: 2;
 }
 
@@ -544,18 +688,20 @@ function getDotTitle(n: number) {
   min-width: 44px;
   text-align: right;
 }
-.bar-cap { color: #706050; }
+.bar-cap {
+  color: #706050;
+}
 
 .cap-tip {
   text-align: center;
   font-size: 10px;
-  color: rgba(255,215,0,0.5);
+  color: rgba(255, 215, 0, 0.5);
   margin-bottom: 10px;
 }
 
 /* 阶段区 */
 .stage-section {
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding-top: 10px;
 }
 
@@ -566,9 +712,21 @@ function getDotTitle(n: number) {
   gap: 4px;
   margin-bottom: 8px;
 }
-.sn-label { font-size: 11px; color: #808080; }
-.sn-value { font-size: 30px; font-weight: bold; color: var(--acc); text-shadow: 0 0 12px var(--pri); line-height: 1; }
-.sn-max   { font-size: 14px; color: #404040; }
+.sn-label {
+  font-size: 11px;
+  color: #808080;
+}
+.sn-value {
+  font-size: 30px;
+  font-weight: bold;
+  color: var(--acc);
+  text-shadow: 0 0 12px var(--pri);
+  line-height: 1;
+}
+.sn-max {
+  font-size: 14px;
+  color: #404040;
+}
 
 .stage-dots {
   display: flex;
@@ -582,8 +740,8 @@ function getDotTitle(n: number) {
   width: 11px;
   height: 11px;
   border-radius: 2px;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   transition: all 0.3s ease;
   cursor: default;
 }
@@ -610,7 +768,7 @@ function getDotTitle(n: number) {
 /* ══ Tab 导航 ════════════════════════════════════════════ */
 .tabs {
   display: flex;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   margin-bottom: 0;
 }
 
@@ -627,7 +785,9 @@ function getDotTitle(n: number) {
   transition: all 0.2s ease;
   letter-spacing: 1px;
 }
-.tab-btn:hover { color: var(--pri); }
+.tab-btn:hover {
+  color: var(--pri);
+}
 .tab-btn.active {
   color: var(--acc);
   border-bottom-color: var(--pri);
@@ -635,8 +795,8 @@ function getDotTitle(n: number) {
 
 /* ══ Tab 面板 ════════════════════════════════════════════ */
 .tab-panel {
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-top: none;
   border-radius: 0 0 6px 6px;
   padding: 10px;
@@ -654,13 +814,23 @@ function getDotTitle(n: number) {
   flex-direction: column;
   gap: 3px;
   padding: 8px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 5px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
-.tc-icon { font-size: 13px; }
-.tc-lbl  { font-size: 10px; color: var(--pri); letter-spacing: 1px; }
-.tc-val  { font-size: 12px; color: #c0c0c0; line-height: 1.4; }
+.tc-icon {
+  font-size: 13px;
+}
+.tc-lbl {
+  font-size: 10px;
+  color: var(--pri);
+  letter-spacing: 1px;
+}
+.tc-val {
+  font-size: 12px;
+  color: #c0c0c0;
+  line-height: 1.4;
+}
 
 /* 着装网格 */
 .clothing-grid {
@@ -673,10 +843,16 @@ function getDotTitle(n: number) {
   gap: 10px;
   font-size: 12px;
   padding: 4px 0;
-  border-bottom: 1px dashed rgba(255,255,255,0.06);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
 }
-.cg-key { min-width: 36px; color: #807060; }
-.cg-val { flex: 1; color: #c8c0b0; }
+.cg-key {
+  min-width: 36px;
+  color: #807060;
+}
+.cg-val {
+  flex: 1;
+  color: #c8c0b0;
+}
 .scene-note {
   margin-top: 8px;
   text-align: center;
@@ -684,27 +860,48 @@ function getDotTitle(n: number) {
   padding: 4px;
   border-radius: 4px;
 }
-.scene-note.pub  { background: rgba(60,120,60,0.15); color: #80c080; }
-.scene-note.priv { background: rgba(120,40,60,0.2);  color: #e09090; }
+.scene-note.pub {
+  background: rgba(60, 120, 60, 0.15);
+  color: #80c080;
+}
+.scene-note.priv {
+  background: rgba(120, 40, 60, 0.2);
+  color: #e09090;
+}
 
 /* 近期事务 */
-.empty-tip { text-align: center; color: #505050; font-size: 12px; padding: 10px 0; }
-.affairs-list { display: flex; flex-direction: column; gap: 6px; }
+.empty-tip {
+  text-align: center;
+  color: #505050;
+  font-size: 12px;
+  padding: 10px 0;
+}
+.affairs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .af-item {
   display: flex;
   gap: 10px;
   font-size: 12px;
   padding: 5px 8px;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   border-left: 2px solid var(--sec);
 }
-.af-key { color: #a09070; min-width: 80px; }
-.af-val { flex: 1; color: #c0c0c0; }
+.af-key {
+  color: #a09070;
+  min-width: 80px;
+}
+.af-val {
+  flex: 1;
+  color: #c0c0c0;
+}
 
 /* ══ 身体改造 ════════════════════════════════════════════ */
 .mod-section {
-  border: 1px solid rgba(192,64,192,0.3);
+  border: 1px solid rgba(192, 64, 192, 0.3);
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 8px;
@@ -714,27 +911,49 @@ function getDotTitle(n: number) {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(120,0,120,0.2);
+  background: rgba(120, 0, 120, 0.2);
   cursor: pointer;
   font-size: 13px;
   color: #d080d0;
   user-select: none;
 }
-.mod-header:hover { background: rgba(120,0,120,0.3); }
-.mod-icon { font-size: 14px; }
-.toggle-icon { margin-left: auto; font-size: 10px; opacity: 0.6; }
-.mod-list { padding: 8px 12px; background: rgba(0,0,0,0.2); }
+.mod-header:hover {
+  background: rgba(120, 0, 120, 0.3);
+}
+.mod-icon {
+  font-size: 14px;
+}
+.toggle-icon {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+}
+.mod-list {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+}
 .mod-item {
   display: flex;
   gap: 10px;
   font-size: 12px;
   padding: 4px 0;
-  border-bottom: 1px dashed rgba(192,64,192,0.15);
+  border-bottom: 1px dashed rgba(192, 64, 192, 0.15);
   color: #c0b0c0;
 }
-.mod-item:last-child { border-bottom: none; }
-.mod-k { min-width: 60px; color: #a060a0; }
-.mod-v { flex: 1; }
-.mod-item.tattoo .mod-k { color: #d080c0; }
-.mod-item.tattoo .mod-v { color: #f0a0e0; }
+.mod-item:last-child {
+  border-bottom: none;
+}
+.mod-k {
+  min-width: 60px;
+  color: #a060a0;
+}
+.mod-v {
+  flex: 1;
+}
+.mod-item.tattoo .mod-k {
+  color: #d080c0;
+}
+.mod-item.tattoo .mod-v {
+  color: #f0a0e0;
+}
 </style>

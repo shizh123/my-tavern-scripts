@@ -49,11 +49,20 @@ const WorldState = z.object({
 
 const TeresaState = z.object({
   // 核心数值
-  好感度: z.coerce.number().transform(v => _.clamp(v, 0, 100)).default(2),
-  堕落值: z.coerce.number().transform(v => _.clamp(v, 0, 100)).default(0),
+  好感度: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 100))
+    .default(2),
+  堕落值: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 100))
+    .default(0),
 
   // 派生数值（由transform自动计算）
-  当前阶段: z.coerce.number().transform(v => _.clamp(v, 1, 20)).default(1),
+  当前阶段: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 1, 20))
+    .default(1),
 
   // 服装系统
   着装: ClothingDetails.default({}),
@@ -70,85 +79,91 @@ const TeresaState = z.object({
 // 主 Schema
 // ============================================
 
-export const Schema = z.object({
-  世界状态: WorldState.default({}),
-  特蕾莎状态: TeresaState.default({}),
-}).transform((root) => {
-  try {
-    const world = root.世界状态;
-    const theresa = root.特蕾莎状态;
+export const Schema = z
+  .object({
+    世界状态: WorldState.default({}),
+    特蕾莎状态: TeresaState.default({}),
+  })
+  .transform(root => {
+    try {
+      const world = root.世界状态;
+      const theresa = root.特蕾莎状态;
 
-    // --- 1. 强制数值修正 (防止 NaN 或 字符串) ---
-    const rawAffection = Number(theresa.好感度) || 0;
-    const rawDepravity = Number(theresa.堕落值) || 0;
+      // --- 1. 强制数值修正 (防止 NaN 或 字符串) ---
+      const rawAffection = Number(theresa.好感度) || 0;
+      const rawDepravity = Number(theresa.堕落值) || 0;
 
-    // 好感度 clamp
-    theresa.好感度 = _.clamp(rawAffection, 0, 100);
+      // 好感度 clamp
+      theresa.好感度 = _.clamp(rawAffection, 0, 100);
 
-    // 计算堕落值上限并应用 (核心逻辑)
-    const maxDepravity = Math.floor(theresa.好感度 / 10) * 10;
-    const clampedDepravity = _.clamp(rawDepravity, 0, Math.min(maxDepravity, 100));
+      // 计算堕落值上限并应用 (核心逻辑)
+      const maxDepravity = Math.floor(theresa.好感度 / 10) * 10;
+      const clampedDepravity = _.clamp(rawDepravity, 0, Math.min(maxDepravity, 100));
 
-    // 强制写入修正后的堕落值
-    theresa.堕落值 = clampedDepravity;
+      // 强制写入修正后的堕落值
+      theresa.堕落值 = clampedDepravity;
 
-    // --- 2. 强制重算当前阶段 (无视 AI 输入) ---
-    // 堕落值 0-4=阶段1, 5-9=阶段2 ...
-    const calculatedStage = _.clamp(Math.floor(clampedDepravity / 5) + 1, 1, 20);
-    theresa.当前阶段 = calculatedStage;
+      // --- 2. 强制重算当前阶段 (无视 AI 输入) ---
+      // 堕落值 0-4=阶段1, 5-9=阶段2 ...
+      const calculatedStage = _.clamp(Math.floor(clampedDepravity / 5) + 1, 1, 20);
+      theresa.当前阶段 = calculatedStage;
 
-    // 调试日志 (按F12在Console查看)
-    console.log(`[MVU Debug] 好感:${theresa.好感度} -> 上限:${maxDepravity} -> 堕落:${theresa.堕落值} -> 阶段:${calculatedStage}`);
+      // 调试日志 (按F12在Console查看)
+      console.log(
+        `[MVU Debug] 好感:${theresa.好感度} -> 上限:${maxDepravity} -> 堕落:${theresa.堕落值} -> 阶段:${calculatedStage}`,
+      );
 
-    // --- 3. 强制重算阶段特征 ---
-    if (theresa.好感度 < 10) {
-      theresa.阶段特征 = {
-        态度描述: '威严肃穆，完全无视苏斌的存在',
-        语气风格: '冰冷机械，拒绝任何交流',
-        行为倾向: '视若无睹，避免一切接触',
-        内心状态: '毫无波澜，心如止水',
-      };
-    } else {
-      // 从配置表获取阶段特征
-      const traits = getStageCharacteristics(calculatedStage);
-      if (traits) {
-        theresa.阶段特征 = { ...traits };
+      // --- 3. 强制重算阶段特征 ---
+      if (theresa.好感度 < 10) {
+        theresa.阶段特征 = {
+          态度描述: '威严肃穆，完全无视苏斌的存在',
+          语气风格: '冰冷机械，拒绝任何交流',
+          行为倾向: '视若无睹，避免一切接触',
+          内心状态: '毫无波澜，心如止水',
+        };
+      } else {
+        // 从配置表获取阶段特征
+        const traits = getStageCharacteristics(calculatedStage);
+        if (traits) {
+          theresa.阶段特征 = { ...traits };
+        }
       }
+
+      // --- 4. 强制重算着装 ---
+      const currentDate = world.当前日期;
+      const currentScene = world.当前场景 || '未知';
+
+      const isPrivate =
+        currentScene.includes('私') ||
+        currentScene.includes('寝室') ||
+        currentScene.includes('密室') ||
+        currentScene.includes('独处');
+      const sceneType = isPrivate ? '私密' : '公共';
+
+      // 查找适配的服装等级 (向下兼容)
+      const clothingSet = getClothingByStage(calculatedStage, sceneType);
+      if (clothingSet) {
+        theresa.着装 = {
+          ...clothingSet,
+          最后更新日期: currentDate,
+          当前场景类型: sceneType as '公共' | '私密',
+        };
+      }
+
+      // --- 5. 清理低阶段的改造数据 ---
+      if (theresa.堕落值 < 80) {
+        theresa.纹身 = {};
+        theresa.身体改造 = {};
+      }
+    } catch (e) {
+      console.error('[MVU Critical Error] 脚本逻辑严重错误，已执行紧急重置:', e);
+      // 发生严重错误时，强制回退到安全值
+      root.特蕾莎状态.当前阶段 = 1;
+      root.特蕾莎状态.堕落值 = 0;
     }
 
-    // --- 4. 强制重算着装 ---
-    const currentDate = world.当前日期;
-    const currentScene = world.当前场景 || '未知';
-
-    const isPrivate = currentScene.includes('私') || currentScene.includes('寝室') ||
-                     currentScene.includes('密室') || currentScene.includes('独处');
-    const sceneType = isPrivate ? '私密' : '公共';
-
-    // 查找适配的服装等级 (向下兼容)
-    const clothingSet = getClothingByStage(calculatedStage, sceneType);
-    if (clothingSet) {
-      theresa.着装 = {
-        ...clothingSet,
-        最后更新日期: currentDate,
-        当前场景类型: sceneType as '公共' | '私密',
-      };
-    }
-
-    // --- 5. 清理低阶段的改造数据 ---
-    if (theresa.堕落值 < 80) {
-      theresa.纹身 = {};
-      theresa.身体改造 = {};
-    }
-
-  } catch (e) {
-    console.error('[MVU Critical Error] 脚本逻辑严重错误，已执行紧急重置:', e);
-    // 发生严重错误时，强制回退到安全值
-    root.特蕾莎状态.当前阶段 = 1;
-    root.特蕾莎状态.堕落值 = 0;
-  }
-
-  return root;
-});
+    return root;
+  });
 
 export type SchemaType = z.output<typeof Schema>;
 

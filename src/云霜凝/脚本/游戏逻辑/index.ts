@@ -16,8 +16,25 @@ import { waitUntil } from 'async-wait-until';
 import { Schema } from '../../schema';
 import { validateAndRecalcState, applyFloorCeiling, calcHealingStage } from './stateValidation';
 import { advanceTimeFromText, onDayChanged } from './timeSystem';
-import { getStatusSnapshot, buildBatchUseEvent, selectSoulMemory, getSpecialSceneTrigger, checkMiaoxuanEasterEgg, getQianjingEntryTrigger, getQianjingRoundGuidance, getQianjingExitText, getQianjingMaxRounds } from './promptInjection';
-import { processNewlyActivatedItems, processEquipmentUnequip, tickEquipmentEffects, tickTemporaryItems, clearSceneTemporaryItems, advanceSpecialScene } from './shopSystem';
+import {
+  getStatusSnapshot,
+  buildBatchUseEvent,
+  selectSoulMemory,
+  getSpecialSceneTrigger,
+  checkMiaoxuanEasterEgg,
+  getQianjingEntryTrigger,
+  getQianjingRoundGuidance,
+  getQianjingExitText,
+  getQianjingMaxRounds,
+} from './promptInjection';
+import {
+  processNewlyActivatedItems,
+  processEquipmentUnequip,
+  tickEquipmentEffects,
+  tickTemporaryItems,
+  clearSceneTemporaryItems,
+  advanceSpecialScene,
+} from './shopSystem';
 
 // ────────────────────────────────────────────────────────
 // 初始化
@@ -40,7 +57,15 @@ function isClaudeModel(): boolean {
   } catch {
     _isClaudeModel = true; // 检测失败默认Claude行为
   }
-  console.info(`[云霜凝] 模型检测: ${_isClaudeModel ? 'Claude' : '非Claude'}（预设: ${(() => { try { return getLoadedPresetName(); } catch { return '未知'; } })()}）`);
+  console.info(
+    `[云霜凝] 模型检测: ${_isClaudeModel ? 'Claude' : '非Claude'}（预设: ${(() => {
+      try {
+        return getLoadedPresetName();
+      } catch {
+        return '未知';
+      }
+    })()}）`,
+  );
   return _isClaudeModel;
 }
 
@@ -53,7 +78,7 @@ $(() => {
     // 事件1：AI生成前 → 注入状态快照 + 附加道具事件到玩家消息
     // 参考赵霞：直接操作 event_data.chat（发给API的数组）
     // ────────────────────────────────────────────────────
-    eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, (event_data) => {
+    eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, event_data => {
       try {
         const { chat, dryRun } = event_data;
 
@@ -78,13 +103,16 @@ $(() => {
           _.set(raw, 'stat_data._待发送道具事件', '');
           Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
 
-          items = pendingRaw.split('|||').map(s => s.trim()).filter(Boolean);
+          items = pendingRaw
+            .split('|||')
+            .map(s => s.trim())
+            .filter(Boolean);
           // 构建事件文本时使用原始 data（首次进入判定需要原始 _神魂空间已进入过）
           richEvent = buildBatchUseEvent(items, data);
 
           // 神魂空间模式切换：退出优先于引导（用户可能在同一批事件中先入后出）
           const hasEntry = items.includes('__神魂空间引导__');
-          const hasExit  = items.includes('__退出神魂空间__');
+          const hasExit = items.includes('__退出神魂空间__');
 
           if (hasExit) {
             // 退出优先级最高：即使引导事件也存在，用户已明确退出
@@ -190,9 +218,7 @@ $(() => {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
                     const content = chat[i].content;
-                    chat[i].content = typeof content === 'string'
-                      ? content + '\n\n' + guidance
-                      : guidance;
+                    chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
                     break;
                   }
                 }
@@ -225,7 +251,8 @@ $(() => {
         // ── Phase 3: 注入事件文本到玩家消息 + 特殊场景触发 ──
         if (richEvent) {
           // 打断事件：替换玩家消息（强制AI演绎打断场景）
-          const isInterruption = items.includes('__打断治疗__') || items.includes('__打断治疗_神魂__') || items.includes('__坏结局_愤怒__');
+          const isInterruption =
+            items.includes('__打断治疗__') || items.includes('__打断治疗_神魂__') || items.includes('__坏结局_愤怒__');
 
           for (let i = chat.length - 1; i >= 0; i--) {
             if (chat[i].role === 'user') {
@@ -234,9 +261,7 @@ $(() => {
                 chat[i].content = richEvent;
               } else {
                 const content = chat[i].content;
-                chat[i].content = typeof content === 'string'
-                  ? richEvent + '\n' + content
-                  : richEvent;
+                chat[i].content = typeof content === 'string' ? richEvent + '\n' + content : richEvent;
               }
               break;
             }
@@ -257,7 +282,8 @@ $(() => {
           // 千晶幻术入场触发：替换玩家消息 + 预填指令
           if (items.includes('__千晶幻术_进入__')) {
             const qjTrigger = getQianjingEntryTrigger(data.苗广.千晶幻术.已使用次数, data.苗广.千晶幻术.幻境摘要);
-            const combined = qjTrigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${qjTrigger.prefill}`;
+            const combined =
+              qjTrigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${qjTrigger.prefill}`;
             for (let i = chat.length - 1; i >= 0; i--) {
               if (chat[i].role === 'user') {
                 chat[i].content = combined;
@@ -272,7 +298,8 @@ $(() => {
             const trigger = getSpecialSceneTrigger(name);
             if (trigger) {
               // 将场景触发词 + 预填指令合并到最后一条 user 消息
-              const combined = trigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${trigger.prefill}`;
+              const combined =
+                trigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${trigger.prefill}`;
               for (let i = chat.length - 1; i >= 0; i--) {
                 if (chat[i].role === 'user') {
                   chat[i].content = combined;
@@ -344,7 +371,7 @@ $(() => {
             }
             console.info(
               `[云霜凝] 时间推进: ${timeResult.reason}`,
-              `| ${timeResult.oldDay}天${timeResult.oldHour.toFixed(1)}h → ${timeResult.newDay}天${timeResult.newHour.toFixed(1)}h`
+              `| ${timeResult.oldDay}天${timeResult.oldHour.toFixed(1)}h → ${timeResult.newDay}天${timeResult.newHour.toFixed(1)}h`,
             );
           }
         }
@@ -356,10 +383,11 @@ $(() => {
         // 将计算结果写回
         _.set(新变量, 'stat_data', newData);
 
-        console.info('[云霜凝] 状态验证完成：',
+        console.info(
+          '[云霜凝] 状态验证完成：',
           `治疗${newData.治疗.完成度.toFixed(1)}%·阶段${newData.治疗.阶段}`,
           `| 苗广[${newData.苗广.心态}·疑心${newData.苗广.疑心值}]`,
-          `| 灵石${newData.系统.灵石}`
+          `| 灵石${newData.系统.灵石}`,
         );
       } catch (e) {
         console.error('[云霜凝] VARIABLE_UPDATE_ENDED 处理失败:', e);
@@ -416,10 +444,7 @@ $(() => {
         }
 
         // 写回变量
-        await Mvu.replaceMvuData(
-          _.set(_.cloneDeep(raw), 'stat_data', data),
-          { type: 'message', message_id: -1 },
-        );
+        await Mvu.replaceMvuData(_.set(_.cloneDeep(raw), 'stat_data', data), { type: 'message', message_id: -1 });
       } catch (e) {
         console.error('[云霜凝] MESSAGE_RECEIVED 处理失败:', e);
       }
@@ -428,12 +453,14 @@ $(() => {
     // ────────────────────────────────────────────────────
     // 事件4：MVU命令解析完成 → 修复AI格式错误
     // ────────────────────────────────────────────────────
-    eventOn(Mvu.events.COMMAND_PARSED, (_variables: any, commands: Array<{ args: string[] }>, _message_content: string) => {
-      commands.forEach(cmd => {
-        // 修复AI在中文字段名中插入的多余连字符（如 "云-霜-凝" → "云霜凝"）
-        cmd.args[0] = cmd.args[0].replaceAll('-', '');
-      });
-    });
-
+    eventOn(
+      Mvu.events.COMMAND_PARSED,
+      (_variables: any, commands: Array<{ args: string[] }>, _message_content: string) => {
+        commands.forEach(cmd => {
+          // 修复AI在中文字段名中插入的多余连字符（如 "云-霜-凝" → "云霜凝"）
+          cmd.args[0] = cmd.args[0].replaceAll('-', '');
+        });
+      },
+    );
   })();
 });

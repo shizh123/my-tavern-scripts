@@ -69,7 +69,6 @@ function parseThoughtJudgments(aiText: string): Array<{
   return results;
 }
 
-
 /**
  * 处理 AI 判定结果，更新待判定的念头
  *
@@ -103,15 +102,11 @@ function processThoughtJudgments(data: SchemaType, aiText: string): void {
     const thoughts = characterState.念头培育区;
 
     // 查找匹配的待判定念头
-    const thoughtIndex = thoughts.findIndex(
-      t => t.待判定 && t.念头内容 === judgment.念头内容,
-    );
+    const thoughtIndex = thoughts.findIndex(t => t.待判定 && t.念头内容 === judgment.念头内容);
 
     if (thoughtIndex === -1) {
       // 尝试模糊匹配（念头内容可能有细微差异）
-      const fuzzyIndex = thoughts.findIndex(
-        t => t.待判定 && t.念头内容.includes(judgment.念头内容),
-      );
+      const fuzzyIndex = thoughts.findIndex(t => t.待判定 && t.念头内容.includes(judgment.念头内容));
 
       if (fuzzyIndex === -1) {
         console.warn(`[念头判定] 未找到匹配的待判定念头: ${judgment.角色}:${judgment.念头内容}`);
@@ -149,9 +144,7 @@ function updatePendingThought(
     thought.难度等级 = '简单';
     thought.待判定 = false;
 
-    console.info(
-      `[念头判定] 🏥 住院模式: "${thought.念头内容}" => 固定简单难度, 2小时`,
-    );
+    console.info(`[念头判定] 🏥 住院模式: "${thought.念头内容}" => 固定简单难度, 2小时`);
     return;
   }
 
@@ -177,9 +170,7 @@ function updatePendingThought(
     thought.难度等级 = '困难';
     thought.待判定 = false;
 
-    console.info(
-      `[念头判定] ⚠️ 念头被拒绝: "${thought.念头内容}" => ${result.reason}，设置为过期`,
-    );
+    console.info(`[念头判定] ⚠️ 念头被拒绝: "${thought.念头内容}" => ${result.reason}，设置为过期`);
   }
 }
 
@@ -229,7 +220,7 @@ function handlePendingThoughtTimeout(data: SchemaType): void {
 
             console.info(
               `[念头判定超时] 🏥 住院模式: ${characterName} 念头"${thought.念头内容}"` +
-              `超时未判定，固定为简单难度，2小时`,
+                `超时未判定，固定为简单难度，2小时`,
             );
           } else {
             // 默认设为"陪伴交流"类型（最安全的类型）
@@ -243,7 +234,7 @@ function handlePendingThoughtTimeout(data: SchemaType): void {
 
             console.info(
               `[念头判定超时] ${characterName} 念头"${thought.念头内容}"超时未被AI判定，` +
-              `自动设为"${defaultCategory}"类型，难度=${thought.难度等级}，时间=${hours}h`,
+                `自动设为"${defaultCategory}"类型，难度=${thought.难度等级}，时间=${hours}h`,
             );
           }
         }
@@ -285,7 +276,9 @@ $(async () => {
     try {
       const swipeId = getSwipeId(message_id);
       const messageKey = `${message_id}:${swipeId}`;
-      console.info(`[游戏逻辑] processGameLogic 进入: message_id=${message_id}, swipe_id=${swipeId}, eventType=${eventType}`);
+      console.info(
+        `[游戏逻辑] processGameLogic 进入: message_id=${message_id}, swipe_id=${swipeId}, eventType=${eventType}`,
+      );
 
       // 检查是否跳过时间推进（仅对 MESSAGE_RECEIVED 生效）
       if (eventType === 'MESSAGE_RECEIVED' && isFirstMessageAfterInit) {
@@ -384,7 +377,9 @@ $(async () => {
       _.set(currentVars, 'stat_data', validatedData);
       await Mvu.replaceMvuData(currentVars, { type: 'message', message_id: targetMessageId });
 
-      console.info(`[游戏逻辑] 数据已写入楼层 ${targetMessageId}，时间: ${validatedData.世界?.日期} ${validatedData.世界?.时间}`);
+      console.info(
+        `[游戏逻辑] 数据已写入楼层 ${targetMessageId}，时间: ${validatedData.世界?.日期} ${validatedData.世界?.时间}`,
+      );
 
       // 验证写入结果
       const verifyVars = Mvu.getMvuData({ type: 'message', message_id: targetMessageId });
@@ -397,14 +392,13 @@ $(async () => {
       } else {
         console.info(`[游戏逻辑] ✅ ${eventType} 处理完成，时间: ${timeResult.newDate} ${timeResult.newTime}`);
       }
-
     } catch (err) {
       console.error('[游戏逻辑] 执行错误:', err);
     }
   }
 
   // 监听新消息接收事件
-  eventOn(tavern_events.MESSAGE_RECEIVED, (message_id) => {
+  eventOn(tavern_events.MESSAGE_RECEIVED, message_id => {
     const id = Number(message_id);
     console.info(`[游戏逻辑] 收到 MESSAGE_RECEIVED 事件，message_id=${id}`);
     setTimeout(() => {
@@ -413,7 +407,7 @@ $(async () => {
   });
 
   // 监听消息ROLL（重新生成）事件
-  eventOn(tavern_events.MESSAGE_SWIPED, (message_id) => {
+  eventOn(tavern_events.MESSAGE_SWIPED, message_id => {
     const id = Number(message_id);
     console.info(`[游戏逻辑] 收到 MESSAGE_SWIPED 事件，message_id=${id}`);
     setTimeout(() => {
@@ -427,7 +421,7 @@ $(async () => {
   });
 
   // 监听消息删除事件
-  eventOn(tavern_events.MESSAGE_DELETED, (message_id) => {
+  eventOn(tavern_events.MESSAGE_DELETED, message_id => {
     const id = Number(message_id);
     console.info(`[游戏逻辑] 收到 MESSAGE_DELETED 事件，message_id=${id}`);
 
@@ -450,7 +444,7 @@ $(async () => {
   });
 
   // 监听生成结束事件（作为备选，确保 ROLL 后也能处理）
-  eventOn(tavern_events.GENERATION_ENDED, (message_id) => {
+  eventOn(tavern_events.GENERATION_ENDED, message_id => {
     console.info(`[游戏逻辑] 收到 GENERATION_ENDED 事件，原始 message_id=${message_id}`);
     // GENERATION_ENDED 事件的 message_id 可能在消息实际创建前就触发，导致 ID 无效
     // 因此使用 getLastMessageId() 获取最新消息的实际 ID

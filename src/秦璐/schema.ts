@@ -5,13 +5,7 @@ import { z } from 'zod';
 // ============================================
 
 /** 阶段标题（5阶段系统） */
-const StageTitle = z.enum([
-  '抵抗',
-  '动摇',
-  '沉溺',
-  '疯狂',
-  '圆满',
-]);
+const StageTitle = z.enum(['抵抗', '动摇', '沉溺', '疯狂', '圆满']);
 
 /** 念头难度 */
 const ThoughtDifficulty = z.enum(['简单', '中等', '困难', '待定']);
@@ -45,10 +39,12 @@ const ClothingDetails = z.object({
   头部: z.string().default('无').describe('发饰、头饰等'),
   上装: z.string().default('米色针织开衫'),
   下装: z.string().default('深灰长裙'),
-  内衣: z.object({
-    上: z.string().default('肉色棉质文胸'),
-    下: z.string().default('棉质内裤'),
-  }).default({}),
+  内衣: z
+    .object({
+      上: z.string().default('肉色棉质文胸'),
+      下: z.string().default('棉质内裤'),
+    })
+    .default({}),
   袜裤: z.string().default('肉色丝袜'),
   鞋子: z.string().default('室内拖鞋'),
   外套: z.string().default('无').describe('大衣、披肩等'),
@@ -73,16 +69,18 @@ const MakeupDetails = z.object({
 /** 身体改造 */
 const BodyModification = z.object({
   纹身: z.record(z.string(), z.string()).default({}).describe('部位: 纹身内容'),
-  穿刺: z.object({
-    耳环: z.boolean().default(false),
-    乳环: z.boolean().default(false),
-    乳头环: z.boolean().default(false),
-    阴蒂环: z.boolean().default(false),
-    舌环: z.boolean().default(false),
-    肚脐环: z.boolean().default(false),
-    阴唇环: z.boolean().default(false),
-    其他: z.array(z.string()).default([]),
-  }).default({}),
+  穿刺: z
+    .object({
+      耳环: z.boolean().default(false),
+      乳环: z.boolean().default(false),
+      乳头环: z.boolean().default(false),
+      阴蒂环: z.boolean().default(false),
+      舌环: z.boolean().default(false),
+      肚脐环: z.boolean().default(false),
+      阴唇环: z.boolean().default(false),
+      其他: z.array(z.string()).default([]),
+    })
+    .default({}),
   乳晕改造: z.string().default('无').describe('如：增大、变色、穿刺等'),
   永久标记: z.array(z.string()).default([]).describe('烙印、伤疤等'),
   临时标记: z.array(z.string()).default([]).describe('吻痕、精液痕迹等'),
@@ -96,13 +94,28 @@ const BodyModification = z.object({
 /** 秦璐/苏梦状态 */
 const CharacterState = z.object({
   // ━━━━━━ 核心三维数值 ━━━━━━
-  道德底线: z.coerce.number().transform(v => _.clamp(v, 0, 100)).default(90),
-  对主角依存度: z.coerce.number().transform(v => _.clamp(v, -50, 100)).default(20),
-  对苏文依存度: z.coerce.number().transform(v => _.clamp(v, -50, 100)).default(80),
+  道德底线: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 100))
+    .default(90),
+  对主角依存度: z.coerce
+    .number()
+    .transform(v => _.clamp(v, -50, 100))
+    .default(20),
+  对苏文依存度: z.coerce
+    .number()
+    .transform(v => _.clamp(v, -50, 100))
+    .default(80),
 
   // ━━━━━━ 派生数值 ━━━━━━
-  潜意识侵蚀度: z.coerce.number().transform(v => _.clamp(v, 0, 150)).default(0),
-  当前阶段: z.coerce.number().transform(v => _.clamp(v, 1, 5)).default(1),
+  潜意识侵蚀度: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 150))
+    .default(0),
+  当前阶段: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 1, 5))
+    .default(1),
   阶段标题: StageTitle.default('抵抗'),
 
   // ━━━━━━ 心理状态 ━━━━━━
@@ -117,17 +130,20 @@ const CharacterState = z.object({
 
   // ━━━━━━ 习惯系统 ━━━━━━
   习惯列表: z.array(Habit).default([]),
-  念头培育区: z.array(TemporaryThought).transform(thoughts => {
-    // 自动去重：基于念头内容
-    const seen = new Set<string>();
-    return thoughts.filter(thought => {
-      if (seen.has(thought.念头内容)) {
-        return false;
-      }
-      seen.add(thought.念头内容);
-      return true;
-    });
-  }).default([]),
+  念头培育区: z
+    .array(TemporaryThought)
+    .transform(thoughts => {
+      // 自动去重：基于念头内容
+      const seen = new Set<string>();
+      return thoughts.filter(thought => {
+        if (seen.has(thought.念头内容)) {
+          return false;
+        }
+        seen.add(thought.念头内容);
+        return true;
+      });
+    })
+    .default([]),
 });
 
 /** 苏文位置枚举 */
@@ -179,12 +195,18 @@ const SuwenState = z.object({
   住院状态: HospitalizationState.default({}),
 
   // 对秦璐的疑心与印象
-  对秦璐疑心值: z.coerce.number().transform(v => _.clamp(v, 0, 100)).default(0),
+  对秦璐疑心值: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 100))
+    .default(0),
   对秦璐印象: Impression.default({ 基础印象: '我的贤内助', 细节描述: '' }),
   对秦璐疑心值冻结: SuspicionFreeze.default({}),
 
   // 对苏梦的疑心与印象
-  对苏梦疑心值: z.coerce.number().transform(v => _.clamp(v, 0, 100)).default(0),
+  对苏梦疑心值: z.coerce
+    .number()
+    .transform(v => _.clamp(v, 0, 100))
+    .default(0),
   对苏梦印象: Impression.default({ 基础印象: '我的乖女儿', 细节描述: '' }),
   对苏梦疑心值冻结: SuspicionFreeze.default({}),
 });

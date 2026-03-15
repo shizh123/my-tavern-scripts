@@ -34,10 +34,7 @@ $(async () => {
   ];
 
   /** 条件保护字段：堕落值 < 80 时拦截 */
-  const CONDITIONAL_PROTECTED: string[] = [
-    '特蕾莎状态.纹身',
-    '特蕾莎状态.身体改造',
-  ];
+  const CONDITIONAL_PROTECTED: string[] = ['特蕾莎状态.纹身', '特蕾莎状态.身体改造'];
 
   function matchesField(path: string, field: string): boolean {
     return path === field || path.endsWith('.' + field) || path.includes('.' + field + '.');
@@ -196,7 +193,10 @@ $(async () => {
     else if (['半小时后', '30分钟后'].some(kw => userText.includes(kw))) advance = 30;
 
     minute += advance;
-    while (minute >= 60) { minute -= 60; hour++; }
+    while (minute >= 60) {
+      minute -= 60;
+      hour++;
+    }
 
     if (hour >= 24) {
       hour -= 24;
@@ -253,10 +253,10 @@ $(async () => {
 
       console.info(
         `[游戏逻辑] ✅ ${eventType} 完成 | ` +
-        `好感:${validated.特蕾莎状态.好感度} ` +
-        `堕落:${validated.特蕾莎状态.堕落值}` +
-        `(上限:${Math.floor(validated.特蕾莎状态.好感度 / 10) * 10}) ` +
-        `阶段:${validated.特蕾莎状态.当前阶段}`,
+          `好感:${validated.特蕾莎状态.好感度} ` +
+          `堕落:${validated.特蕾莎状态.堕落值}` +
+          `(上限:${Math.floor(validated.特蕾莎状态.好感度 / 10) * 10}) ` +
+          `阶段:${validated.特蕾莎状态.当前阶段}`,
       );
     } catch (err) {
       console.error('[游戏逻辑] 执行错误:', err);
@@ -270,12 +270,18 @@ $(async () => {
   let isFirstAfterInit = false;
   const processedMessages = new Set<string>();
 
-  eventOn(Mvu.events.VARIABLE_INITIALIZED, () => { isFirstAfterInit = true; });
+  eventOn(Mvu.events.VARIABLE_INITIALIZED, () => {
+    isFirstAfterInit = true;
+  });
 
   async function handleMessage(messageId: number, eventType: string): Promise<void> {
     // 获取当前 swipe 标识
     const swipeId: number = (() => {
-      try { return (SillyTavern.chat?.[messageId] as any)?.swipe_id ?? 0; } catch { return 0; }
+      try {
+        return (SillyTavern.chat?.[messageId] as any)?.swipe_id ?? 0;
+      } catch {
+        return 0;
+      }
     })();
     const key = `${messageId}:${swipeId}`;
 
@@ -310,17 +316,21 @@ $(async () => {
     await processGameLogic(messageId, eventType);
   }
 
-  eventOn(tavern_events.MESSAGE_RECEIVED, (id) => {
+  eventOn(tavern_events.MESSAGE_RECEIVED, id => {
     setTimeout(() => handleMessage(Number(id), 'MESSAGE_RECEIVED'), 300);
   });
 
-  eventOn(tavern_events.MESSAGE_SWIPED, (id) => {
+  eventOn(tavern_events.MESSAGE_SWIPED, id => {
     setTimeout(() => handleMessage(Number(id), 'MESSAGE_SWIPED'), 300);
   });
 
   eventOn(tavern_events.GENERATION_ENDED, () => {
     setTimeout(() => {
-      try { handleMessage(getLastMessageId(), 'GENERATION_ENDED'); } catch { /* ignore */ }
+      try {
+        handleMessage(getLastMessageId(), 'GENERATION_ENDED');
+      } catch {
+        /* ignore */
+      }
     }, 300);
   });
 

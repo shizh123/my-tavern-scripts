@@ -29,9 +29,7 @@
             {{ safeWorld.地点 }}
           </span>
         </div>
-        <div v-if="safeWorld.环境氛围 !== '日常'" class="environment">
-          「 {{ safeWorld.环境氛围 }} 」
-        </div>
+        <div v-if="safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
       </header>
 
       <!-- 角色切换（点击同时设置查看角色和植入目标） -->
@@ -58,7 +56,9 @@
         <div class="input-group">
           <!-- 当前植入目标提示 -->
           <div class="target-hint">
-            <span class="hint-text">植入对象：<strong>{{ implantTarget }}</strong></span>
+            <span class="hint-text"
+              >植入对象：<strong>{{ implantTarget }}</strong></span
+            >
           </div>
 
           <div class="input-wrapper">
@@ -66,7 +66,9 @@
               v-model="thoughtContent"
               type="text"
               :maxlength="MAX_THOUGHT_LENGTH"
-              :placeholder="isThoughtLimitReached ? '已达念头上限，无法植入更多' : `简短念头（${MAX_THOUGHT_LENGTH}字内）...`"
+              :placeholder="
+                isThoughtLimitReached ? '已达念头上限，无法植入更多' : `简短念头（${MAX_THOUGHT_LENGTH}字内）...`
+              "
               :disabled="isThoughtLimitReached"
               @keyup.enter="implantThought"
             />
@@ -113,10 +115,7 @@
                 <span class="num">{{ currentCharacter?.道德底线 ?? 0 }}</span>
               </div>
               <div class="progress-track">
-                <div
-                  class="progress-bar stat-moral"
-                  :style="{ width: (currentCharacter?.道德底线 ?? 0) + '%' }"
-                ></div>
+                <div class="progress-bar stat-moral" :style="{ width: (currentCharacter?.道德底线 ?? 0) + '%' }"></div>
               </div>
             </div>
 
@@ -164,7 +163,9 @@
           <div class="suwen-card">
             <div class="suwen-header">
               <span class="name">苏文</span>
-              <span :class="['status-tag', { 'sleeping-pill': isSleepingPillActive, 'hospitalized': isHospitalized }]">{{ suwenStatusDisplay }}</span>
+              <span :class="['status-tag', { 'sleeping-pill': isSleepingPillActive, hospitalized: isHospitalized }]">{{
+                suwenStatusDisplay
+              }}</span>
             </div>
 
             <div class="suspicion-row">
@@ -227,10 +228,7 @@
                   <span class="item-value">{{ patrolCooldownDisplay }}</span>
                 </div>
                 <div class="monitor-track">
-                  <div
-                    class="monitor-fill patrol"
-                    :style="{ width: patrolCooldownPercent + '%' }"
-                  ></div>
+                  <div class="monitor-fill patrol" :style="{ width: patrolCooldownPercent + '%' }"></div>
                 </div>
                 <div class="item-detail">
                   {{ patrolStatusText }}
@@ -245,8 +243,14 @@
             </div>
 
             <!-- 安全提示（苏文不在家/睡眠时） -->
-            <div v-else-if="suwenSafeReason" :class="['safe-indicator', { 'sleeping-pill-active': isSleepingPillActive, 'hospitalized-active': isHospitalized }]">
-              <span class="safe-icon">{{ isHospitalized ? '🏥' : (isSleepingPillActive ? '🔮' : '✓') }}</span>
+            <div
+              v-else-if="suwenSafeReason"
+              :class="[
+                'safe-indicator',
+                { 'sleeping-pill-active': isSleepingPillActive, 'hospitalized-active': isHospitalized },
+              ]"
+            >
+              <span class="safe-icon">{{ isHospitalized ? '🏥' : isSleepingPillActive ? '🔮' : '✓' }}</span>
               <span class="safe-text">{{ suwenSafeReason }}</span>
             </div>
           </div>
@@ -263,9 +267,7 @@
                 <span class="emotion-val">{{ currentCharacter?.当前情绪 ?? '平静' }}</span>
               </div>
               <div class="thought-bubble">
-                <template v-if="currentCharacter?.当前心理想法">
-                  「 {{ currentCharacter.当前心理想法 }} 」
-                </template>
+                <template v-if="currentCharacter?.当前心理想法"> 「 {{ currentCharacter.当前心理想法 }} 」 </template>
                 <template v-else>
                   <span class="empty-thought">（内心暂无波澜）</span>
                 </template>
@@ -276,11 +278,14 @@
 
           <!-- 培育中的念头 -->
           <div v-if="(currentCharacter?.念头培育区?.length ?? 0) > 0" class="thoughts-section">
-            <div class="section-title">
-              🌱 培育中 ({{ currentCharacter?.念头培育区?.length ?? 0 }})
-            </div>
+            <div class="section-title">🌱 培育中 ({{ currentCharacter?.念头培育区?.length ?? 0 }})</div>
             <div class="thought-list">
-              <div v-for="(t, index) in (currentCharacter?.念头培育区 ?? [])" :key="t.念头内容" class="thought-item" :class="{ pending: t.待判定 }">
+              <div
+                v-for="(t, index) in currentCharacter?.念头培育区 ?? []"
+                :key="t.念头内容"
+                class="thought-item"
+                :class="{ pending: t.待判定 }"
+              >
                 <div class="thought-main">
                   <div class="thought-content">{{ t.念头内容 }}</div>
                   <div class="thought-meta">
@@ -297,9 +302,7 @@
                     <div v-else class="thought-fill pending-fill"></div>
                   </div>
                 </div>
-                <button class="delete-thought-btn" @click="handleDeleteThought(index)" title="删除此念头">
-                  🗑️
-                </button>
+                <button class="delete-thought-btn" @click="handleDeleteThought(index)" title="删除此念头">🗑️</button>
               </div>
             </div>
           </div>
@@ -311,7 +314,7 @@
               <span :class="['influence-badge', habitInfluenceLevel]">{{ habitInfluenceText }}</span>
             </div>
             <div class="habit-tags">
-              <span v-for="h in (currentCharacter?.习惯列表 ?? [])" :key="h.内容" class="habit-tag">
+              <span v-for="h in currentCharacter?.习惯列表 ?? []" :key="h.内容" class="habit-tag">
                 {{ h.内容 }}
               </span>
             </div>
@@ -329,7 +332,10 @@
                 <span class="cat-tags">
                   <span class="mini-tag">{{ currentCharacter?.服装细节?.整体风格 ?? '未知' }}</span>
                   <span class="mini-tag outline">{{ currentCharacter?.服装细节?.暴露程度 ?? '正常' }}</span>
-                  <span v-if="currentCharacter?.服装细节?.整洁度 && currentCharacter.服装细节.整洁度 !== '整洁'" class="mini-tag warn">
+                  <span
+                    v-if="currentCharacter?.服装细节?.整洁度 && currentCharacter.服装细节.整洁度 !== '整洁'"
+                    class="mini-tag warn"
+                  >
                     {{ currentCharacter.服装细节.整洁度 }}
                   </span>
                 </span>
@@ -345,7 +351,10 @@
                 </div>
                 <div class="detail-row">
                   <span class="d-label">内衣</span>
-                  <span class="d-value">{{ currentCharacter?.服装细节?.内衣?.上 ?? '---' }} / {{ currentCharacter?.服装细节?.内衣?.下 ?? '---' }}</span>
+                  <span class="d-value"
+                    >{{ currentCharacter?.服装细节?.内衣?.上 ?? '---' }} /
+                    {{ currentCharacter?.服装细节?.内衣?.下 ?? '---' }}</span
+                  >
                 </div>
                 <div class="detail-row">
                   <span class="d-label">袜裤</span>
@@ -355,11 +364,17 @@
                   <span class="d-label">鞋子</span>
                   <span class="d-value">{{ currentCharacter?.服装细节?.鞋子 ?? '---' }}</span>
                 </div>
-                <div v-if="currentCharacter?.服装细节?.配饰 && currentCharacter.服装细节.配饰 !== '无'" class="detail-row">
+                <div
+                  v-if="currentCharacter?.服装细节?.配饰 && currentCharacter.服装细节.配饰 !== '无'"
+                  class="detail-row"
+                >
                   <span class="d-label">配饰</span>
                   <span class="d-value">{{ currentCharacter.服装细节.配饰 }}</span>
                 </div>
-                <div v-if="currentCharacter?.服装细节?.特殊装饰 && currentCharacter.服装细节.特殊装饰 !== '无'" class="detail-row highlight">
+                <div
+                  v-if="currentCharacter?.服装细节?.特殊装饰 && currentCharacter.服装细节.特殊装饰 !== '无'"
+                  class="detail-row highlight"
+                >
                   <span class="d-label">特殊</span>
                   <span class="d-value">{{ currentCharacter.服装细节.特殊装饰 }}</span>
                 </div>
@@ -381,7 +396,10 @@
                   <span class="d-label">底妆</span>
                   <span class="d-value">{{ currentCharacter?.妆容细节?.底妆 ?? '---' }}</span>
                 </div>
-                <div v-if="currentCharacter?.妆容细节?.眼妆 && currentCharacter.妆容细节.眼妆 !== '无'" class="detail-row">
+                <div
+                  v-if="currentCharacter?.妆容细节?.眼妆 && currentCharacter.妆容细节.眼妆 !== '无'"
+                  class="detail-row"
+                >
                   <span class="d-label">眼妆</span>
                   <span class="d-value">{{ currentCharacter.妆容细节.眼妆 }}</span>
                 </div>
@@ -389,7 +407,10 @@
                   <span class="d-label">唇妆</span>
                   <span class="d-value">{{ currentCharacter?.妆容细节?.唇妆 ?? '---' }}</span>
                 </div>
-                <div v-if="currentCharacter?.妆容细节?.特殊妆容 && currentCharacter.妆容细节.特殊妆容 !== '无'" class="detail-row highlight">
+                <div
+                  v-if="currentCharacter?.妆容细节?.特殊妆容 && currentCharacter.妆容细节.特殊妆容 !== '无'"
+                  class="detail-row highlight"
+                >
                   <span class="d-label">特殊</span>
                   <span class="d-value">{{ currentCharacter.妆容细节.特殊妆容 }}</span>
                 </div>
@@ -408,11 +429,7 @@
                   <span class="mod-icon">🖤</span>
                   <span class="mod-label">纹身</span>
                   <div class="mod-items">
-                    <span
-                      v-for="(content, part) in (currentCharacter?.身体改造?.纹身 ?? {})"
-                      :key="part"
-                      class="mod-tag"
-                    >
+                    <span v-for="(content, part) in currentCharacter?.身体改造?.纹身 ?? {}" :key="part" class="mod-tag">
                       {{ part }}：{{ content }}
                     </span>
                   </div>
@@ -432,7 +449,7 @@
                   <span class="mod-icon">🔥</span>
                   <span class="mod-label">永久标记</span>
                   <div class="mod-items">
-                    <span v-for="m in (currentCharacter?.身体改造?.永久标记 ?? [])" :key="m" class="mod-tag danger">
+                    <span v-for="m in currentCharacter?.身体改造?.永久标记 ?? []" :key="m" class="mod-tag danger">
                       {{ m }}
                     </span>
                   </div>
@@ -443,14 +460,17 @@
                   <span class="mod-icon">💋</span>
                   <span class="mod-label">临时标记</span>
                   <div class="mod-items">
-                    <span v-for="m in (currentCharacter?.身体改造?.临时标记 ?? [])" :key="m" class="mod-tag temp">
+                    <span v-for="m in currentCharacter?.身体改造?.临时标记 ?? []" :key="m" class="mod-tag temp">
                       {{ m }}
                     </span>
                   </div>
                 </div>
 
                 <!-- 体态变化 -->
-                <div v-if="currentCharacter?.身体改造?.体态变化 && currentCharacter.身体改造.体态变化 !== '无'" class="mod-group">
+                <div
+                  v-if="currentCharacter?.身体改造?.体态变化 && currentCharacter.身体改造.体态变化 !== '无'"
+                  class="mod-group"
+                >
                   <span class="mod-icon">✨</span>
                   <span class="mod-label">体态变化</span>
                   <span class="mod-text">{{ currentCharacter.身体改造.体态变化 }}</span>
@@ -548,10 +568,13 @@ function refreshData() {
     });
 
     if (statData?.秦璐状态?.念头培育区?.length > 0) {
-      console.info(`[状态面板] 秦璐念头详情:`, statData.秦璐状态.念头培育区.map((t: any) => ({
-        内容: t.念头内容,
-        进度: `${t.开发进度}/${t.需要时间}`,
-      })));
+      console.info(
+        `[状态面板] 秦璐念头详情:`,
+        statData.秦璐状态.念头培育区.map((t: any) => ({
+          内容: t.念头内容,
+          进度: `${t.开发进度}/${t.需要时间}`,
+        })),
+      );
     }
 
     // 解析数据，如果解析失败则保持当前数据
@@ -719,7 +742,9 @@ onMounted(() => {
           const wasLatest = isLatestFloor.value;
           isLatestFloor.value = messageId === lastId;
 
-          console.info(`[状态面板] 楼层 ${messageId} 延迟刷新: wasLatest=${wasLatest}, isNowLatest=${isLatestFloor.value}`);
+          console.info(
+            `[状态面板] 楼层 ${messageId} 延迟刷新: wasLatest=${wasLatest}, isNowLatest=${isLatestFloor.value}`,
+          );
 
           // 最新楼层刷新数据，确保显示正确的游戏状态
           console.info(`[状态面板] 楼层 ${messageId} 执行延迟刷新（600ms）`);
@@ -757,7 +782,9 @@ onMounted(() => {
 
     // 监听消息ROLL（重新生成）事件
     eventOn(tavern_events.MESSAGE_SWIPED, swipedMessageId => {
-      console.info(`[状态面板] MESSAGE_SWIPED 事件收到，swipedMessageId=${swipedMessageId}, 当前楼层=${messageId}, 类型: ${typeof swipedMessageId}`);
+      console.info(
+        `[状态面板] MESSAGE_SWIPED 事件收到，swipedMessageId=${swipedMessageId}, 当前楼层=${messageId}, 类型: ${typeof swipedMessageId}`,
+      );
       try {
         // 【修复】ROLL 时，最新楼层的界面应该刷新
         // swipedMessageId 可能不可靠，所以检查当前楼层是否是最新楼层
@@ -765,7 +792,9 @@ onMounted(() => {
         const isCurrentLatest = messageId === lastId;
         const isSwipedCurrent = Number(swipedMessageId) === messageId;
 
-        console.info(`[状态面板] MESSAGE_SWIPED 检查: lastId=${lastId}, isCurrentLatest=${isCurrentLatest}, isSwipedCurrent=${isSwipedCurrent}`);
+        console.info(
+          `[状态面板] MESSAGE_SWIPED 检查: lastId=${lastId}, isCurrentLatest=${isCurrentLatest}, isSwipedCurrent=${isSwipedCurrent}`,
+        );
 
         // 如果是当前楼层被ROLL，或者当前是最新楼层
         if (isSwipedCurrent || isCurrentLatest) {
@@ -800,7 +829,9 @@ onMounted(() => {
                     const parsedData = parseCleanData(statData);
                     data.value = parsedData;
                     isDataReady.value = true;
-                    console.info(`[状态面板] ✅ MESSAGE_SWIPED 刷新成功（第 ${retryCount} 次），时间: ${parsedData?.世界?.日期} ${parsedData?.世界?.时间}`);
+                    console.info(
+                      `[状态面板] ✅ MESSAGE_SWIPED 刷新成功（第 ${retryCount} 次），时间: ${parsedData?.世界?.日期} ${parsedData?.世界?.时间}`,
+                    );
                     return; // 成功，停止重试
                   } catch (parseErr) {
                     console.warn(`[状态面板] MESSAGE_SWIPED 数据解析失败:`, parseErr);
@@ -857,7 +888,9 @@ onMounted(() => {
 
         const currentSwipeId = chat[messageId].swipe_id ?? 0;
         if (lastKnownSwipeId !== undefined && currentSwipeId !== lastKnownSwipeId) {
-          console.info(`[状态面板] 检测到 ROLL: 楼层 ${messageId} swipe_id 从 ${lastKnownSwipeId} 变为 ${currentSwipeId}`);
+          console.info(
+            `[状态面板] 检测到 ROLL: 楼层 ${messageId} swipe_id 从 ${lastKnownSwipeId} 变为 ${currentSwipeId}`,
+          );
           lastKnownSwipeId = currentSwipeId;
           return true;
         }
@@ -870,7 +903,9 @@ onMounted(() => {
 
     // 监听生成结束事件（作为备选，确保 ROLL 后也能刷新）
     eventOn(tavern_events.GENERATION_ENDED, generatedMessageId => {
-      console.info(`[状态面板] GENERATION_ENDED 事件收到，原始 generatedMessageId=${generatedMessageId}, 当前楼层=${messageId}`);
+      console.info(
+        `[状态面板] GENERATION_ENDED 事件收到，原始 generatedMessageId=${generatedMessageId}, 当前楼层=${messageId}`,
+      );
       try {
         // GENERATION_ENDED 事件的 message_id 可能无效，需要使用 getLastMessageId() 获取实际 ID
         const actualMessageId = getLastMessageId();
@@ -879,7 +914,9 @@ onMounted(() => {
         // 【关键修复】检测是否发生了 ROLL（swipe_id 变化）
         const isRoll = detectSwipeChange();
 
-        console.info(`[状态面板] GENERATION_ENDED 检查: actualMessageId=${actualMessageId}, isCurrentLatest=${isCurrentLatest}, isLatestFloor=${isLatestFloor.value}, isRoll=${isRoll}`);
+        console.info(
+          `[状态面板] GENERATION_ENDED 检查: actualMessageId=${actualMessageId}, isCurrentLatest=${isCurrentLatest}, isLatestFloor=${isLatestFloor.value}, isRoll=${isRoll}`,
+        );
 
         // 如果是当前楼层或检测到 ROLL，刷新数据
         if (isCurrentLatest || isLatestFloor.value || isRoll) {
@@ -917,7 +954,9 @@ onMounted(() => {
         const isCurrentLatest = messageId === lastId;
         const isTargetFloor = messageId === eventMessageId;
 
-        console.info(`[状态面板] IFRAME_DATA_REFRESH 检查: reason=${reason}, eventMessageId=${eventMessageId}, currentMessageId=${messageId}, lastId=${lastId}, isCurrentLatest=${isCurrentLatest}, isTargetFloor=${isTargetFloor}`);
+        console.info(
+          `[状态面板] IFRAME_DATA_REFRESH 检查: reason=${reason}, eventMessageId=${eventMessageId}, currentMessageId=${messageId}, lastId=${lastId}, isCurrentLatest=${isCurrentLatest}, isTargetFloor=${isTargetFloor}`,
+        );
 
         // 最新楼层 或 目标楼层 需要响应
         if (isCurrentLatest || isTargetFloor) {
@@ -1086,7 +1125,9 @@ const isThoughtLimitReached = computed(() => currentThoughtCount.value >= MAX_TH
 const canImplant = computed(() => {
   try {
     const content = thoughtContent.value.trim();
-    return isLatestFloor.value && content.length > 0 && content.length <= MAX_THOUGHT_LENGTH && !isThoughtLimitReached.value;
+    return (
+      isLatestFloor.value && content.length > 0 && content.length <= MAX_THOUGHT_LENGTH && !isThoughtLimitReached.value
+    );
   } catch {
     return false;
   }
@@ -1169,9 +1210,10 @@ const currentSuspicion = computed(() => {
 // 当前角色的基础印象（从变量读取，由脚本自动生成）
 const currentImpression = computed(() => {
   try {
-    const impression = activeCharacter.value === '秦璐'
-      ? (data.value.苏文状态?.对秦璐印象?.基础印象 ?? '我的贤内助')
-      : (data.value.苏文状态?.对苏梦印象?.基础印象 ?? '我的乖女儿');
+    const impression =
+      activeCharacter.value === '秦璐'
+        ? (data.value.苏文状态?.对秦璐印象?.基础印象 ?? '我的贤内助')
+        : (data.value.苏文状态?.对苏梦印象?.基础印象 ?? '我的乖女儿');
     // 限制12个字符，超出则截断并添加省略号
     return impression.length > 12 ? impression.slice(0, 11) + '…' : impression;
   } catch {
@@ -1182,9 +1224,10 @@ const currentImpression = computed(() => {
 // 当前角色的印象细节（从变量读取，由AI补充）
 const currentImpressionDetail = computed(() => {
   try {
-    const detail = activeCharacter.value === '秦璐'
-      ? (data.value.苏文状态?.对秦璐印象?.细节描述 ?? '')
-      : (data.value.苏文状态?.对苏梦印象?.细节描述 ?? '');
+    const detail =
+      activeCharacter.value === '秦璐'
+        ? (data.value.苏文状态?.对秦璐印象?.细节描述 ?? '')
+        : (data.value.苏文状态?.对苏梦印象?.细节描述 ?? '');
     // 限制20个字符，超出则截断并添加省略号
     if (!detail) return '';
     return detail.length > 20 ? detail.slice(0, 19) + '…' : detail;
@@ -1579,10 +1622,14 @@ const riskLevel = computed(() => {
 const riskLevelText = computed(() => {
   try {
     switch (riskLevel.value) {
-      case 'critical': return '极危险';
-      case 'high': return '高风险';
-      case 'medium': return '中风险';
-      default: return '低风险';
+      case 'critical':
+        return '极危险';
+      case 'high':
+        return '高风险';
+      case 'medium':
+        return '中风险';
+      default:
+        return '低风险';
     }
   } catch {
     return '低风险';
@@ -1596,10 +1643,10 @@ function saveCurrentCharacter() {
     console.warn('[状态面板] 旧楼层不允许保存数据');
     return;
   }
-  updateVariablesWith(
-    vars => _.set(vars, 'stat_data.系统追踪.当前角色', data.value.系统追踪.当前角色),
-    { type: 'message', message_id: -1 },
-  );
+  updateVariablesWith(vars => _.set(vars, 'stat_data.系统追踪.当前角色', data.value.系统追踪.当前角色), {
+    type: 'message',
+    message_id: -1,
+  });
 }
 
 // 部分更新：仅保存念头相关数据
@@ -1715,11 +1762,7 @@ async function implantThought() {
       // 显示判定结果
       if (!allowed && reason) {
         console.warn(`[念头植入] 念头被拒绝: ${reason}`);
-        toastr.warning(
-          `⚠️ ${reason}\n念头开发时间${needHours}小时，将会过期`,
-          '念头超出当前阶段',
-          { timeOut: 5000 },
-        );
+        toastr.warning(`⚠️ ${reason}\n念头开发时间${needHours}小时，将会过期`, '念头超出当前阶段', { timeOut: 5000 });
       } else if (category) {
         console.info(`[念头植入] 念头类型: ${category}，难度: ${difficulty}，需要${needHours}小时`);
       }
@@ -1757,19 +1800,12 @@ async function implantThought() {
     // 3. 保存念头相关数据（部分更新，避免覆盖时间等数据）
     await saveThoughtData(target);
 
-    console.info(
-      `[念头植入] 已向${target}植入念头："${content}"` +
-        `，待判定：${needsPending}`,
-    );
+    console.info(`[念头植入] 已向${target}植入念头："${content}"` + `，待判定：${needsPending}`);
 
     thoughtContent.value = '';
 
     if (needsPending) {
-      toastr.info(
-        `已向${target}植入念头\n难度：待定（等待AI判定）\n将在AI回复后确定开发时间`,
-        '',
-        { timeOut: 3000 },
-      );
+      toastr.info(`已向${target}植入念头\n难度：待定（等待AI判定）\n将在AI回复后确定开发时间`, '', { timeOut: 3000 });
     } else {
       const { category, hours: needHours, willExpire } = judgeResult;
       const difficulty = getDifficultyLabel(needHours);
@@ -1875,12 +1911,12 @@ $font-sans: 'Roboto', sans-serif;
     radial-gradient(circle at 50% 50%, rgba($c-gold, 0.04), transparent 60%),
     // 织物暗纹 - 更明显的交叉纹理
     repeating-linear-gradient(
-      45deg,
-      transparent,
-      transparent 1px,
-      rgba(255, 255, 255, 0.025) 1px,
-      rgba(255, 255, 255, 0.025) 2px
-    ),
+        45deg,
+        transparent,
+        transparent 1px,
+        rgba(255, 255, 255, 0.025) 1px,
+        rgba(255, 255, 255, 0.025) 2px
+      ),
     repeating-linear-gradient(
       -45deg,
       transparent,
@@ -1890,12 +1926,12 @@ $font-sans: 'Roboto', sans-serif;
     ),
     // 额外的大间距暗纹
     repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 20px,
-      rgba($c-gold, 0.015) 20px,
-      rgba($c-gold, 0.015) 21px
-    ),
+        90deg,
+        transparent,
+        transparent 20px,
+        rgba($c-gold, 0.015) 20px,
+        rgba($c-gold, 0.015) 21px
+      ),
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -1925,8 +1961,12 @@ $font-sans: 'Roboto', sans-serif;
   background: linear-gradient(90deg, transparent, $c-gold, transparent);
   opacity: 0.4;
 
-  &.top { top: 8px; }
-  &.bottom { bottom: 8px; }
+  &.top {
+    top: 8px;
+  }
+  &.bottom {
+    bottom: 8px;
+  }
 }
 
 // ========== 头部 ==========
@@ -2291,10 +2331,18 @@ $font-sans: 'Roboto', sans-serif;
       border-radius: 2px;
       transition: width 0.5s;
 
-      &.stat-moral { background: linear-gradient(90deg, $c-green, color.adjust($c-green, $lightness: -10%)); }
-      &.stat-desire { background: linear-gradient(90deg, $c-red, color.adjust($c-red, $lightness: 10%)); }
-      &.stat-husband { background: linear-gradient(90deg, $c-blue, color.adjust($c-blue, $lightness: -15%)); }
-      &.stat-corruption { background: linear-gradient(90deg, $c-purple, color.adjust($c-purple, $lightness: 10%)); }
+      &.stat-moral {
+        background: linear-gradient(90deg, $c-green, color.adjust($c-green, $lightness: -10%));
+      }
+      &.stat-desire {
+        background: linear-gradient(90deg, $c-red, color.adjust($c-red, $lightness: 10%));
+      }
+      &.stat-husband {
+        background: linear-gradient(90deg, $c-blue, color.adjust($c-blue, $lightness: -15%));
+      }
+      &.stat-corruption {
+        background: linear-gradient(90deg, $c-purple, color.adjust($c-purple, $lightness: 10%));
+      }
     }
   }
 }
@@ -2345,7 +2393,8 @@ $font-sans: 'Roboto', sans-serif;
 
   // 安眠药沉睡动画
   @keyframes sleeping-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
       box-shadow: 0 0 4px rgba($c-red, 0.5);
     }
@@ -2357,7 +2406,8 @@ $font-sans: 'Roboto', sans-serif;
 
   // 住院状态动画（终极隐藏模式）
   @keyframes hospitalized-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
       box-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
     }
@@ -2375,7 +2425,9 @@ $font-sans: 'Roboto', sans-serif;
     color: $c-text-sub;
     margin-bottom: 6px;
 
-    .label { flex: 0 0 28px; }
+    .label {
+      flex: 0 0 28px;
+    }
 
     .suspicion-track {
       flex: 1;
@@ -2689,7 +2741,8 @@ $font-sans: 'Roboto', sans-serif;
 
   // 安眠药生效发光动画
   @keyframes sleeping-pill-glow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 5px rgba($c-red, 0.3);
     }
     50% {
@@ -2699,7 +2752,8 @@ $font-sans: 'Roboto', sans-serif;
 
   // 住院状态发光动画（终极隐藏模式）
   @keyframes hospitalized-glow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
     }
     50% {
@@ -2710,29 +2764,57 @@ $font-sans: 'Roboto', sans-serif;
 
 // 危险脉动动画
 @keyframes danger-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes risk-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 // 冻结动画
 @keyframes freeze-pulse {
-  0%, 100% { opacity: 1; filter: brightness(1); }
-  50% { opacity: 0.6; filter: brightness(1.3); }
+  0%,
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.6;
+    filter: brightness(1.3);
+  }
 }
 
 @keyframes freeze-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes freeze-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 // ========== 通用 Section 标题 ==========
@@ -2756,10 +2838,22 @@ $font-sans: 'Roboto', sans-serif;
     padding: 1px 6px;
     margin-left: auto;
 
-    &.weak { color: $c-text-sub; }
-    &.moderate { color: $c-gold; background: rgba($c-gold, 0.1); }
-    &.strong { color: $c-red-light; background: rgba($c-red, 0.1); }
-    &.extreme { color: $c-red-light; background: rgba($c-red, 0.2); font-weight: bold; }
+    &.weak {
+      color: $c-text-sub;
+    }
+    &.moderate {
+      color: $c-gold;
+      background: rgba($c-gold, 0.1);
+    }
+    &.strong {
+      color: $c-red-light;
+      background: rgba($c-red, 0.1);
+    }
+    &.extreme {
+      color: $c-red-light;
+      background: rgba($c-red, 0.2);
+      font-weight: bold;
+    }
   }
 }
 
@@ -2844,10 +2938,22 @@ $font-sans: 'Roboto', sans-serif;
         padding: 1px 5px;
         border-radius: 2px;
 
-        &.简单 { color: $c-green; background: rgba($c-green, 0.1); }
-        &.中等 { color: $c-orange; background: rgba($c-orange, 0.1); }
-        &.困难 { color: $c-red-light; background: rgba($c-red, 0.1); }
-        &.待定 { color: $c-cyan; background: rgba($c-cyan, 0.1); }
+        &.简单 {
+          color: $c-green;
+          background: rgba($c-green, 0.1);
+        }
+        &.中等 {
+          color: $c-orange;
+          background: rgba($c-orange, 0.1);
+        }
+        &.困难 {
+          color: $c-red-light;
+          background: rgba($c-red, 0.1);
+        }
+        &.待定 {
+          color: $c-cyan;
+          background: rgba($c-cyan, 0.1);
+        }
       }
 
       .pending-text {
@@ -2915,8 +3021,12 @@ $font-sans: 'Roboto', sans-serif;
 }
 
 @keyframes pending-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 // ========== 习惯区 ==========

@@ -8,11 +8,7 @@
 // 5. 注入强制事件提示（打断/巡逻）
 // 6. 注入阶段突破剧情（5阶段系统隐藏剧情）
 
-import {
-  generateStageBreakthroughInjection,
-  generateStageBreakthroughPrefill,
-  getStageTitle,
-} from '../../stageConfig';
+import { generateStageBreakthroughInjection, generateStageBreakthroughPrefill, getStageTitle } from '../../stageConfig';
 import { LOCAL_KEYWORDS, STAGE_REQUIREMENTS, type ThoughtCategory } from '../../thoughtCategoryLib';
 
 $(async () => {
@@ -46,28 +42,32 @@ $(async () => {
       return {
         level: '完全内化',
         description: '这些行为已彻底融入人格，如同呼吸般自然，不做反而会觉得缺少什么',
-        example: '她自然地跪在他面前，像是每天早上都会做的事。这已经成为她的日常，不需要任何理由或铺垫，她的身体自己就知道该怎么做。如果一天没有这样，她反而会觉得浑身不对劲。',
+        example:
+          '她自然地跪在他面前，像是每天早上都会做的事。这已经成为她的日常，不需要任何理由或铺垫，她的身体自己就知道该怎么做。如果一天没有这样，她反而会觉得浑身不对劲。',
       };
     }
     if (count >= 9) {
       return {
         level: '深度影响',
         description: '这些行为已非常自然，几乎没有心理障碍，会主动创造相关场景',
-        example: '看到他坐在沙发上，她不自觉地走过去，自然而然地坐到他腿上。没有犹豫，没有羞涩，这个动作就像给家人倒杯水一样平常。她甚至会主动找机会制造独处的场景。',
+        example:
+          '看到他坐在沙发上，她不自觉地走过去，自然而然地坐到他腿上。没有犹豫，没有羞涩，这个动作就像给家人倒杯水一样平常。她甚至会主动找机会制造独处的场景。',
       };
     }
     if (count >= 5) {
       return {
         level: '明显影响',
         description: '这些行为开始变得自然，抗拒减弱，稍加暗示就会配合',
-        example: '他的手指轻轻抬起她的下巴，她只是微微红了脸，但没有躲开。心里虽然还有一丝不安，但那种感觉已经弱了很多。她甚至有些期待接下来会发生什么。',
+        example:
+          '他的手指轻轻抬起她的下巴，她只是微微红了脸，但没有躲开。心里虽然还有一丝不安，但那种感觉已经弱了很多。她甚至有些期待接下来会发生什么。',
       };
     }
     if (count >= 1) {
       return {
         level: '轻微影响',
         description: '这些行为还需要引导才会做，仍有羞涩和犹豫',
-        example: '她的脸一下子红到了耳根，眼神闪躲，不知道该把手放在哪里。虽然没有立刻拒绝，但身体还是僵硬的，需要他一步步引导才会慢慢放松下来。',
+        example:
+          '她的脸一下子红到了耳根，眼神闪躲，不知道该把手放在哪里。虽然没有立刻拒绝，但身体还是僵硬的，需要他一步步引导才会慢慢放松下来。',
       };
     }
     return { level: '', description: '', example: '' };
@@ -186,15 +186,9 @@ $(async () => {
 
       // 根据苏文状态添加约束提醒（这些是硬性约束）
       if (suwenState === '睡眠') {
-        parts.push(
-          `\n⚠️ 苏文正在睡眠，禁止描写：`,
-          `  - 苏文的脚步声、说话、任何活动`,
-          `  - 苏文在主卧以外的位置`
-        );
+        parts.push(`\n⚠️ 苏文正在睡眠，禁止描写：`, `  - 苏文的脚步声、说话、任何活动`, `  - 苏文在主卧以外的位置`);
       } else if (suwenState === '上班' || suwenState === '出差') {
-        parts.push(
-          `\n⚠️ 苏文不在家（${suwenState}），禁止描写苏文在家中`
-        );
+        parts.push(`\n⚠️ 苏文不在家（${suwenState}），禁止描写苏文在家中`);
       }
 
       // 时间描述约束（改为建议而非强制）
@@ -494,22 +488,24 @@ $(async () => {
         const { level, description, example } = getInfluenceDescription(qinluHabits.length);
         const habitsText = qinluHabits.map((h: any) => `"${h.内容}"`).join('、');
 
-        parts.push([
-          `【秦璐的行为倾向】`,
-          `当前影响力：${level}`,
-          `具体表现：${description}`,
-          `已内化的行为：${habitsText}`,
-          ``,
-          `【当前影响力的演绎示例】`,
-          `${example}`,
-          ``,
-          `【演绎要求】`,
-          `- 在相关场景中，秦璐会自然地表现出这些行为倾向`,
-          `- 参考上面的示例，把握当前影响力等级下角色的反应程度`,
-          `- 这些是角色已经习惯的行为模式，不需要{{user}}每次都提起`,
-          `- 【禁止】在输出中提及"习惯"、"行为倾向"、"影响力"等元游戏术语`,
-          `- 【禁止】让角色意识到自己"被改变了"或"有了习惯"`,
-        ].join('\n'));
+        parts.push(
+          [
+            `【秦璐的行为倾向】`,
+            `当前影响力：${level}`,
+            `具体表现：${description}`,
+            `已内化的行为：${habitsText}`,
+            ``,
+            `【当前影响力的演绎示例】`,
+            `${example}`,
+            ``,
+            `【演绎要求】`,
+            `- 在相关场景中，秦璐会自然地表现出这些行为倾向`,
+            `- 参考上面的示例，把握当前影响力等级下角色的反应程度`,
+            `- 这些是角色已经习惯的行为模式，不需要{{user}}每次都提起`,
+            `- 【禁止】在输出中提及"习惯"、"行为倾向"、"影响力"等元游戏术语`,
+            `- 【禁止】让角色意识到自己"被改变了"或"有了习惯"`,
+          ].join('\n'),
+        );
       }
 
       // 处理苏梦的习惯
@@ -518,22 +514,24 @@ $(async () => {
         const { level, description, example } = getInfluenceDescription(sumengHabits.length);
         const habitsText = sumengHabits.map((h: any) => `"${h.内容}"`).join('、');
 
-        parts.push([
-          `【苏梦的行为倾向】`,
-          `当前影响力：${level}`,
-          `具体表现：${description}`,
-          `已内化的行为：${habitsText}`,
-          ``,
-          `【当前影响力的演绎示例】`,
-          `${example}`,
-          ``,
-          `【演绎要求】`,
-          `- 在相关场景中，苏梦会自然地表现出这些行为倾向`,
-          `- 参考上面的示例，把握当前影响力等级下角色的反应程度`,
-          `- 这些是角色已经习惯的行为模式，不需要{{user}}每次都提起`,
-          `- 【禁止】在输出中提及"习惯"、"行为倾向"、"影响力"等元游戏术语`,
-          `- 【禁止】让角色意识到自己"被改变了"或"有了习惯"`,
-        ].join('\n'));
+        parts.push(
+          [
+            `【苏梦的行为倾向】`,
+            `当前影响力：${level}`,
+            `具体表现：${description}`,
+            `已内化的行为：${habitsText}`,
+            ``,
+            `【当前影响力的演绎示例】`,
+            `${example}`,
+            ``,
+            `【演绎要求】`,
+            `- 在相关场景中，苏梦会自然地表现出这些行为倾向`,
+            `- 参考上面的示例，把握当前影响力等级下角色的反应程度`,
+            `- 这些是角色已经习惯的行为模式，不需要{{user}}每次都提起`,
+            `- 【禁止】在输出中提及"习惯"、"行为倾向"、"影响力"等元游戏术语`,
+            `- 【禁止】让角色意识到自己"被改变了"或"有了习惯"`,
+          ].join('\n'),
+        );
       }
 
       if (parts.length === 0) {
@@ -558,10 +556,10 @@ $(async () => {
     stage: number;
     accumulatedTime: number;
     reason: string;
-    logIndex: number;  // 用于后续标记已通知
+    logIndex: number; // 用于后续标记已通知
     stageNumber?: number;
     triggerTime?: string;
-    patrolLocation?: string;  // 巡逻位置
+    patrolLocation?: string; // 巡逻位置
   } {
     try {
       const variables = Mvu.getMvuData({ type: 'message', message_id: -1 });
@@ -575,7 +573,7 @@ $(async () => {
       const logs = data.系统追踪.强制事件日志;
 
       // 按优先级排序：阶段突破 > 苏文打断 > 苏文巡逻
-      const priorityOrder = { '阶段突破': 0, '苏文打断': 1, '苏文巡逻': 2 };
+      const priorityOrder = { 阶段突破: 0, 苏文打断: 1, 苏文巡逻: 2 };
 
       // 找到第一个未通知且在3楼内的事件（按优先级）
       const validLogs = logs
@@ -585,7 +583,11 @@ $(async () => {
           const floorDiff = currentFloor - log.触发楼层;
           return floorDiff >= 0 && floorDiff <= 3 && !log.已通知AI;
         })
-        .sort((a: any, b: any) => priorityOrder[a.log.事件类型 as keyof typeof priorityOrder] - priorityOrder[b.log.事件类型 as keyof typeof priorityOrder]);
+        .sort(
+          (a: any, b: any) =>
+            priorityOrder[a.log.事件类型 as keyof typeof priorityOrder] -
+            priorityOrder[b.log.事件类型 as keyof typeof priorityOrder],
+        );
 
       if (validLogs.length === 0) {
         return { type: null, character: null, stage: 1, accumulatedTime: 0, reason: '', logIndex: -1 };
@@ -593,9 +595,7 @@ $(async () => {
 
       const { log, index } = validLogs[0] as { log: any; index: number };
       const character = log.角色 as '秦璐' | '苏梦';
-      const stage = character === '秦璐'
-        ? data.秦璐状态?.当前阶段 || 1
-        : data.苏梦状态?.当前阶段 || 1;
+      const stage = character === '秦璐' ? data.秦璐状态?.当前阶段 || 1 : data.苏梦状态?.当前阶段 || 1;
 
       console.info(`[强制事件日志] 检测到待处理事件: ${log.事件类型}, 角色: ${character}, 楼层: ${log.触发楼层}`);
 
@@ -642,9 +642,7 @@ $(async () => {
 
       const event = data.系统追踪.苏文打断事件;
       const currentCharacter = (data.系统追踪?.当前角色 || '秦璐') as '秦璐' | '苏梦';
-      const stage = currentCharacter === '秦璐'
-        ? data.秦璐状态?.当前阶段 || 1
-        : data.苏梦状态?.当前阶段 || 1;
+      const stage = currentCharacter === '秦璐' ? data.秦璐状态?.当前阶段 || 1 : data.苏梦状态?.当前阶段 || 1;
 
       console.info(`[打断事件] 检测到待触发的打断事件，原因: ${event.打断原因}`);
 
@@ -785,9 +783,16 @@ $(async () => {
    * 所有可能的念头类型（用于计算禁止类型）
    */
   const ALL_THOUGHT_CATEGORIES: ThoughtCategory[] = [
-    '陪伴交流', '情感依赖', '肢体亲近', '暧昧互动',
-    '亲密接触', '身体开放', '性行为', '身份认同',
-    '绝对服从', '家庭替代',
+    '陪伴交流',
+    '情感依赖',
+    '肢体亲近',
+    '暧昧互动',
+    '亲密接触',
+    '身体开放',
+    '性行为',
+    '身份认同',
+    '绝对服从',
+    '家庭替代',
   ];
 
   /**
@@ -1124,7 +1129,6 @@ $(async () => {
     return `【苏文打断事件】\n\n${scenario.prefill}\n`;
   }
 
-
   /**
    * 检测苏文巡逻事件是否待触发
    * 【新逻辑】直接触发，设置离开期限，不再需要预警阶段
@@ -1151,9 +1155,7 @@ $(async () => {
 
       const event = data.系统追踪.苏文巡逻事件;
       const currentCharacter = (data.系统追踪?.当前角色 || '秦璐') as '秦璐' | '苏梦';
-      const stage = currentCharacter === '秦璐'
-        ? data.秦璐状态?.当前阶段 || 1
-        : data.苏梦状态?.当前阶段 || 1;
+      const stage = currentCharacter === '秦璐' ? data.秦璐状态?.当前阶段 || 1 : data.苏梦状态?.当前阶段 || 1;
 
       console.info(`[巡逻事件] 检测到待触发的巡逻事件，时间: ${event.触发时间}`);
 
@@ -1177,11 +1179,7 @@ $(async () => {
     {
       name: '路过询问',
       scene: '走廊里传来了脚步声。\n苏文路过{{user}}房间门口，注意到门关着，停下了脚步...',
-      dialogues: [
-        '"{{user}}？在房间里吗？"',
-        '"小璐？你也在吗？"',
-        '（敲敲门）"门怎么关着？"',
-      ],
+      dialogues: ['"{{user}}？在房间里吗？"', '"小璐？你也在吗？"', '（敲敲门）"门怎么关着？"'],
       prefill: '（走廊里忽然传来了脚步声，苏文路过{{user}}房间门口...）\n\n',
     },
     {
@@ -1464,11 +1462,11 @@ $(async () => {
     userMessageContent: string | null;
     prefill: string | null;
     // 额外信息
-    stageNumber?: number;       // 阶段突破时的新阶段
-    accumulatedTime?: number;   // 打断事件时的累计时间
-    triggerTime?: string;       // 巡逻事件时的触发时间
-    logIndex?: number;          // 日志索引，用于标记已通知
-    violationType?: string;     // 越界行为类型
+    stageNumber?: number; // 阶段突破时的新阶段
+    accumulatedTime?: number; // 打断事件时的累计时间
+    triggerTime?: string; // 巡逻事件时的触发时间
+    logIndex?: number; // 日志索引，用于标记已通知
+    violationType?: string; // 越界行为类型
   };
 
   /**
@@ -1538,7 +1536,9 @@ $(async () => {
         prefill: generateBoundaryViolationPrefill(),
         violationType,
       };
-      console.warn(`[习惯注入] ⚠️ 检测到越界行为！阶段${stage}禁止「${violationType}」，关键词: "${matchedKeyword}"，触发打断`);
+      console.warn(
+        `[习惯注入] ⚠️ 检测到越界行为！阶段${stage}禁止「${violationType}」，关键词: "${matchedKeyword}"，触发打断`,
+      );
 
       // 越界行为检测到后，直接返回，不再检查其他事件
       return {
@@ -1699,7 +1699,6 @@ $(async () => {
     }
   }
 
-
   // 监听 CHAT_COMPLETION_PROMPT_READY 事件
   eventOn(
     tavern_events.CHAT_COMPLETION_PROMPT_READY,
@@ -1733,9 +1732,7 @@ $(async () => {
               const rawContent = chat[i].content;
               const content = typeof rawContent === 'string' ? rawContent : '';
               const trimmed = content.trim();
-              const isSystemPrompt = systemPrompts.some(prompt =>
-                trimmed === prompt || trimmed.startsWith(prompt)
-              );
+              const isSystemPrompt = systemPrompts.some(prompt => trimmed === prompt || trimmed.startsWith(prompt));
               if (!isSystemPrompt) {
                 return i;
               }
