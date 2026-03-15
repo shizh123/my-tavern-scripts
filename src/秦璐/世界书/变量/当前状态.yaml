@@ -1,0 +1,146 @@
+---
+当前状态: |-
+  # 当前游戏状态（实时数据）
+
+  ## 世界
+  - 日期：<%= getvar('stat_data.世界.日期') %> <%= getvar('stat_data.世界.星期') %>
+  - 时间：<%= getvar('stat_data.世界.时间') %>
+  - 地点：<%= getvar('stat_data.世界.地点') %>
+  - 环境氛围：<%= getvar('stat_data.世界.环境氛围') %>
+
+  ## 秦璐状态
+  - 当前阶段：<%= getvar('stat_data.秦璐状态.当前阶段') %>（<%= getvar('stat_data.秦璐状态.阶段标题') %>）
+  - 道德底线：<%= getvar('stat_data.秦璐状态.道德底线') %>
+  - 对主角依存度：<%= getvar('stat_data.秦璐状态.对主角依存度') %>
+  - 对苏文依存度：<%= getvar('stat_data.秦璐状态.对苏文依存度') %>
+  - 潜意识侵蚀度：<%= getvar('stat_data.秦璐状态.潜意识侵蚀度') %>
+  - 当前情绪：<%= getvar('stat_data.秦璐状态.当前情绪') %>
+  - 当前心理想法：<%= getvar('stat_data.秦璐状态.当前心理想法') %>
+  - 气质描述：<%= getvar('stat_data.秦璐状态.气质描述') %>
+
+  ### 秦璐服装
+  - 头部：<%= getvar('stat_data.秦璐状态.服装细节.头部') %>
+  - 上装：<%= getvar('stat_data.秦璐状态.服装细节.上装') %>
+  - 下装：<%= getvar('stat_data.秦璐状态.服装细节.下装') %>
+  - 内衣上：<%= getvar('stat_data.秦璐状态.服装细节.内衣.上') %>
+  - 内衣下：<%= getvar('stat_data.秦璐状态.服装细节.内衣.下') %>
+  - 袜裤：<%= getvar('stat_data.秦璐状态.服装细节.袜裤') %>
+  - 鞋子：<%= getvar('stat_data.秦璐状态.服装细节.鞋子') %>
+  - 外套：<%= getvar('stat_data.秦璐状态.服装细节.外套') %>
+  - 配饰：<%= getvar('stat_data.秦璐状态.服装细节.配饰') %>
+  - 特殊装饰：<%= getvar('stat_data.秦璐状态.服装细节.特殊装饰') %>
+  - 整体风格：<%= getvar('stat_data.秦璐状态.服装细节.整体风格') %>
+  - 暴露程度：<%= getvar('stat_data.秦璐状态.服装细节.暴露程度') %>
+  - 整洁度：<%= getvar('stat_data.秦璐状态.服装细节.整洁度') %>
+
+  ### 秦璐妆容
+  - 底妆：<%= getvar('stat_data.秦璐状态.妆容细节.底妆') %>
+  - 眼妆：<%= getvar('stat_data.秦璐状态.妆容细节.眼妆') %>
+  - 唇妆：<%= getvar('stat_data.秦璐状态.妆容细节.唇妆') %>
+  - 腮红：<%= getvar('stat_data.秦璐状态.妆容细节.腮红') %>
+  - 特殊妆容：<%= getvar('stat_data.秦璐状态.妆容细节.特殊妆容') %>
+  - 整体风格：<%= getvar('stat_data.秦璐状态.妆容细节.整体风格') %>
+  - 浓淡程度：<%= getvar('stat_data.秦璐状态.妆容细节.浓淡程度') %>
+
+  ### 秦璐习惯
+  <%_ const qinluHabits = getvar('stat_data.秦璐状态.习惯列表') || []; _%>
+  <%_ if (qinluHabits.length > 0) { _%>
+  <%_ qinluHabits.forEach((h, i) => { _%>
+  - <%= h.内容 %>（形成于 <%= h.形成时间 %>）
+  <%_ }); _%>
+  <%_ } else { _%>
+  - 暂无习惯
+  <%_ } _%>
+
+  ## 苏梦状态
+  - 当前阶段：<%= getvar('stat_data.苏梦状态.当前阶段') %>（<%= getvar('stat_data.苏梦状态.阶段标题') %>）
+  - 道德底线：<%= getvar('stat_data.苏梦状态.道德底线') %>
+  - 对主角依存度：<%= getvar('stat_data.苏梦状态.对主角依存度') %>
+  - 对苏文依存度：<%= getvar('stat_data.苏梦状态.对苏文依存度') %>
+  - 潜意识侵蚀度：<%= getvar('stat_data.苏梦状态.潜意识侵蚀度') %>
+  - 当前情绪：<%= getvar('stat_data.苏梦状态.当前情绪') %>
+  - 当前心理想法：<%= getvar('stat_data.苏梦状态.当前心理想法') %>
+  - 气质描述：<%= getvar('stat_data.苏梦状态.气质描述') %>
+
+  ### 苏梦服装
+  - 头部：<%= getvar('stat_data.苏梦状态.服装细节.头部') %>
+  - 上装：<%= getvar('stat_data.苏梦状态.服装细节.上装') %>
+  - 下装：<%= getvar('stat_data.苏梦状态.服装细节.下装') %>
+  - 内衣上：<%= getvar('stat_data.苏梦状态.服装细节.内衣.上') %>
+  - 内衣下：<%= getvar('stat_data.苏梦状态.服装细节.内衣.下') %>
+  - 袜裤：<%= getvar('stat_data.苏梦状态.服装细节.袜裤') %>
+  - 鞋子：<%= getvar('stat_data.苏梦状态.服装细节.鞋子') %>
+  - 外套：<%= getvar('stat_data.苏梦状态.服装细节.外套') %>
+  - 配饰：<%= getvar('stat_data.苏梦状态.服装细节.配饰') %>
+  - 特殊装饰：<%= getvar('stat_data.苏梦状态.服装细节.特殊装饰') %>
+  - 整体风格：<%= getvar('stat_data.苏梦状态.服装细节.整体风格') %>
+  - 暴露程度：<%= getvar('stat_data.苏梦状态.服装细节.暴露程度') %>
+  - 整洁度：<%= getvar('stat_data.苏梦状态.服装细节.整洁度') %>
+
+  ### 苏梦妆容
+  - 底妆：<%= getvar('stat_data.苏梦状态.妆容细节.底妆') %>
+  - 眼妆：<%= getvar('stat_data.苏梦状态.妆容细节.眼妆') %>
+  - 唇妆：<%= getvar('stat_data.苏梦状态.妆容细节.唇妆') %>
+  - 腮红：<%= getvar('stat_data.苏梦状态.妆容细节.腮红') %>
+  - 特殊妆容：<%= getvar('stat_data.苏梦状态.妆容细节.特殊妆容') %>
+  - 整体风格：<%= getvar('stat_data.苏梦状态.妆容细节.整体风格') %>
+  - 浓淡程度：<%= getvar('stat_data.苏梦状态.妆容细节.浓淡程度') %>
+
+  ### 苏梦习惯
+  <%_ const sumengHabits = getvar('stat_data.苏梦状态.习惯列表') || []; _%>
+  <%_ if (sumengHabits.length > 0) { _%>
+  <%_ sumengHabits.forEach((h, i) => { _%>
+  - <%= h.内容 %>（形成于 <%= h.形成时间 %>）
+  <%_ }); _%>
+  <%_ } else { _%>
+  - 暂无习惯
+  <%_ } _%>
+
+  ## 苏文状态
+  - 当前状态：<%= getvar('stat_data.苏文状态.当前状态') %>
+  - 当前位置：<%= getvar('stat_data.苏文状态.当前位置') %>
+  - 当前情绪：<%= getvar('stat_data.苏文状态.当前情绪') %>
+  - 对秦璐疑心值：<%= getvar('stat_data.苏文状态.对秦璐疑心值') %>
+  - 对秦璐印象：<%= getvar('stat_data.苏文状态.对秦璐印象') %>
+  - 对苏梦疑心值：<%= getvar('stat_data.苏文状态.对苏梦疑心值') %>
+  - 对苏梦印象：<%= getvar('stat_data.苏文状态.对苏梦印象') %>
+
+  ### 特殊状态
+  <%_ const sleepingPill = getvar('stat_data.苏文状态.安眠药状态') || {}; _%>
+  <%_ if (sleepingPill.是否生效) { _%>
+  - 【安眠药生效中】剩余 <%= sleepingPill.剩余时间 %> 小时（结束时间：<%= sleepingPill.生效结束时间 %>）
+  <%_ } _%>
+  <%_ const hospitalization = getvar('stat_data.苏文状态.住院状态') || {}; _%>
+  <%_ if (hospitalization.是否住院) { _%>
+  - 【住院中】剩余 <%= hospitalization.剩余天数 %> 天（出院时间：<%= hospitalization.住院结束时间 %>）
+  <%_ } _%>
+
+  ### 疑心值冻结状态
+  <%_ const qinluFreeze = getvar('stat_data.苏文状态.对秦璐疑心值冻结') || {}; _%>
+  <%_ if (qinluFreeze.是否冻结) { _%>
+  - 秦璐疑心值已冻结，借口：<%= qinluFreeze.借口内容 %>，解除时间：<%= qinluFreeze.冻结结束时间 %>
+  <%_ } else { _%>
+  - 秦璐疑心值未冻结
+  <%_ } _%>
+  <%_ const sumengFreeze = getvar('stat_data.苏文状态.对苏梦疑心值冻结') || {}; _%>
+  <%_ if (sumengFreeze.是否冻结) { _%>
+  - 苏梦疑心值已冻结，借口：<%= sumengFreeze.借口内容 %>，解除时间：<%= sumengFreeze.冻结结束时间 %>
+  <%_ } else { _%>
+  - 苏梦疑心值未冻结
+  <%_ } _%>
+
+  ## 系统追踪
+  - 当前所在位置：<%= getvar('stat_data.系统追踪.当前所在位置') %>
+  - 当前角色：<%= getvar('stat_data.系统追踪.当前角色') %>
+  - 秦璐危险时间累计：<%= getvar('stat_data.系统追踪.秦璐危险时间累计') %> 小时
+  - 苏梦危险时间累计：<%= getvar('stat_data.系统追踪.苏梦危险时间累计') %> 小时
+
+  ### 待触发事件
+  <%_ const interruptEvent = getvar('stat_data.系统追踪.苏文打断事件') || {}; _%>
+  <%_ if (interruptEvent.待触发) { _%>
+  - 【苏文打断事件】待触发！原因：<%= interruptEvent.打断原因 %>
+  <%_ } _%>
+  <%_ const patrolEvent = getvar('stat_data.系统追踪.苏文巡逻事件') || {}; _%>
+  <%_ if (patrolEvent.待触发) { _%>
+  - 【苏文巡逻事件】待触发！位置：<%= patrolEvent.巡逻位置 %>，离开期限：<%= patrolEvent.离开期限 || '未设置' %>
+  <%_ } _%>

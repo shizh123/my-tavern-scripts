@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "治疗": {
+      "default": {
+        "完成度": 0,
+        "阶段": 1
+      },
+      "type": "object",
+      "properties": {
+        "完成度": {
+          "type": "number"
+        },
+        "阶段": {
+          "default": 1,
+          "type": "number"
+        }
+      }
+    },
+    "云霜凝": {
+      "default": {
+        "信任度": 5,
+        "心理防线": 100,
+        "身体开发": {
+          "小嘴": 0,
+          "胸部": 0,
+          "小屄": 0,
+          "屁穴": 0
+        },
+        "性癖列表": {},
+        "肉体改造": {
+          "胸部": "默认",
+          "臀部": "默认",
+          "乳环": false,
+          "阴环": false,
+          "淫纹位置": [],
+          "堕落烙印": false
+        },
+        "服装": {
+          "上装": "寒霜门道袍",
+          "下装": "寒霜门长裙",
+          "内衣": "素白抹胸",
+          "内裤": "素白亵裤",
+          "特殊配饰": "无",
+          "暴露程度": "遮蔽"
+        },
+        "心理活动": ""
+      },
+      "type": "object",
+      "properties": {
+        "信任度": {
+          "default": 5,
+          "type": "number"
+        },
+        "心理防线": {
+          "default": 100,
+          "type": "number"
+        },
+        "身体开发": {
+          "default": {
+            "小嘴": 0,
+            "胸部": 0,
+            "小屄": 0,
+            "屁穴": 0
+          },
+          "type": "object",
+          "properties": {
+            "小嘴": {
+              "type": "number"
+            },
+            "胸部": {
+              "type": "number"
+            },
+            "小屄": {
+              "type": "number"
+            },
+            "屁穴": {
+              "type": "number"
+            }
+          }
+        },
+        "性癖列表": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "肉体改造": {
+          "default": {
+            "胸部": "默认",
+            "臀部": "默认",
+            "乳环": false,
+            "阴环": false,
+            "淫纹位置": [],
+            "堕落烙印": false
+          },
+          "type": "object",
+          "properties": {
+            "胸部": {
+              "default": "默认",
+              "type": "string",
+              "enum": [
+                "默认",
+                "E罩杯",
+                "G罩杯",
+                "H罩杯"
+              ]
+            },
+            "臀部": {
+              "default": "默认",
+              "type": "string",
+              "enum": [
+                "默认",
+                "丰满"
+              ]
+            },
+            "乳环": {
+              "type": "boolean"
+            },
+            "阴环": {
+              "type": "boolean"
+            },
+            "淫纹位置": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "腰腹",
+                  "胸前",
+                  "大腿内侧"
+                ]
+              }
+            },
+            "堕落烙印": {
+              "type": "boolean"
+            }
+          }
+        },
+        "服装": {
+          "default": {
+            "上装": "寒霜门道袍",
+            "下装": "寒霜门长裙",
+            "内衣": "素白抹胸",
+            "内裤": "素白亵裤",
+            "特殊配饰": "无",
+            "暴露程度": "遮蔽"
+          },
+          "type": "object",
+          "properties": {
+            "上装": {
+              "default": "寒霜门道袍",
+              "type": "string"
+            },
+            "下装": {
+              "default": "寒霜门长裙",
+              "type": "string"
+            },
+            "内衣": {
+              "default": "素白抹胸",
+              "type": "string"
+            },
+            "内裤": {
+              "default": "素白亵裤",
+              "type": "string"
+            },
+            "特殊配饰": {
+              "default": "无",
+              "type": "string"
+            },
+            "暴露程度": {
+              "default": "遮蔽",
+              "type": "string",
+              "enum": [
+                "遮蔽",
+                "微露",
+                "轻露",
+                "半露",
+                "大露",
+                "极露"
+              ]
+            }
+          }
+        },
+        "心理活动": {
+          "type": "string"
+        }
+      }
+    },
+    "苗广": {
+      "default": {
+        "疑心值": 0,
+        "心态": "正常",
+        "心理活动": "",
+        "千晶幻术": {
+          "激活中": false,
+          "冷却结束楼层": 0,
+          "已使用次数": 0,
+          "幻境摘要": "",
+          "认知改写完成": false
+        }
+      },
+      "type": "object",
+      "properties": {
+        "疑心值": {
+          "type": "number"
+        },
+        "心态": {
+          "default": "正常",
+          "type": "string",
+          "enum": [
+            "正常",
+            "疑惑",
+            "察觉",
+            "愤怒",
+            "屈辱",
+            "默许",
+            "沉溺"
+          ]
+        },
+        "心理活动": {
+          "type": "string"
+        },
+        "千晶幻术": {
+          "default": {
+            "激活中": false,
+            "冷却结束楼层": 0,
+            "已使用次数": 0,
+            "幻境摘要": "",
+            "认知改写完成": false
+          },
+          "type": "object",
+          "properties": {
+            "激活中": {
+              "type": "boolean"
+            },
+            "冷却结束楼层": {
+              "type": "number"
+            },
+            "已使用次数": {
+              "type": "number"
+            },
+            "幻境摘要": {
+              "type": "string"
+            },
+            "认知改写完成": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "系统": {
+      "default": {
+        "灵石": 100,
+        "道具状态": {}
+      },
+      "type": "object",
+      "properties": {
+        "灵石": {
+          "default": 100,
+          "type": "number"
+        },
+        "道具状态": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "未购买",
+              "已购买",
+              "使用中"
+            ]
+          }
+        }
+      }
+    },
+    "时间": {
+      "default": {
+        "第几天": 1,
+        "当前小时": 8
+      },
+      "type": "object",
+      "properties": {
+        "第几天": {
+          "default": 1,
+          "type": "number"
+        },
+        "当前小时": {
+          "default": 8,
+          "type": "number"
+        }
+      }
+    },
+    "_坏结局已触发": {
+      "type": "boolean"
+    },
+    "_打断冻结至楼层": {
+      "type": "number"
+    },
+    "_已触发蚀心露屈辱": {
+      "type": "boolean"
+    },
+    "_消耗品上次使用楼层": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "_净灵铃上次使用楼层": {
+      "type": "number"
+    },
+    "_待发送道具事件": {
+      "type": "string"
+    },
+    "_神魂空间激活中": {
+      "type": "boolean"
+    },
+    "_当前互动模式": {
+      "default": "日常",
+      "type": "string",
+      "enum": [
+        "神魂空间",
+        "现实互动",
+        "日常"
+      ]
+    },
+    "_已发放里程碑灵石": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "_已发放苗广心态灵石": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "_临时道具剩余轮次": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "_特殊场景": {
+      "default": {
+        "进行中": "",
+        "当前阶段": 0,
+        "总阶段数": 0,
+        "当前阶段轮次": 0
+      },
+      "type": "object",
+      "properties": {
+        "进行中": {
+          "type": "string"
+        },
+        "当前阶段": {
+          "type": "number"
+        },
+        "总阶段数": {
+          "type": "number"
+        },
+        "当前阶段轮次": {
+          "type": "number"
+        }
+      }
+    },
+    "_已完成特殊场景": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "_神魂空间已解锁": {
+      "type": "boolean"
+    },
+    "_神魂空间已进入过": {
+      "type": "boolean"
+    },
+    "_神魂记忆场景": {
+      "type": "string"
+    },
+    "_新婚夜已触发": {
+      "type": "boolean"
+    },
+    "_记忆进入次数": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "_系统操作中": {
+      "type": "boolean"
+    },
+    "_留影石计数": {
+      "type": "number"
+    },
+    "_苗喧上次触发楼层": {
+      "type": "number"
+    },
+    "_苗喧碎片": {
+      "type": "string"
+    },
+    "_千晶幻术开始楼层": {
+      "type": "number"
+    }
+  }
+}

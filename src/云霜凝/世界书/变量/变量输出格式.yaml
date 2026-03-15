@@ -1,0 +1,73 @@
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
+      - replace: replace the value of existing paths
+      - delta: update the value of existing number paths by a delta value
+      - insert: insert new items into an object or array
+      - remove
+    - don't update field names starts with underscore (_) as they are readonly — managed by script
+    - 【时间禁止修改】时间系统（/时间/*）完全由脚本控制，AI绝对不要修改
+    - 【治疗阶段禁止修改】/治疗/阶段 由脚本从完成度自动计算，AI绝对不要修改
+    - 【苗广心态】AI可以修改心态枚举值，脚本会在默许/沉溺时保护；愤怒状态不可逆
+    - AI should update character states based on interactions:
+      - 云霜凝.信任度: increase when 云霜凝 experiences warmth or meaningful interaction
+      - 云霜凝.心理防线: decrease when 云霜凝 accepts intimate/taboo behavior
+      - 云霜凝.身体开发.*: increase based on body-part related intimate acts (script limits +15/turn)
+      - 云霜凝.心理活动: generate 100-150 char first-person inner thoughts each turn
+      - 苗广.疑心值: increase when suspicious things happen (script auto-maps to 心态)
+      - 苗广.心理活动: generate thoughts each turn; 前半程(正常/疑惑/察觉) 100-150 chars; 后半程(屈辱/默许/沉溺) 300-350 chars; 千晶幻术 active 300-500 chars
+      - 治疗.完成度: increase after effective dual-cultivation acts (script calculates stage)
+  format: |
+    <UpdateVariable>
+    <Analysis>(IN ENGLISH, no more than 100 words)
+    - analyze 云霜凝's emotional/psychological changes
+    - analyze 信任度/心理防线 changes
+    - analyze 身体开发 if intimate contact occurred (note body part)
+    - analyze 苗广 suspicion changes
+    - analyze 治疗.完成度 if dual-cultivation occurred
+    </Analysis>
+    <JSONPatch>
+    [
+      { "op": "delta", "path": "/云霜凝/信任度", "value": 3 },
+      { "op": "delta", "path": "/云霜凝/心理防线", "value": -5 },
+      { "op": "delta", "path": "/云霜凝/身体开发/小嘴", "value": 8 },
+      { "op": "replace", "path": "/云霜凝/心理活动", "value": "他的话语令我不由心神动荡……" },
+      { "op": "replace", "path": "/苗广/心理活动", "value": "里面没有动静，应该是在正常施术……" },
+      { "op": "delta", "path": "/治疗/完成度", "value": 5 },
+      ...
+    ]
+    </JSONPatch>
+    </UpdateVariable>
+
+  特殊场景示例:
+    神魂空间对话（信任提升）: |
+      { "op": "delta", "path": "/云霜凝/信任度", "value": 5 }
+      { "op": "replace", "path": "/云霜凝/心理活动", "value": "他竟然能进入此处……我需要弄清楚他的来意" }
+
+    双修行为（治疗推进）: |
+      { "op": "delta", "path": "/治疗/完成度", "value": 8 }
+      { "op": "delta", "path": "/云霜凝/心理防线", "value": -8 }
+      { "op": "delta", "path": "/云霜凝/身体开发/胸部", "value": 10 }
+
+    苗广发现可疑（疑心上升）: |
+      { "op": "delta", "path": "/苗广/疑心值", "value": 10 }
+
+
+    千晶幻术激活（苗广心理扩展至300-500字）:
+      说明: 苗广.心理活动 在千晶幻术激活时应扩展为300-500字主观视角，描写幻境感知
+      示例: |
+        { "op": "replace", "path": "/苗广/心理活动", "value": "眼前的景象开始扭曲……我感觉自己站在熟悉却又陌生的地方……那个声音在呼唤我……我仿佛明白了什么是真正的爱……" }
+
+    苗广心态变化（默许路线）: |
+      { "op": "replace", "path": "/苗广/心态", "value": "默许" }
+      { "op": "replace", "path": "/苗广/心理活动", "value": "也罢……只要她能好起来……" }
+
+    苗广心态变化（沉溺路线）: |
+      { "op": "replace", "path": "/苗广/心态", "value": "沉溺" }
+
+    性癖写入（特殊场景永久奖励）:
+      说明: 性癖列表仅存特殊场景奖励（镜前记忆、改嫁认知等），商店性癖通过系统.道具状态管理（脚本控制，AI不要修改）
+      示例: |
+        { "op": "insert", "path": "/云霜凝/性癖列表", "value": { "镜前记忆": "照镜子时不自觉审视自己被改造的身体，产生复杂情绪" } }

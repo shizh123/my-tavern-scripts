@@ -71,7 +71,7 @@ export function defineMvuDataStore<T extends z.ZodObject>(
         additional_setup(data);
       }
 
-      useIntervalFn(() => {
+      const { pause, resume } = useIntervalFn(() => {
         // Bug #18 八次修复：检查消息变量是否真的存在 stat_data
         // 问题：当 getVariables 返回空对象时，schema.safeParse({}) 会成功返回默认值
         // 这导致真实数据被默认值覆盖
@@ -101,6 +101,28 @@ export function defineMvuDataStore<T extends z.ZodObject>(
         }
       }, 500);
 
+      // 性能优化：iframe 滚出视口时暂停轮询，避免多楼层时大量 iframe 同时轮询
+      // 使用父窗口的 IntersectionObserver 观察 iframe 元素在聊天区的可见性
+      try {
+        if (window.frameElement && window.parent) {
+          const ParentIO = (window.parent as any).IntersectionObserver as typeof IntersectionObserver;
+          const observer = new ParentIO(
+            (entries: IntersectionObserverEntry[]) => {
+              if (entries[0]?.isIntersecting) {
+                resume();
+              } else {
+                pause();
+              }
+            },
+            { root: null, threshold: 0 },
+          );
+          observer.observe(window.frameElement);
+          onScopeDispose(() => observer.disconnect());
+        }
+      } catch {
+        // 跨域或不在 iframe 中，忽略（保持默认轮询）
+      }
+
       const { ignoreUpdates } = watchIgnorable(
         data,
         new_data => {
@@ -119,7 +141,30 @@ export function defineMvuDataStore<T extends z.ZodObject>(
         { deep: true },
       );
 
-      return { data };
+      /** 同步刷新 store 数据到 MVU 变量，用于 triggerSlash 前确保数据已持久化 */
+      function flush() {
+        const result = schema.safeParse(data.value);
+        if (!result.error) {
+          updateVariablesWith(variables => _.set(variables, 'stat_data', result.data), currentOption);
+        }
+      }
+
+      /** 从 MVU 拉取最新数据到 store（绕过 500ms 轮询延迟）
+       *  用于按钮操作前确保读到脚本侧已清除/修改的值，避免 store 旧值覆盖 MVU */
+      function pull() {
+        const variables = getVariables(currentOption);
+        if (!variables || !_.has(variables, 'stat_data')) return;
+        const stat_data = _.get(variables, 'stat_data', {});
+        const result = schema.safeParse(stat_data);
+        if (result.error) return;
+        if (!_.isEqual(data.value, result.data)) {
+          ignoreUpdates(() => {
+            data.value = result.data;
+          });
+        }
+      }
+
+      return { data, flush, pull };
     }),
   );
 }

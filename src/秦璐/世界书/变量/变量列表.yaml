@@ -1,0 +1,142 @@
+---
+变量列表: |-
+  世界:
+    时间: string
+    日期: string
+    星期: string (周一|周二|周三|周四|周五|周六|周日)
+    地点: string
+    环境氛围: string
+
+  秦璐状态:
+    道德底线: number (0~100)
+    对主角依存度: number (-50~100)
+    对苏文依存度: number (-50~100)
+    潜意识侵蚀度: number (0~150)
+    当前阶段: number (1~5)
+    阶段标题: string
+    当前心理想法: string
+    当前情绪: string
+    服装细节:
+      头部: string
+      上装: string
+      下装: string
+      内衣:
+        上: string
+        下: string
+      袜裤: string
+      鞋子: string
+      外套: string
+      配饰: string
+      特殊装饰: string
+      整体风格: string
+      暴露程度: string
+      整洁度: string
+    妆容细节:
+      底妆: string
+      眼妆: string
+      唇妆: string
+      腮红: string
+      特殊妆容: string
+      整体风格: string
+      浓淡程度: string
+    身体改造:
+      纹身: object
+      穿刺:
+        耳环: boolean
+        乳环: boolean
+        乳头环: boolean
+        阴蒂环: boolean
+        舌环: boolean
+        肚脐环: boolean
+        阴唇环: boolean
+        其他: string[]
+      乳晕改造: string
+      永久标记: string[]
+      临时标记: string[]
+      体态变化: string
+    气质描述: string
+    习惯列表: array
+    念头培育区: array
+
+  苏梦状态:
+    道德底线: number (0~100)
+    对主角依存度: number (-50~100)
+    对苏文依存度: number (-50~100)
+    潜意识侵蚀度: number (0~150)
+    当前阶段: number (1~5)
+    阶段标题: string
+    当前心理想法: string
+    当前情绪: string
+    服装细节: { ... }
+    妆容细节: { ... }
+    身体改造: { ... }
+    气质描述: string
+    习惯列表: array
+    念头培育区: array
+
+  苏文状态:
+    当前状态: string (在家|出差|上班|睡眠)
+    当前位置: string (客厅|餐厅|厨房|主卧|浴室|主角房间|外面)
+    当前情绪: string
+    安眠药状态:
+      是否生效: boolean
+      生效开始时间: string
+      生效结束时间: string
+      剩余时间: number (小时)
+      上次使用时间: string
+      触发楼层: number
+    住院状态:
+      是否住院: boolean
+      住院开始时间: string
+      住院结束时间: string
+      剩余天数: number
+      触发楼层: number
+    对秦璐疑心值: number (0~100)
+    对秦璐印象: string
+    对秦璐疑心值冻结:
+      是否冻结: boolean
+      借口内容: string
+      冻结开始时间: string
+      冻结结束时间: string
+    对苏梦疑心值: number (0~100)
+    对苏梦印象: string
+    对苏梦疑心值冻结:
+      是否冻结: boolean
+      借口内容: string
+      冻结开始时间: string
+      冻结结束时间: string
+
+  系统追踪:
+    当前所在位置: string
+    当前角色: string (秦璐|苏梦)
+    进入当前位置时间: string
+    上次更新时间: string
+    上次衰减日期: string
+    危险时间累计: number (已废弃，兼容旧数据)
+    秦璐危险时间累计: number (秦璐在主角房间且苏文在家清醒的累计小时数)
+    苏梦危险时间累计: number (苏梦在主角房间且苏文在家清醒的累计小时数)
+    秦璐外观待更新:
+      需要更新: boolean
+      目标阶段: number
+      变化原因: string
+    苏梦外观待更新:
+      需要更新: boolean
+      目标阶段: number
+      变化原因: string
+    苏文打断事件:
+      待触发: boolean
+      已通知AI: boolean
+      打断原因: string
+      累计时间: number
+      等待借口: boolean
+      借口结果: string (待定|成功|失败)
+    苏文巡逻事件:
+      待触发: boolean
+      已通知AI: boolean
+      触发时间: string
+      巡逻位置: string
+      上次巡逻时间: string
+      离开期限: string (HH:mm格式)
+      期限小时数: number (1-2小时)
+    念头植入日志: array
+    强制事件日志: array (记录阶段突破/打断/巡逻等强制事件)

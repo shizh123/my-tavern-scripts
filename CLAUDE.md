@@ -7,3 +7,4 @@
 @.cursor/rules/脚本.mdc
 @.cursor/rules/mvu变量框架.mdc
 @.cursor/rules/mvu角色卡.mdc
+@.cursor/rules/破限.mdc

@@ -1,0 +1,77 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Core palette */
+  --c-bg: #0c0406;
+  --c-bg2: #180810;
+  --c-surface: #1e0a14;
+  --c-ice: #c03050;
+  --c-ice-dim: #8a2038;
+  --c-acc: #ff6080;
+  --c-frost: #ffd0d8;
+  --c-text: #f0d0d8;
+  --c-sub: #a07080;
+  --c-gold: #d4aa48;
+  --c-gold-l: #f0d070;
+  --c-danger: #d44444;
+  --c-good: #38b870;
+  --c-warn: #c8a02a;
+
+  /* Category colors */
+  --cat-consumable: #48b8c8;
+  --cat-equip: #d86878;
+  --cat-bodymod: #e06898;
+  --cat-kink: #c850a0;
+  --cat-scene: #c89030;
+
+  /* Spacing */
+  --sp-xs: 4px;
+  --sp-sm: 8px;
+  --sp-md: 12px;
+  --sp-lg: 16px;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-pill: 20px;
+}
+
+body {
+  font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  background: transparent;
+  color: #f0d0d8;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 2px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(192, 48, 80, 0.3), rgba(138, 32, 56, 0.2));
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(192, 48, 80, 0.5), rgba(138, 32, 56, 0.3));
+}
+
+/* Mobile touch */
+@media (hover: none) {
+  button, [role="button"] {
+    -webkit-tap-highlight-color: rgba(192, 48, 80, 0.08);
+  }
+}

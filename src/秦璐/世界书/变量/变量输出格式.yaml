@@ -1,0 +1,76 @@
+---
+变量输出格式:
+  rule:
+    - you must output the update analysis and the actual update commands at once in the end of the next reply
+    - the update commands works like the **JSON Patch (RFC 6902)** standard, must be a valid JSON array containing operation objects, but supports the following operations instead:
+      - replace: replace the value of existing paths
+      - delta: update the value of existing number paths by a delta value
+      - insert: insert new items into an object or array
+      - remove
+    - don't update field names starts with `_` as they are readonly
+    - AI does NOT handle thought implantation - player uses the UI panel to implant thoughts
+    - AI should update character states based on interactions:
+      - 道德底线: decrease when character accepts inappropriate behavior
+      - 对主角依存度: increase when character relies on or enjoys {{user}}'s attention
+      - 对苏文依存度: may decrease as 对主角依存度 increases
+      - 潜意识侵蚀度: increases through habit formation and corruption events
+    - scripts automatically handle: time advancement, thought progress, stage transitions, appearance updates
+  format: |-
+    <UpdateVariable>
+    <Analysis>$(IN ENGLISH, no more than 120 words)
+    - ${calculate time passed: ...}
+    - ${analyze character emotional/psychological changes based on interactions: ...}
+    - ${analyze other variable changes based on corresponding check rules, according to current reply: ...}
+    </Analysis>
+    <JSONPatch>
+    [
+      { "op": "replace", "path": "/世界/时间", "value": "08:00" },
+      { "op": "replace", "path": "/世界/地点", "value": "家 - 客厅" },
+      { "op": "delta", "path": "/秦璐状态/道德底线", "value": -2 },
+      { "op": "delta", "path": "/秦璐状态/对主角依存度", "value": 3 },
+      { "op": "delta", "path": "/秦璐状态/潜意识侵蚀度", "value": 2 },
+      { "op": "replace", "path": "/秦璐状态/当前情绪", "value": "困惑而羞涩" },
+      { "op": "replace", "path": "/秦璐状态/当前心理想法", "value": "为什么我会有这种感觉..." },
+      { "op": "delta", "path": "/苏文状态/疑心值", "value": 5 },
+      ...
+    ]
+    </JSONPatch>
+    </UpdateVariable>
+
+  特殊场景示例:
+    角色情绪和心理变化: |-
+      { "op": "replace", "path": "/秦璐状态/当前情绪", "value": "羞愧与期待交织" }
+      { "op": "replace", "path": "/秦璐状态/当前心理想法", "value": "这样做是不对的，但是..." }
+
+    核心数值调整: |-
+      { "op": "delta", "path": "/秦璐状态/道德底线", "value": -3 }
+      { "op": "delta", "path": "/秦璐状态/对主角依存度", "value": 5 }
+      { "op": "delta", "path": "/秦璐状态/对苏文依存度", "value": -2 }
+      { "op": "delta", "path": "/秦璐状态/潜意识侵蚀度", "value": 3 }
+
+    苏文疑心值变化: |-
+      { "op": "delta", "path": "/苏文状态/疑心值", "value": 8 }
+      { "op": "replace", "path": "/苏文状态/当前情绪", "value": "隐隐不安" }
+      { "op": "replace", "path": "/苏文状态/对秦璐印象", "value": "最近似乎有些心不在焉" }
+
+    苏文疑心值冻结（撒谎成功）: |-
+      { "op": "replace", "path": "/苏文状态/疑心值冻结/是否冻结", "value": true }
+      { "op": "replace", "path": "/苏文状态/疑心值冻结/借口内容", "value": "去超市买菜" }
+      { "op": "replace", "path": "/苏文状态/疑心值冻结/冻结开始时间", "value": "2024/11/20 14:00" }
+      { "op": "replace", "path": "/苏文状态/疑心值冻结/冻结结束时间", "value": "2024/11/20 16:00" }
+
+    服装变化（特殊场景）: |-
+      { "op": "replace", "path": "/秦璐状态/服装细节/上装", "value": "宽松的白色衬衫" }
+      { "op": "replace", "path": "/秦璐状态/服装细节/暴露程度", "value": "清凉" }
+      { "op": "replace", "path": "/秦璐状态/服装细节/整洁度", "value": "略显凌乱" }
+
+    地点和环境变化: |-
+      { "op": "replace", "path": "/世界/地点", "value": "家 - 主角房间" }
+      { "op": "replace", "path": "/世界/环境氛围", "value": "暧昧" }
+      { "op": "replace", "path": "/系统追踪/当前所在位置", "value": "主角房间" }
+      { "op": "replace", "path": "/系统追踪/进入当前位置时间", "value": "2024/11/20 14:30" }
+
+    苏梦状态变化: |-
+      { "op": "delta", "path": "/苏梦状态/道德底线", "value": -2 }
+      { "op": "delta", "path": "/苏梦状态/对主角依存度", "value": 4 }
+      { "op": "replace", "path": "/苏梦状态/当前情绪", "value": "好奇而兴奋" }

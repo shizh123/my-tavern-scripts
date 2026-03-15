@@ -1,0 +1,100 @@
+---
+entries:
+  - keys: [秦璐, 母亲, 妈妈]
+    content: !include 角色/秦璐.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: [苏梦, 姐姐, 梦姐]
+    content: !include 角色/苏梦.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: [主角, 儿子, 弟弟, <user>]
+    content: !include 角色/主角.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: ['[变量列表]']
+    content: !include 变量/变量列表.yaml
+    enabled: true
+    insertion_order: 1
+    case_sensitive: true
+    constant: true
+
+  - keys: ['[当前状态]']
+    content: !include 变量/当前状态.yaml
+    enabled: true
+    insertion_order: 5
+    case_sensitive: true
+    constant: true
+    comment: 将MVU变量的当前值注入AI上下文，确保AI能看到最新状态
+
+  - keys: ['[initvar]', 变量初始化勿开]
+    content: !include 变量/initvar.yaml
+    enabled: false
+    insertion_order: 0
+    case_sensitive: true
+    comment: 仅在新建聊天时开启一次，用于初始化MVU变量
+
+  - keys: ['[mvu_update]', 变量更新规则]
+    content: !include 变量/变量更新规则.yaml
+    enabled: true
+    insertion_order: 2
+    case_sensitive: true
+    constant: true
+
+  - keys: ['[mvu_update]', 变量输出格式]
+    content: !include 变量/变量输出格式.yaml
+    enabled: true
+    insertion_order: 3
+    case_sensitive: true
+    constant: true
+
+  - keys: [念头植入, 植入系统, THOUGHT_IMPLANT]
+    content: !include 系统设定/念头植入系统.yaml
+    enabled: true
+    insertion_order: 50
+    case_sensitive: false
+
+  - keys: [外观, 服装, 妆容, 打扮]
+    content: !include 系统设定/外观互动系统.yaml
+    enabled: true
+    insertion_order: 51
+    case_sensitive: false
+    comment: 指导AI让角色自发评价/炫耀外观
+
+  - keys: [苏文打断, 打断事件, SUWEN_INTERRUPT]
+    content: !include 系统设定/苏文打断系统.yaml
+    enabled: true
+    insertion_order: 52
+    case_sensitive: false
+    comment: 苏文强制打断机制，惩罚长时间停留在主角房间
+
+  - keys: [苏文巡逻, 巡逻事件, SUWEN_PATROL]
+    content: !include 系统设定/苏文巡逻系统.yaml
+    enabled: true
+    insertion_order: 53
+    case_sensitive: false
+    comment: 苏文随机巡逻机制，设置离开期限
+
+  - keys: ['[状态一致性规则]']
+    content: !include 系统设定/状态一致性规则.yaml
+    enabled: true
+    insertion_order: 4
+    case_sensitive: true
+    constant: true
+    position: 0
+    comment: 【高优先级】确保AI描写与系统状态保持一致，每次都注入
+
+  - keys: ['[信息隔离规则]']
+    content: !include 系统设定/信息隔离系统.yaml
+    enabled: true
+    insertion_order: 5
+    case_sensitive: true
+    constant: true
+    position: 0
+    comment: 【高优先级】秦璐和苏梦之间的信息隔离，每次都注入
