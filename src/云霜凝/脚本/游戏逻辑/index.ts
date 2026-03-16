@@ -50,27 +50,6 @@ let _freezeBaseline: FreezeBaseline | null = null;
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
 
-// 模型族检测缓存（首次 PROMPT_READY 时检测，后续复用）
-let _isClaudeModel: boolean | null = null;
-function isClaudeModel(): boolean {
-  if (_isClaudeModel !== null) return _isClaudeModel;
-  try {
-    const presetName = getLoadedPresetName().toLowerCase();
-    _isClaudeModel = presetName.includes('claude') || presetName.includes('anthropic');
-  } catch {
-    _isClaudeModel = true; // 检测失败默认Claude行为
-  }
-  console.info(
-    `[云霜凝] 模型检测: ${_isClaudeModel ? 'Claude' : '非Claude'}（预设: ${(() => {
-      try {
-        return getLoadedPresetName();
-      } catch {
-        return '未知';
-      }
-    })()}）`,
-  );
-  return _isClaudeModel;
-}
 
 $(() => {
   (async () => {
@@ -236,21 +215,19 @@ $(() => {
         }
 
         // ── Phase 2: 注入状态快照（使用已更新的 data，确保 _神魂空间已进入过 等状态正确）──
-        // 插入到最后一条 assistant 消息（prefill）之前，确保快照是 AI 生成前最后看到的系统指令。
-        // 不能用 chat.push()：Gemini 的 prefill 是 chat 数组末尾的 assistant 消息，
-        // push 会把快照放到 prefill 之后，被 Gemini 视为已输出内容而忽略。
+        // 自动检测 prefill：如果 chat 末尾是 assistant 消息（Gemini prefill），
+        // 则 splice 到它之前；否则直接 push 到末尾（Claude 等无 prefill 的模型）。
         const snapshot = getStatusSnapshot(data);
         if (snapshot) {
-          let inserted = false;
-          for (let i = chat.length - 1; i >= 0; i--) {
-            if (chat[i].role === 'assistant') {
-              chat.splice(i, 0, { role: 'system', content: snapshot });
-              inserted = true;
-              break;
-            }
-          }
-          if (!inserted) {
+          const lastMsg = chat[chat.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            // 末尾有 prefill：插入到它之前，避免被视为已输出内容
+            chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
+            console.info('[云霜凝] 状态快照: 插入到 prefill 之前');
+          } else {
+            // 无 prefill：直接 push 到末尾，最靠近生成位置
             chat.push({ role: 'system', content: snapshot });
+            console.info('[云霜凝] 状态快照: push 到末尾');
           }
         }
 
