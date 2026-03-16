@@ -18,6 +18,7 @@ export interface ProtectionSnapshot {
   神魂空间激活中: boolean;
   疑心值: number;
   心态: string;
+  已触发蚀心露屈辱: boolean;
   服装: {
     上装: string;
     下装: string;
@@ -196,6 +197,7 @@ export function validateAndRecalcState(
         神魂空间激活中: snapshot.神魂空间激活中,
         疑心值: snapshot.疑心值,
         心态: snapshot.心态,
+        已触发蚀心露屈辱: snapshot.已触发蚀心露屈辱,
         服装: { ...snapshot.服装 },
         道具状态: { ...snapshot.道具状态 },
       }
@@ -209,6 +211,7 @@ export function validateAndRecalcState(
         神魂空间激活中: 旧变量._神魂空间激活中,
         疑心值: 旧变量.苗广.疑心值,
         心态: 旧变量.苗广.心态,
+        已触发蚀心露屈辱: 旧变量._已触发蚀心露屈辱,
         服装: { ...旧变量.云霜凝.服装 },
         道具状态: { ...旧变量.系统.道具状态 },
       };
@@ -225,6 +228,8 @@ export function validateAndRecalcState(
   新变量._神魂空间激活中 = base.神魂空间激活中;
   // 疑心值：脚本全权管理（被动增长在后续步骤中计算），AI不得修改
   新变量.苗广.疑心值 = base.疑心值;
+  // 蚀心露屈辱标记：前端触发的一次性状态，AI不得修改
+  新变量._已触发蚀心露屈辱 = base.已触发蚀心露屈辱;
   // 服装：脚本管理（商店装备切换触发），AI不得修改
   // 快照包含前端操作（玩家换装），回滚后 processNewlyActivatedItems/processEquipmentUnequip 会更新
   新变量.云霜凝.服装.上装 = base.服装.上装;
@@ -272,7 +277,8 @@ export function validateAndRecalcState(
     console.info('[状态验证] 阶段1保护：疑心值上限5');
   }
   const oldMind = 旧变量.苗广.心态;
-  新变量.苗广.心态 = calcMiaoguangMind(新变量.苗广.疑心值, 新变量.苗广.心态) as SchemaType['苗广']['心态'];
+  // 用快照心态（而非AI写的值）作为基准：防止AI不知道蚀心露转变，写回旧心态导致calcMiaoguangMind走错分支
+  新变量.苗广.心态 = calcMiaoguangMind(新变量.苗广.疑心值, base.心态) as SchemaType['苗广']['心态'];
   const newMind = 新变量.苗广.心态;
 
   // ── 3b. 苗广心态进入新阶段 → 里程碑灵石 ──────────────
