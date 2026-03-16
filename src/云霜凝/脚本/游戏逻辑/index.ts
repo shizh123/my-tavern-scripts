@@ -50,7 +50,6 @@ let _freezeBaseline: FreezeBaseline | null = null;
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
 
-
 $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
