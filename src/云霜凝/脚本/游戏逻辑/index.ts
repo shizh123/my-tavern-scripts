@@ -117,7 +117,9 @@ $(() => {
           // __神魂空间引导__: 自动解锁（首次进入，stateValidation触发）
           // __神魂空间入口__: 手动按钮进入（前端 flush 可能未传播到新消息，必须在此处切换）
           const hasEntry = items.includes('__神魂空间引导__') || items.includes('__神魂空间入口__');
-          const hasExit = items.includes('__退出神魂空间__');
+          // __打断治疗_神魂__: 打断系统强制退出神魂空间（VARIABLE_UPDATE_ENDED触发，
+          // 但MVU数据可能未传播到新消息，必须在此处也显式切换）
+          const hasExit = items.includes('__退出神魂空间__') || items.includes('__打断治疗_神魂__');
 
           if (hasExit) {
             // 退出优先级最高：即使引导事件也存在，用户已明确退出
