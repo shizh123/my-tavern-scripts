@@ -327,6 +327,8 @@ $(() => {
           神魂空间激活中: data._神魂空间激活中,
           疑心值: data.苗广.疑心值,
           心态: data.苗广.心态,
+          服装: { ...data.云霜凝.服装 },
+          道具状态: { ...data.系统.道具状态 },
         };
       } catch (e) {
         console.error('[云霜凝] CHAT_COMPLETION_PROMPT_READY 处理失败:', e);
@@ -350,8 +352,8 @@ $(() => {
         _freezeBaseline = validateAndRecalcState(newData, oldData, currentFloor, _protSnapshot, _freezeBaseline);
         processNewlyActivatedItems(newData, oldData, currentFloor);
 
-        // 处理装备卸下（使用中→已购买）
-        processEquipmentUnequip(newData, oldData);
+        // 处理装备卸下（使用中→已购买），传入快照道具状态防止AI篡改
+        processEquipmentUnequip(newData, oldData, _protSnapshot?.道具状态);
 
         // 装备每轮数值效果（身体器具加速、暖玉佩信任等）
         tickEquipmentEffects(newData);
@@ -438,6 +440,8 @@ $(() => {
           神魂空间激活中: data._神魂空间激活中,
           疑心值: data.苗广.疑心值,
           心态: data.苗广.心态,
+          服装: { ...data.云霜凝.服装 },
+          道具状态: { ...data.系统.道具状态 },
         };
 
         // 更新冻结基线：冻结期间累积三把锁等效果，冻结结束后清除

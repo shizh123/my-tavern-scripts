@@ -18,6 +18,15 @@ export interface ProtectionSnapshot {
   神魂空间激活中: boolean;
   疑心值: number;
   心态: string;
+  服装: {
+    上装: string;
+    下装: string;
+    内衣: string;
+    内裤: string;
+    特殊配饰: string;
+    暴露程度: string;
+  };
+  道具状态: Record<string, string>;
 }
 
 /**
@@ -187,6 +196,8 @@ export function validateAndRecalcState(
         神魂空间激活中: snapshot.神魂空间激活中,
         疑心值: snapshot.疑心值,
         心态: snapshot.心态,
+        服装: { ...snapshot.服装 },
+        道具状态: { ...snapshot.道具状态 },
       }
     : {
         灵石: 旧变量.系统.灵石,
@@ -198,6 +209,8 @@ export function validateAndRecalcState(
         神魂空间激活中: 旧变量._神魂空间激活中,
         疑心值: 旧变量.苗广.疑心值,
         心态: 旧变量.苗广.心态,
+        服装: { ...旧变量.云霜凝.服装 },
+        道具状态: { ...旧变量.系统.道具状态 },
       };
 
   // 灵石：回滚到快照值（包含前端购买扣款），脚本在后续步骤中叠加奖励
@@ -212,6 +225,14 @@ export function validateAndRecalcState(
   新变量._神魂空间激活中 = base.神魂空间激活中;
   // 疑心值：脚本全权管理（被动增长在后续步骤中计算），AI不得修改
   新变量.苗广.疑心值 = base.疑心值;
+  // 服装：脚本管理（商店装备切换触发），AI不得修改
+  // 快照包含前端操作（玩家换装），回滚后 processNewlyActivatedItems/processEquipmentUnequip 会更新
+  新变量.云霜凝.服装.上装 = base.服装.上装;
+  新变量.云霜凝.服装.下装 = base.服装.下装;
+  新变量.云霜凝.服装.内衣 = base.服装.内衣;
+  新变量.云霜凝.服装.内裤 = base.服装.内裤;
+  新变量.云霜凝.服装.特殊配饰 = base.服装.特殊配饰;
+  新变量.云霜凝.服装.暴露程度 = base.服装.暴露程度 as SchemaType['云霜凝']['服装']['暴露程度'];
 
   // ── 0b. 神魂空间自动解锁（floor>=5 时首次触发）──────────
   // 必须在硬保护之后执行：先恢复旧值防止AI篡改，再判断是否需要解锁

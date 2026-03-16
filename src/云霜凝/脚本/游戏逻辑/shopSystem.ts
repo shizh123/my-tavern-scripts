@@ -749,8 +749,16 @@ export function processNewlyActivatedItems(newData: SchemaType, oldData: SchemaT
 /**
  * 检测装备卸下（使用中→已购买）
  * 在 VARIABLE_UPDATE_ENDED 中调用
+ *
+ * @param snapshotItems - PROMPT_READY 快照中的道具状态（可选）。
+ *   如果快照显示该道具在发送前就是"使用中"，说明 AI 篡改了道具状态，
+ *   应恢复为"使用中"而非执行卸装。
  */
-export function processEquipmentUnequip(newData: SchemaType, oldData: SchemaType): void {
+export function processEquipmentUnequip(
+  newData: SchemaType,
+  oldData: SchemaType,
+  snapshotItems?: Record<string, string>,
+): void {
   const newItems = newData.系统.道具状态;
   const oldItems = oldData.系统.道具状态;
 
@@ -760,6 +768,13 @@ export function processEquipmentUnequip(newData: SchemaType, oldData: SchemaType
     // 检测：旧="使用中" → 新="已购买"（代表刚刚卸下）
     if (newState !== '已购买' || oldState !== '使用中') continue;
     if (!ALL_EQUIPMENT.has(itemName)) continue;
+
+    // 快照保护：如果 PROMPT_READY 快照中该道具是"使用中"，说明是 AI 篡改而非玩家卸下
+    if (snapshotItems && snapshotItems[itemName] === '使用中') {
+      newItems[itemName] = '使用中';
+      console.warn(`[商店] AI 篡改装备状态被拦截: ${itemName}（恢复为使用中）`);
+      continue;
+    }
 
     console.info(`[商店] 检测到装备卸下: ${itemName}`);
     applyUnequipSideEffects(itemName, newData);
