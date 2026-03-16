@@ -114,7 +114,9 @@ $(() => {
           richEvent = buildBatchUseEvent(items, data);
 
           // 神魂空间模式切换：退出优先于引导（用户可能在同一批事件中先入后出）
-          const hasEntry = items.includes('__神魂空间引导__');
+          // __神魂空间引导__: 自动解锁（首次进入，stateValidation触发）
+          // __神魂空间入口__: 手动按钮进入（前端 flush 可能未传播到新消息，必须在此处切换）
+          const hasEntry = items.includes('__神魂空间引导__') || items.includes('__神魂空间入口__');
           const hasExit = items.includes('__退出神魂空间__');
 
           if (hasExit) {
