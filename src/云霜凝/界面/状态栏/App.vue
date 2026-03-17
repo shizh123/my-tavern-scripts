@@ -16,7 +16,9 @@
           <span class="info-item ling"
             >灵石 <b class="ling-val">{{ store.data.系统.灵石 }}</b></span
           >
-          <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">{{ hide_time ? '◷' : '◴' }}</button>
+          <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">
+            {{ hide_time ? '◷' : '◴' }}
+          </button>
         </div>
         <span class="mode-tag" :class="mode_class">{{ store.data._当前互动模式 }}</span>
       </header>
