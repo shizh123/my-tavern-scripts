@@ -292,29 +292,21 @@ $(() => {
           console.info('[云霜凝] 道具事件已附加到玩家消息:', items.join(', '));
         }
 
-        // ── Phase 3.5: 注入状态快照到 user 消息末尾 ──
+        // ── Phase 3.5: 注入状态快照 ──
         // 必须在 Phase 3 之后执行：Phase 3 可能替换整个 user 消息内容（打断/千晶/特殊场景），
-        // 在此之后追加快照，确保无论 Phase 3 如何处理，快照都不会丢失。
+        // 在此之后注入快照，确保无论 Phase 3 如何处理，快照都不会丢失。
         //
-        // 统一追加到 user 消息内容末尾（不再区分 Gemini/Claude）：
-        //   - Gemini 的 prefill 由格式器在 PROMPT_READY 之后添加，无法通过 chat 数组检测
-        //   - Gemini 会将独立 system 消息重排到 user 之前，远离生成位置
-        //   - 追加到 user 消息可确保快照紧贴用户输入，不被任何格式器重排
-        //   - Claude 同样适用：快照内容自带权威指令语气，效果与 system 消息接近
+        // 恢复 232a8b5 的注入策略（已验证 Gemini 生效）：
+        //   - 有 prefill（Gemini）→ chat 末尾是 assistant，splice 到它之前
+        //   - 无 prefill（Claude）→ push 到末尾
         if (snapshot) {
-          let injected = false;
-          for (let i = chat.length - 1; i >= 0; i--) {
-            if (chat[i].role === 'user') {
-              const content = chat[i].content;
-              chat[i].content = typeof content === 'string' ? content + '\n\n' + snapshot : snapshot;
-              injected = true;
-              console.info('[云霜凝] 状态快照: 追加到 user 消息末尾');
-              break;
-            }
-          }
-          if (!injected) {
+          const lastMsg = chat[chat.length - 1];
+          if (lastMsg && lastMsg.role === 'assistant') {
+            chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
+            console.info('[云霜凝] 状态快照: 插入到 prefill 之前');
+          } else {
             chat.push({ role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: 无 user 消息，降级 push');
+            console.info('[云霜凝] 状态快照: push 到末尾');
           }
         }
 
