@@ -329,8 +329,10 @@ $(() => {
           神魂空间已进入过: data._神魂空间已进入过,
           当前互动模式: data._当前互动模式,
           神魂空间激活中: data._神魂空间激活中,
-          疑心值: data.苗广.疑心值,
-          心态: data.苗广.心态,
+          // 疑心值/心态由脚本全权管理，前端不能直接写入，保留 VARIABLE_UPDATE_ENDED 更新的值
+          // 若从 getMvuData 读取，会因 MVU 缓存未同步而读到旧值，导致每轮重置（2→4→2 循环 bug）
+          疑心值: _protSnapshot?.疑心值 ?? data.苗广.疑心值,
+          心态: _protSnapshot?.心态 ?? data.苗广.心态,
           已触发蚀心露屈辱: data._已触发蚀心露屈辱,
           服装: { ...data.云霜凝.服装 },
           道具状态: { ...data.系统.道具状态 },
@@ -393,6 +395,14 @@ $(() => {
         // 将计算结果写回
         _.set(新变量, 'stat_data', newData);
 
+        // 疑心值/心态由脚本全权管理，直接更新快照
+        // 原因：replaceMvuData 会再次触发 VARIABLE_UPDATE_ENDED，第二次触发时若 _protSnapshot
+        // 未更新，楼层去重会将疑心值硬重置回旧 base（2→4→2 交替循环 bug）
+        if (_protSnapshot) {
+          _protSnapshot.疑心值 = newData.苗广.疑心值;
+          _protSnapshot.心态 = newData.苗广.心态;
+        }
+
         console.info(
           '[云霜凝] 状态验证完成：',
           `治疗${newData.治疗.完成度.toFixed(1)}%·阶段${newData.治疗.阶段}`,
@@ -434,7 +444,7 @@ $(() => {
         // 清除系统操作标记（本轮已处理完毕）
         data._系统操作中 = false;
 
-        // 更新保护快照：从当前 MVU 数据读取最新状态（包含 VARIABLE_UPDATE_ENDED 的计算结果）
+        // 更新保护快照：从当前 MVU 数据读取最新状态（灵石/服装等前端可写字段）
         _protSnapshot = {
           灵石: data.系统.灵石,
           第几天: data.时间.第几天,
@@ -443,8 +453,9 @@ $(() => {
           神魂空间已进入过: data._神魂空间已进入过,
           当前互动模式: data._当前互动模式,
           神魂空间激活中: data._神魂空间激活中,
-          疑心值: data.苗广.疑心值,
-          心态: data.苗广.心态,
+          // 疑心值/心态已由 VARIABLE_UPDATE_ENDED 末尾直接更新，此处保留该值
+          疑心值: _protSnapshot?.疑心值 ?? data.苗广.疑心值,
+          心态: _protSnapshot?.心态 ?? data.苗广.心态,
           已触发蚀心露屈辱: data._已触发蚀心露屈辱,
           服装: { ...data.云霜凝.服装 },
           道具状态: { ...data.系统.道具状态 },

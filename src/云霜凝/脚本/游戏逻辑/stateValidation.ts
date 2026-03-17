@@ -324,35 +324,18 @@ export function validateAndRecalcState(
   // ── 4. 环境被动疑心/绿帽增长（每次治疗互动触发） ────
   // 治疗互动判定：云霜凝数值发生变化即算一次
   {
-    let clampedTrust = 新变量.云霜凝.信任度;
-    let clampedDefense = 新变量.云霜凝.心理防线;
-    let clampedCompletion = 新变量.治疗.完成度;
-    const clampedBody = {
-      小嘴: 新变量.云霜凝.身体开发.小嘴,
-      胸部: 新变量.云霜凝.身体开发.胸部,
-      小屄: 新变量.云霜凝.身体开发.小屄,
-      屁穴: 新变量.云霜凝.身体开发.屁穴,
-    };
-    if (currentFloor && currentFloor > 0) {
-      const ceiling = getFloorCeiling(currentFloor);
-      clampedTrust = Math.min(clampedTrust, ceiling.信任上限);
-      clampedDefense = Math.max(clampedDefense, ceiling.防线下限);
-      clampedCompletion = Math.min(clampedCompletion, ceiling.完成度上限);
-      for (const part of ['小嘴', '胸部', '小屄', '屁穴'] as const) {
-        clampedBody[part] = Math.min(clampedBody[part], ceiling.身体开发上限);
-      }
-    }
-
     // 只有治疗推进方向的变化才算治疗互动（信任↑、防线↓、完成度↑、身体开发↑）
     // 数值退步（AI随机波动等）不会引起苗广疑心
+    // 用 AI 原始输出（clamp前）判断意图：数值到达楼层上限后，clamp后等于旧值，
+    // 但 AI 意图仍为推进，苗广应该察觉
     const hasValueChange =
-      clampedTrust > 旧变量.云霜凝.信任度 ||
-      clampedDefense < 旧变量.云霜凝.心理防线 ||
-      clampedCompletion > 旧变量.治疗.完成度 ||
-      clampedBody.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
-      clampedBody.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
-      clampedBody.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
-      clampedBody.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
+      新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
+      新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
+      新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
+      新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
+      新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
+      新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
+      新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
 
     if (hasValueChange) {
       const items = 新变量.系统.道具状态;
