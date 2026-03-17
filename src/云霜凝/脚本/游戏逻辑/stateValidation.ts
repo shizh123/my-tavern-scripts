@@ -241,6 +241,13 @@ export function validateAndRecalcState(
     新变量.苗广.疑心值 = 0;
     console.info('[状态验证] 蚀心露屈辱刚触发，疑心值强制重置为0（绿帽值从0开始）');
   }
+  // 蚀心露屈辱已触发但快照心态仍在前半程 → 强制校正为屈辱
+  // 防止 MVU 传播延迟/页面刷新导致快照捕获到旧心态，calcMiaoguangMind 走错分支
+  const 前半程心态 = ['正常', '疑惑', '察觉', '愤怒'];
+  if (新变量._已触发蚀心露屈辱 && 前半程心态.includes(base.心态)) {
+    console.warn(`[状态验证] 蚀心露屈辱已触发但快照心态为「${base.心态}」，强制校正为「屈辱」`);
+    base.心态 = '屈辱';
+  }
   // 服装：脚本管理（商店装备切换触发），AI不得修改
   // 快照包含前端操作（玩家换装），回滚后 processNewlyActivatedItems/processEquipmentUnequip 会更新
   新变量.云霜凝.服装.上装 = base.服装.上装;
