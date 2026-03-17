@@ -292,37 +292,29 @@ $(() => {
           console.info('[云霜凝] 道具事件已附加到玩家消息:', items.join(', '));
         }
 
-        // ── Phase 3.5: 注入状态快照 ──
+        // ── Phase 3.5: 注入状态快照到 user 消息末尾 ──
         // 必须在 Phase 3 之后执行：Phase 3 可能替换整个 user 消息内容（打断/千晶/特殊场景），
-        // 在此之后注入快照，确保无论 Phase 3 如何处理，快照都不会丢失。
+        // 在此之后追加快照，确保无论 Phase 3 如何处理，快照都不会丢失。
         //
-        // Gemini vs Claude 策略差异：
-        //   Gemini（末尾有 assistant prefill）：追加到 user 消息末尾，避免被 Gemini 格式化重排到 user 之前
-        //   Claude（末尾无 prefill）：独立 system 消息 push 到末尾，保持最高权威性
+        // 统一追加到 user 消息内容末尾（不再区分 Gemini/Claude）：
+        //   - Gemini 的 prefill 由格式器在 PROMPT_READY 之后添加，无法通过 chat 数组检测
+        //   - Gemini 会将独立 system 消息重排到 user 之前，远离生成位置
+        //   - 追加到 user 消息可确保快照紧贴用户输入，不被任何格式器重排
+        //   - Claude 同样适用：快照内容自带权威指令语气，效果与 system 消息接近
         if (snapshot) {
-          const lastMsg = chat[chat.length - 1];
-          const hasPrefill = lastMsg && lastMsg.role === 'assistant';
-
-          if (hasPrefill) {
-            // Gemini：追加到 user 消息内容末尾（防止 system 被重排到 user 之前）
-            let injected = false;
-            for (let i = chat.length - 1; i >= 0; i--) {
-              if (chat[i].role === 'user') {
-                const content = chat[i].content;
-                chat[i].content = typeof content === 'string' ? content + '\n\n' + snapshot : snapshot;
-                injected = true;
-                console.info('[云霜凝] 状态快照: 追加到 user 消息末尾（Gemini模式）');
-                break;
-              }
+          let injected = false;
+          for (let i = chat.length - 1; i >= 0; i--) {
+            if (chat[i].role === 'user') {
+              const content = chat[i].content;
+              chat[i].content = typeof content === 'string' ? content + '\n\n' + snapshot : snapshot;
+              injected = true;
+              console.info('[云霜凝] 状态快照: 追加到 user 消息末尾');
+              break;
             }
-            if (!injected) {
-              chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
-              console.info('[云霜凝] 状态快照: 无 user 消息，插入 prefill 之前');
-            }
-          } else {
-            // Claude：独立 system 消息 push 到末尾，最靠近生成位置，权威性最高
+          }
+          if (!injected) {
             chat.push({ role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: push 到末尾（Claude模式）');
+            console.info('[云霜凝] 状态快照: 无 user 消息，降级 push');
           }
         }
 
