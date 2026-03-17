@@ -1234,7 +1234,7 @@ function confirmUse() {
   if (needTriggerAI) {
     store.data._系统操作中 = true;
     store.flush();
-    triggerSlash('/send （使用道具）|/trigger');
+    triggerSlash(`/send （使用了${eventNames.join('、')}）|/trigger`);
     showToast(`已使用 ${names.length} 件道具，AI生成中…`, 'ok');
   } else {
     store.flush();
