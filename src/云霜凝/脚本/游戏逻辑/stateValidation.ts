@@ -407,9 +407,7 @@ export function validateAndRecalcState(
       if (increment > 0) {
         // 楼层去重：同一楼层重新生成时不重复叠加疑心值
         if (currentFloor !== undefined && currentFloor === _lastSuspicionFloor) {
-          console.info(
-            `[状态验证] 疑心值跳过：楼层${currentFloor}已增长过（重新生成保护）`,
-          );
+          console.info(`[状态验证] 疑心值跳过：楼层${currentFloor}已增长过（重新生成保护）`);
         } else {
           if (currentFloor !== undefined) _lastSuspicionFloor = currentFloor;
           新变量.苗广.疑心值 = Math.min(100, 新变量.苗广.疑心值 + increment);
