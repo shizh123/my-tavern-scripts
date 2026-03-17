@@ -1216,8 +1216,8 @@ function confirmUse() {
       store.data.系统.道具状态[name] = '使用中';
       // 前端处理互斥（store.flush不触发VARIABLE_UPDATE_ENDED，后端会跳过）
       enforceExclusiveGroup(name, store.data as any);
-      // 三把锁是纯脚本数值效果，无需通知AI
-      if (name !== '寒心锁' && name !== '破心锁' && name !== '断情锁') {
+      // 三把锁是纯脚本数值效果，锚神钉是被动装备（状态快照已提示AI），无需触发AI事件
+      if (name !== '寒心锁' && name !== '破心锁' && name !== '断情锁' && name !== '锚神钉') {
         eventNames.push(name);
       }
     }
