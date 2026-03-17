@@ -213,22 +213,8 @@ $(() => {
           }
         }
 
-        // ── Phase 2: 注入状态快照（使用已更新的 data，确保 _神魂空间已进入过 等状态正确）──
-        // 自动检测 prefill：如果 chat 末尾是 assistant 消息（Gemini prefill），
-        // 则 splice 到它之前；否则直接 push 到末尾（Claude 等无 prefill 的模型）。
+        // ── Phase 2: 构建状态快照（注入在 Phase 3 之后执行，避免被事件替换覆盖）──
         const snapshot = getStatusSnapshot(data);
-        if (snapshot) {
-          const lastMsg = chat[chat.length - 1];
-          if (lastMsg && lastMsg.role === 'assistant') {
-            // 末尾有 prefill：插入到它之前，避免被视为已输出内容
-            chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: 插入到 prefill 之前');
-          } else {
-            // 无 prefill：直接 push 到末尾，最靠近生成位置
-            chat.push({ role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: push 到末尾');
-          }
-        }
 
         // ── Phase 3: 注入事件文本到玩家消息 + 特殊场景触发 ──
         if (richEvent) {
@@ -304,6 +290,29 @@ $(() => {
           }
 
           console.info('[云霜凝] 道具事件已附加到玩家消息:', items.join(', '));
+        }
+
+        // ── Phase 3.5: 注入状态快照到 user 消息末尾 ──
+        // 必须在 Phase 3 之后执行：Phase 3 可能替换整个 user 消息内容（打断/千晶/特殊场景），
+        // 在此之后追加快照，确保无论 Phase 3 如何处理，快照都不会丢失。
+        // Gemini 会将 system 消息重排到 user 消息之前，导致快照远离生成位置。
+        // 追加到 user 消息内容末尾可避免被 Gemini 格式化重排。Claude 等模型同样适用。
+        if (snapshot) {
+          let injected = false;
+          for (let i = chat.length - 1; i >= 0; i--) {
+            if (chat[i].role === 'user') {
+              const content = chat[i].content;
+              chat[i].content = typeof content === 'string' ? content + '\n\n' + snapshot : snapshot;
+              injected = true;
+              console.info('[云霜凝] 状态快照: 追加到最后一条 user 消息末尾');
+              break;
+            }
+          }
+          if (!injected) {
+            // 极端边界：无 user 消息，降级为 push
+            chat.push({ role: 'system', content: snapshot });
+            console.info('[云霜凝] 状态快照: 无 user 消息，降级 push');
+          }
         }
 
         // ── Phase 4: 苗喧彩蛋（优先级最低，有道具事件时跳过）──
