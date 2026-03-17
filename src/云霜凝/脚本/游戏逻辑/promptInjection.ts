@@ -1552,6 +1552,27 @@ export function buildStatusSnapshot(data: SchemaType): string {
   const 冻结剩余 = Math.max(0, data._打断冻结至楼层 - currentFloor);
   const 治疗冻结中 = currentFloor > 0 && 冻结剩余 > 0;
 
+  // ── 千晶幻术激活时：返回精简快照，避免大量无关信息干扰AI ──
+  if (千晶激活) {
+    const count = data.苗广.千晶幻术.已使用次数;
+    const idx = Math.max(0, Math.min(count - 1, QIANJING_SESSIONS.length - 1));
+    const session = QIANJING_SESSIONS[idx];
+    const theme = session.theme;
+    const maxRounds = session.maxRounds;
+    return `\n[当前游戏状态快照·千晶幻术模式]
+时间: ${timeLabel}（${timeOfDay}）| 治疗阶段: 第${data.治疗.阶段}阶·${phase}
+⟨千晶幻术激活中·第${count}/5次·${theme}·共${maxRounds}轮⟩
+苗广正身处幻境，云霜凝正在施术改写他的记忆（最终目标：苗广→"儿子"，云霜凝→"妻子"）
+[千晶幻术场景规则]
+- 当前场景完全发生在苗广的识海/幻境中，由云霜凝施术操控
+- 禁止描写现实世界的任何场景（卧房、门、走廊等）
+- 禁止描写云霜凝的服装、身体暴露、肉体互动等现实内容
+- 苗广在幻境中无法行动，只有意识在被操控
+- AI禁止扮演{{user}}，禁止替{{user}}做出任何决策、说话或行动
+[AI必须] 每轮回复末尾用150字以内总结当前幻境进展，写入苗广.千晶幻术.幻境摘要变量（滚动总结，覆盖旧内容）。
+`;
+  }
+
   let snapshot = `\n[当前游戏状态快照]\n`;
   if (data._神魂空间已解锁 || data._神魂空间已进入过) {
     snapshot += `当前互动模式: 【${data._当前互动模式}】 ← 模式由玩家按钮控制，AI绝对不要自行描写进入或退出任何空间的过程。所有场景描写必须在当前模式内进行。\n`;
@@ -2362,6 +2383,8 @@ ${list}
 
   // 其他道具：使用各自的独立事件文本
   for (const name of otherItems) {
+    // 跳过内部系统事件（双下划线包裹的名称由脚本单独处理，不需要生成事件文本）
+    if (name.startsWith('__') && name.endsWith('__')) continue;
     const eventFn = itemEventMap[name];
     if (eventFn) {
       parts.push(eventFn(data));
