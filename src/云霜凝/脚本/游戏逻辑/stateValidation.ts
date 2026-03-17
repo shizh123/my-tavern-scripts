@@ -664,6 +664,13 @@ export function validateAndRecalcState(
     console.info('[状态验证] 地仙境突破剧情触发！阶段3+且在现实互动中');
   }
 
+  // ── 12. 阶段最终校正：delta clamp/三把锁/冻结可能修改完成度，阶段需重算 ──
+  const finalStage = calcHealingStage(新变量.治疗.完成度);
+  if (finalStage !== 新变量.治疗.阶段) {
+    console.info(`[状态验证] 阶段校正: ${新变量.治疗.阶段} → ${finalStage}（完成度=${新变量.治疗.完成度}）`);
+    新变量.治疗.阶段 = finalStage;
+  }
+
   // 返回 freezeBaseline（新创建或透传），由 index.ts 管理生命周期
   return freezeBaseline ?? null;
 }
