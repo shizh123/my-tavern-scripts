@@ -1,6 +1,9 @@
 import type { Schema as SchemaType } from '../../schema';
 import { applyLockRetreat } from './shopSystem';
 
+/** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
+let _lastSuspicionFloor = -1;
+
 /**
  * 硬保护快照类型
  *
@@ -402,10 +405,18 @@ export function validateAndRecalcState(
       }
 
       if (increment > 0) {
-        新变量.苗广.疑心值 = Math.min(100, 新变量.苗广.疑心值 + increment);
-        console.info(
-          `[状态验证] 治疗互动 → ${是后半程 ? '绿帽值' : '疑心值'} +${increment}${新变量._当前互动模式 === '神魂空间' ? '(神魂×0.3)' : ''} → ${新变量.苗广.疑心值}`,
-        );
+        // 楼层去重：同一楼层重新生成时不重复叠加疑心值
+        if (currentFloor !== undefined && currentFloor === _lastSuspicionFloor) {
+          console.info(
+            `[状态验证] 疑心值跳过：楼层${currentFloor}已增长过（重新生成保护）`,
+          );
+        } else {
+          if (currentFloor !== undefined) _lastSuspicionFloor = currentFloor;
+          新变量.苗广.疑心值 = Math.min(100, 新变量.苗广.疑心值 + increment);
+          console.info(
+            `[状态验证] 治疗互动 → ${是后半程 ? '绿帽值' : '疑心值'} +${increment}${新变量._当前互动模式 === '神魂空间' ? '(神魂×0.3)' : ''} → ${新变量.苗广.疑心值}`,
+          );
+        }
       }
     }
   }
