@@ -11,11 +11,12 @@
             >第 <b>{{ store.data.时间.第几天 }}</b> 天</span
           >
           <span class="divider">·</span>
-          <span class="info-item">{{ formatted_time }}</span>
-          <span class="divider">·</span>
+          <span v-if="!hide_time" class="info-item">{{ formatted_time }}</span>
+          <span v-if="!hide_time" class="divider">·</span>
           <span class="info-item ling"
             >灵石 <b class="ling-val">{{ store.data.系统.灵石 }}</b></span
           >
+          <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">{{ hide_time ? '◷' : '◴' }}</button>
         </div>
         <span class="mode-tag" :class="mode_class">{{ store.data._当前互动模式 }}</span>
       </header>
@@ -90,6 +91,7 @@ const tabs = [
   { id: '商店', label: '商店' },
 ];
 const active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', null);
+const hide_time = useLocalStorage<boolean>('云霜凝:status_bar:hide_time', false);
 
 function toggleTab(id: string) {
   active_tab.value = active_tab.value === id ? null : id;
@@ -281,6 +283,29 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   opacity: 0.15;
   color: $c-ice;
   font-size: 0.6em;
+}
+.time-toggle {
+  background: none;
+  border: 1px solid rgba($c-ice, 0.15);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: $c-sub;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  transition: all 0.2s;
+  font-family: $font-main;
+
+  &:hover {
+    color: $c-frost;
+    border-color: rgba($c-ice, 0.35);
+    background: rgba($c-ice, 0.08);
+  }
 }
 
 .mode-tag {
