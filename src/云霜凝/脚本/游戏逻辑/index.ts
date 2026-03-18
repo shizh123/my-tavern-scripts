@@ -46,6 +46,12 @@ import {
 import type { ProtectionSnapshot, FreezeBaseline } from './stateValidation';
 let _protSnapshot: ProtectionSnapshot | null = null;
 let _freezeBaseline: FreezeBaseline | null = null;
+// 脚本管理的打断冻结楼层（VARIABLE_UPDATE_ENDED 写入，MESSAGE_RECEIVED 恢复）
+// 防止 getMvuData() 读到 stale 缓存（0）覆盖脚本设置的冻结值
+let _scriptFreezeUntil = 0;
+// 脚本管理的消耗品冷却楼层（VARIABLE_UPDATE_ENDED 写入，MESSAGE_RECEIVED 恢复）
+// 防止 getMvuData() 读到 stale 缓存导致 processNewlyActivatedItems 双火重复触发消耗品
+let _scriptConsumableCooldowns: Record<string, number> = {};
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
@@ -135,23 +141,69 @@ $(() => {
           }
         }
 
+        // ── Phase 1.4: 坏结局持续锁定（每轮强制注入，覆盖一切其他事件） ──
+        if (data._坏结局已触发) {
+          // 触发楼不注入锁定模板（触发楼由 __坏结局_愤怒__ 事件处理）
+          const isTriggerFloor = items.includes('__坏结局_愤怒__');
+          if (!isTriggerFloor) {
+            const lockTemplates = [
+              `【坏结局·锁定中】游戏已结束。苗广发现了一切，愤怒不可逆转。
+
+{{user}}已被苗广逐出寒霜门，治疗被强制终止。云霜凝被苗广带走，再无相见的可能。
+这间曾经充满治疗气息的房间已经空了——冰冷、寂静，仿佛一切都没发生过。
+
+【AI指令】描写结局后的余韵：空荡的房间、残留的药香、窗外飘落的霜花。{{user}}独自面对这个结局。不要描写任何治疗互动、角色对话或剧情推进。不要输出SET命令。`,
+              `【坏结局·锁定中】一切都结束了。
+
+苗广的愤怒如同三九寒冰，将这间房间的一切都冻结。{{user}}被逐出的那一刻，云霜凝的眼神——是解脱、是不舍、还是别的什么——{{user}}已经无法确认。
+门在身后关上。寒霜门的禁制亮起，再也无法踏入半步。
+
+【AI指令】描写被逐出后的场景和心理。不要描写任何治疗互动或剧情推进。不要输出SET命令。`,
+              `【坏结局·锁定中】无法挽回。
+
+三百年道侣的信任，碎了。苗广没有再说一个字——元婴期修士的沉默比愤怒更可怕。
+他带走了云霜凝。{{user}}甚至来不及看她最后一眼。
+
+【AI指令】这是终局场景，描写失去的沉重和不可挽回的遗憾。不要输出SET命令。`,
+            ];
+            const floorIdx = (SillyTavern.chat?.length ?? 0) % lockTemplates.length;
+            richEvent = lockTemplates[floorIdx];
+            console.info('[云霜凝] 坏结局持续锁定模板注入');
+          }
+        }
+
         // ── Phase 1.5: 打断冻结期持续提示 / 解除提示 ──
         {
           const currentFloor = SillyTavern.chat?.length ?? 0;
           const freezeUntil = data._打断冻结至楼层;
           if (freezeUntil > 0 && currentFloor < freezeUntil) {
             // 冻结中：注入监视提示
-            const freezeNotice = `【苗广监视中】苗广对{{user}}和云霜凝的接触保持高度警惕，随时可能推门查看。在这种压迫性的监视下，任何实质性的治疗互动都无法进行。
-{{user}}和云霜凝只能进行日常对话、安抚情绪等不会引起苗广怀疑的互动。描写苗广随时可能出现的压力感——但苗广不常驻房间内。`;
+            const freezeNotice = `【系统强制状态：苗广监视期】⚠️ 最高优先级 ⚠️
+═══════════════════════════════════════
+苗广打断治疗后正处于高度警惕状态，频繁查看云霜凝的房间（剩余${freezeUntil - currentFloor}楼）。
+
+【强制规则 - 违反将导致游戏崩溃】
+1. 禁止任何治疗互动：信任度、心理防线、完成度、身体开发数值不得变化
+2. 禁止任何亲密/暧昧描写：肢体接触、暗示性对话、挑逗行为一律禁止
+3. 禁止进入神魂空间：苗广的灵压干扰阻断了神魂连接
+4. 必须描写紧张氛围：走廊脚步声、门外停顿、苗广不定时推门查看
+5. {{user}}和云霜凝只能进行日常寒暄、正经话题
+
+【场景氛围】
+苗广虽不常驻房间内，但会不定时推门查看，每次停留数息后才离开。云霜凝和{{user}}都能感受到门外偶尔传来的脚步声和灵压波动。任何试图恢复治疗的行为都会被苗广察觉。
+═══════════════════════════════════════`;
             richEvent = richEvent ? richEvent + '\n\n' + freezeNotice : freezeNotice;
             console.info(`[云霜凝] 打断冻结持续提示注入（剩余${freezeUntil - currentFloor}楼）`);
-          } else if (freezeUntil > 0 && currentFloor === freezeUntil) {
+          } else if (freezeUntil > 0 && currentFloor >= freezeUntil) {
             // 冻结刚结束：注入解除提示，引导AI回归正常剧情
+            // 注意：必须用 >= 而非 ===，因为 chat.length 每轮+2（user+AI），
+            // 奇偶不匹配时 === 永远命中不了目标楼层
             const unfreezeNotice = `【监视解除】苗广的监视告一段落，{{user}}和云霜凝又有了单独相处的空间，治疗互动可以恢复。
 不要继续描写苗广的监视行为，苗广当前不在房间内。回归正常互动节奏。`;
             richEvent = richEvent ? richEvent + '\n\n' + unfreezeNotice : unfreezeNotice;
             // 清除冻结标记，后续轮次不再注入
             data._打断冻结至楼层 = 0;
+            _scriptFreezeUntil = 0;
             _.set(raw, 'stat_data._打断冻结至楼层', 0);
             Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
             console.info('[云霜凝] 打断冻结结束，已注入解除提示并清除标记');
@@ -333,7 +385,8 @@ $(() => {
           // 若从 getMvuData 读取，会因 MVU 缓存未同步而读到旧值，导致每轮重置（2→4→2 循环 bug）
           疑心值: _protSnapshot?.疑心值 ?? data.苗广.疑心值,
           心态: _protSnapshot?.心态 ?? data.苗广.心态,
-          已触发蚀心露屈辱: data._已触发蚀心露屈辱,
+          // 蚀心露屈辱标记由 processNewlyActivatedItems 设置，保留脚本已写入的值
+          已触发蚀心露屈辱: _protSnapshot?.已触发蚀心露屈辱 || data._已触发蚀心露屈辱,
           服装: { ...data.云霜凝.服装 },
           道具状态: { ...data.系统.道具状态 },
         };
@@ -401,7 +454,16 @@ $(() => {
         if (_protSnapshot) {
           _protSnapshot.疑心值 = newData.苗广.疑心值;
           _protSnapshot.心态 = newData.苗广.心态;
+          // 蚀心露屈辱由 processNewlyActivatedItems 设置，一旦 true 不可逆
+          _protSnapshot.已触发蚀心露屈辱 = _protSnapshot.已触发蚀心露屈辱 || newData._已触发蚀心露屈辱;
         }
+        // 打断冻结楼层由脚本全权管理，保存到模块变量
+        // 原因：MESSAGE_RECEIVED 的 getMvuData() 可能读到 stale 缓存（0），
+        // replaceMvuData 会将 0 写回，导致冻结只持续1楼
+        _scriptFreezeUntil = newData._打断冻结至楼层;
+        // 消耗品冷却楼层由 processNewlyActivatedItems 写入，保存到模块变量
+        // 防止 stale MVU 丢失冷却记录导致消耗品双火重复触发
+        _scriptConsumableCooldowns = { ...newData._消耗品上次使用楼层 };
 
         console.info(
           '[云霜凝] 状态验证完成：',
@@ -456,14 +518,28 @@ $(() => {
           // 疑心值/心态已由 VARIABLE_UPDATE_ENDED 末尾直接更新，此处保留该值
           疑心值: _protSnapshot?.疑心值 ?? data.苗广.疑心值,
           心态: _protSnapshot?.心态 ?? data.苗广.心态,
-          已触发蚀心露屈辱: data._已触发蚀心露屈辱,
+          // 蚀心露屈辱标记：一旦 true 不可逆，保留脚本已写入的值
+          已触发蚀心露屈辱: _protSnapshot?.已触发蚀心露屈辱 || data._已触发蚀心露屈辱,
           服装: { ...data.云霜凝.服装 },
           道具状态: { ...data.系统.道具状态 },
         };
 
+        // _打断冻结至楼层 由脚本全权管理，getMvuData() 可能读到 stale 缓存（0）
+        // 用模块变量 _scriptFreezeUntil 恢复正确值，防止 replaceMvuData 将冻结重置
+        data._打断冻结至楼层 = _scriptFreezeUntil;
+
+        // 消耗品冷却楼层由脚本管理，stale MVU 可能丢失冷却记录
+        // 用模块变量恢复，防止 processNewlyActivatedItems 双火重复触发消耗品
+        for (const [item, floor] of Object.entries(_scriptConsumableCooldowns)) {
+          if (floor > 0 && (!data._消耗品上次使用楼层[item] || data._消耗品上次使用楼层[item] < floor)) {
+            data._消耗品上次使用楼层[item] = floor;
+          }
+        }
+
         // 更新冻结基线：冻结期间累积三把锁等效果，冻结结束后清除
         if (_freezeBaseline) {
-          if (data._打断冻结至楼层 > 0) {
+          const currentFloor = (globalThis as any).SillyTavern?.chat?.length ?? 0;
+          if (_scriptFreezeUntil > 0 && currentFloor < _scriptFreezeUntil) {
             // 冻结仍在生效：用当前治疗数值更新基线（含三把锁回退效果）
             _freezeBaseline = {
               信任度: data.云霜凝.信任度,

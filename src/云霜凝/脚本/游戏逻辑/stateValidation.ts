@@ -280,8 +280,12 @@ export function validateAndRecalcState(
   新变量.治疗.阶段 = newStage;
 
   // ── 2. 治疗阶段突破 → 里程碑灵石 ───────────────────
-  if (newStage > oldStage) {
-    for (let s = oldStage + 1; s <= newStage; s++) {
+  // 用天花板 clamp 后的完成度算真实阶段，防止 AI 写出超天花板的完成度导致虚假突破
+  const ceilingForMilestone = (currentFloor && currentFloor > 0) ? getFloorCeiling(currentFloor) : null;
+  const clampedComp = ceilingForMilestone ? Math.min(新变量.治疗.完成度, ceilingForMilestone.完成度上限) : 新变量.治疗.完成度;
+  const realNewStage = calcHealingStage(clampedComp);
+  if (realNewStage > oldStage) {
+    for (let s = oldStage + 1; s <= realNewStage; s++) {
       const key = `阶段${s}`;
       if (!新变量._已发放里程碑灵石[key]) {
         const reward = getMilestoneReward(s);
@@ -324,18 +328,40 @@ export function validateAndRecalcState(
   // ── 4. 环境被动疑心/绿帽增长（每次治疗互动触发） ────
   // 治疗互动判定：云霜凝数值发生变化即算一次
   {
-    // 只有治疗推进方向的变化才算治疗互动（信任↑、防线↓、完成度↑、身体开发↑）
-    // 数值退步（AI随机波动等）不会引起苗广疑心
-    // 用 AI 原始输出（clamp前）判断意图：数值到达楼层上限后，clamp后等于旧值，
-    // 但 AI 意图仍为推进，苗广应该察觉
-    const hasValueChange =
+    // 先计算 clamp 后的值（不修改新变量，仅用于比较）
+    const ceiling = (currentFloor && currentFloor > 0) ? getFloorCeiling(currentFloor) : null;
+    const cTrust = ceiling ? Math.min(新变量.云霜凝.信任度, ceiling.信任上限) : 新变量.云霜凝.信任度;
+    const cDef = ceiling ? Math.max(新变量.云霜凝.心理防线, ceiling.防线下限) : 新变量.云霜凝.心理防线;
+    const cComp = ceiling ? Math.min(新变量.治疗.完成度, ceiling.完成度上限) : 新变量.治疗.完成度;
+    const cBody = {
+      小嘴: ceiling ? Math.min(新变量.云霜凝.身体开发.小嘴, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.小嘴,
+      胸部: ceiling ? Math.min(新变量.云霜凝.身体开发.胸部, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.胸部,
+      小屄: ceiling ? Math.min(新变量.云霜凝.身体开发.小屄, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.小屄,
+      屁穴: ceiling ? Math.min(新变量.云霜凝.身体开发.屁穴, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.屁穴,
+    };
+
+    // 主判定：clamp 后的值与旧值比较（实际数值变化）
+    const hasActualChange =
+      cTrust > 旧变量.云霜凝.信任度 ||
+      cDef < 旧变量.云霜凝.心理防线 ||
+      cComp > 旧变量.治疗.完成度 ||
+      cBody.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
+      cBody.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
+      cBody.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
+      cBody.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
+
+    // 天花板意图检测：AI 原始输出尝试推进但被天花板压回（clamp 前有变化，clamp 后无变化）
+    const hasCeilingAttempt = !hasActualChange && (
       新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
       新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
       新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
       新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
       新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
       新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
-      新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
+      新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴
+    );
+
+    const hasValueChange = hasActualChange || hasCeilingAttempt;
 
     if (hasValueChange) {
       const items = 新变量.系统.道具状态;
@@ -387,6 +413,11 @@ export function validateAndRecalcState(
         else if (暴露 === '大露' || 暴露 === '极露') increment += 3;
         else if (暴露 === '轻露') increment += 1;
         // 微露和遮蔽不加成
+      }
+
+      // 天花板意图减半：AI尝试推进但被天花板压回，苗广只察觉到微弱波动
+      if (hasCeilingAttempt) {
+        increment = Math.max(1, Math.floor(increment * 0.5));
       }
 
       // 神魂空间减免：苗广无法感知神魂空间内的活动，增长大幅降低
@@ -492,7 +523,7 @@ export function validateAndRecalcState(
   // 阶段1免疫，阶段2+按阶段基础概率 + 疑心加成，cap 35%
   // 隔音灵阵 ×0.5，神魂空间 ×0.5
   // 使用楼层号做种子的确定性伪随机，防止玩家通过重新生成绕过打断
-  // 冻结5楼 + 冷却10楼 = 冻结结束后玩家有10楼自由推进窗口（不回滚、不触发打断）
+  // 冻结10楼 + 冷却8楼 = 冻结结束后玩家有8楼自由推进窗口（不回滚、不触发打断）
   {
     const INTERRUPT_COOLDOWN = 8; // 冻结结束后的安全窗口（楼层数）
 
@@ -532,7 +563,11 @@ export function validateAndRecalcState(
       const floor = currentFloor ?? 0;
       const roll = seededRandom(floor);
       if (roll < prob) {
-        新变量._打断冻结至楼层 = floor + 4;
+        新变量._打断冻结至楼层 = floor + 10;
+        // 疑心值惩罚：察觉心态+8，其他+5
+        const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
+        新变量.苗广.疑心值 += suspicionPenalty;
+        console.warn(`[状态验证] 打断触发疑心值惩罚 +${suspicionPenalty}（心态=${心态}），当前疑心值=${新变量.苗广.疑心值}`);
         // 打断触发时捕获治疗数值基线（冻结期间用作回滚基准）
         freezeBaseline = {
           信任度: 新变量.云霜凝.信任度,

@@ -1,80 +1,107 @@
 <template>
-  <div class="frost-container">
+  <div class="frost-container" :class="{ 'container-dead': is_bad_ending }">
     <div class="bg-pattern"></div>
-    <div class="main-panel">
-      <div class="panel-decor top"></div>
+    <div class="main-panel" :class="{ 'panel-frozen': freeze_remaining > 0 && !is_bad_ending, 'panel-dead': is_bad_ending }">
+      <div class="panel-decor top" :class="{ 'decor-dead': is_bad_ending }"></div>
 
-      <!-- 顶栏 -->
-      <header class="header">
-        <div class="world-info">
-          <span class="info-item"
-            >第 <b>{{ store.data.时间.第几天 }}</b> 天</span
+      <!-- ═══ 坏结局覆盖层 ═══ -->
+      <template v-if="is_bad_ending">
+        <div class="bad-ending-overlay">
+          <div class="bad-ending-icon">💀</div>
+          <div class="bad-ending-title">游戏结束</div>
+          <div class="bad-ending-subtitle">苗广的愤怒不可逆转</div>
+          <div class="bad-ending-divider"></div>
+          <div class="bad-ending-text">
+            三百年道侣的信任，在这一刻碎裂殆尽。<br />
+            苗广确认了一切——愤怒、背叛、不可原谅。<br />
+            治疗终止。云霜凝被带走。<br />
+            寒霜门的禁制已将你永远拒之门外。
+          </div>
+          <div class="bad-ending-stats">
+            <span>存活 <b>{{ store.data.时间.第几天 }}</b> 天</span>
+            <span class="bad-divider">·</span>
+            <span>治疗完成 <b>{{ store.data.治疗.完成度.toFixed(1) }}%</b></span>
+            <span class="bad-divider">·</span>
+            <span>最终阶段 <b>{{ stage_name }}</b></span>
+          </div>
+          <div class="bad-ending-footer">一切不可挽回。</div>
+        </div>
+      </template>
+
+      <!-- ═══ 正常游戏UI ═══ -->
+      <template v-else>
+        <!-- 顶栏 -->
+        <header class="header">
+          <div class="world-info">
+            <span class="info-item"
+              >第 <b>{{ store.data.时间.第几天 }}</b> 天</span
+            >
+            <span class="divider">·</span>
+            <span v-if="!hide_time" class="info-item">{{ formatted_time }}</span>
+            <span v-if="!hide_time" class="divider">·</span>
+            <span class="info-item ling"
+              >灵石 <b class="ling-val">{{ store.data.系统.灵石 }}</b></span
+            >
+            <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">
+              {{ hide_time ? '◷' : '◴' }}
+            </button>
+          </div>
+          <span class="mode-tag" :class="mode_class">{{ store.data._当前互动模式 }}</span>
+        </header>
+
+        <!-- 打断冻结警告 -->
+        <div v-if="freeze_remaining > 0" class="interrupt-banner">⚠ 苗广监视中 · 治疗冻结（剩余 {{ freeze_remaining }} 楼）</div>
+
+        <!-- 治疗进度 -->
+        <section class="healing-section">
+          <div class="healing-meta">
+            <span class="heal-stage">阶段 {{ store.data.治疗.阶段 }}·{{ stage_name }}</span>
+            <span class="heal-pct">{{ store.data.治疗.完成度.toFixed(1) }}%</span>
+          </div>
+          <div class="healing-track">
+            <div class="healing-fill" :style="{ width: store.data.治疗.完成度 + '%' }"></div>
+            <div v-for="n in 9" :key="n" class="stage-tick" :style="{ left: n * 10 + '%' }"></div>
+          </div>
+        </section>
+
+        <!-- 神魂空间入口 -->
+        <div class="mode-entry">
+          <template v-if="store.data._当前互动模式 === '神魂空间'">
+            <button class="mode-btn soul-btn active" @click="exitSoulSpace">⟨ 退出神魂 ⟩</button>
+          </template>
+          <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining <= 0">
+            <button class="mode-btn soul-btn" @click="enterSoulSpace">⟨ 进入神魂 ⟩</button>
+          </template>
+          <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining > 0">
+            <button class="mode-btn soul-btn locked" disabled>⟨ 监视中({{ freeze_remaining }}楼) ⟩</button>
+          </template>
+          <template v-else>
+            <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
+          </template>
+        </div>
+
+        <!-- 标签页 -->
+        <nav class="tabs">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            class="tab-btn"
+            :class="{ active: active_tab === tab.id }"
+            @click="toggleTab(tab.id)"
           >
-          <span class="divider">·</span>
-          <span v-if="!hide_time" class="info-item">{{ formatted_time }}</span>
-          <span v-if="!hide_time" class="divider">·</span>
-          <span class="info-item ling"
-            >灵石 <b class="ling-val">{{ store.data.系统.灵石 }}</b></span
-          >
-          <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">
-            {{ hide_time ? '◷' : '◴' }}
+            {{ tab.label }}
           </button>
+        </nav>
+
+        <!-- 面板内容 -->
+        <div v-if="active_tab" class="content-area">
+          <YunPanel v-if="active_tab === '云霜凝'" />
+          <MiaoPanel v-else-if="active_tab === '苗广'" />
+          <ShopPanel v-else-if="active_tab === '商店'" />
         </div>
-        <span class="mode-tag" :class="mode_class">{{ store.data._当前互动模式 }}</span>
-      </header>
+      </template>
 
-      <!-- 打断冻结警告 -->
-      <div v-if="freeze_remaining > 0" class="interrupt-banner">⚠ 苗广打断治疗，暂时无法继续</div>
-
-      <!-- 治疗进度 -->
-      <section class="healing-section">
-        <div class="healing-meta">
-          <span class="heal-stage">阶段 {{ store.data.治疗.阶段 }}·{{ stage_name }}</span>
-          <span class="heal-pct">{{ store.data.治疗.完成度.toFixed(1) }}%</span>
-        </div>
-        <div class="healing-track">
-          <div class="healing-fill" :style="{ width: store.data.治疗.完成度 + '%' }"></div>
-          <div v-for="n in 9" :key="n" class="stage-tick" :style="{ left: n * 10 + '%' }"></div>
-        </div>
-      </section>
-
-      <!-- 神魂空间入口 -->
-      <div class="mode-entry">
-        <template v-if="store.data._当前互动模式 === '神魂空间'">
-          <button class="mode-btn soul-btn active" @click="exitSoulSpace">⟨ 退出神魂 ⟩</button>
-        </template>
-        <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining <= 0">
-          <button class="mode-btn soul-btn" @click="enterSoulSpace">⟨ 进入神魂 ⟩</button>
-        </template>
-        <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining > 0">
-          <button class="mode-btn soul-btn locked" disabled>⟨ 监视中({{ freeze_remaining }}楼) ⟩</button>
-        </template>
-        <template v-else>
-          <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
-        </template>
-      </div>
-
-      <!-- 标签页 -->
-      <nav class="tabs">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          class="tab-btn"
-          :class="{ active: active_tab === tab.id }"
-          @click="toggleTab(tab.id)"
-        >
-          {{ tab.label }}
-        </button>
-      </nav>
-
-      <!-- 面板内容 -->
-      <div v-if="active_tab" class="content-area">
-        <YunPanel v-if="active_tab === '云霜凝'" />
-        <MiaoPanel v-else-if="active_tab === '苗广'" />
-        <ShopPanel v-else-if="active_tab === '商店'" />
-      </div>
-
-      <div class="panel-decor bottom"></div>
+      <div class="panel-decor bottom" :class="{ 'decor-dead': is_bad_ending }"></div>
     </div>
   </div>
 </template>
@@ -113,6 +140,8 @@ const freeze_remaining = computed(() => {
   const floor = (window as any).SillyTavern?.chat?.length ?? 0;
   return floor > 0 ? Math.max(0, store.data._打断冻结至楼层 - floor) : 0;
 });
+
+const is_bad_ending = computed(() => !!store.data._坏结局已触发);
 
 const mode_class = computed(() => ({
   'mode-soul': store.data._当前互动模式 === '神魂空间',
@@ -207,6 +236,29 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
     0 4px 24px rgba(0, 0, 0, 0.4),
     0 0 40px rgba($c-ice, 0.04),
     inset 0 1px 0 rgba($c-frost, 0.05);
+  transition: border-color 0.6s, box-shadow 0.6s;
+
+  &.panel-frozen {
+    animation: frozenGlow 2.5s ease-in-out infinite;
+  }
+}
+
+@keyframes frozenGlow {
+  0%, 100% {
+    border-color: rgba($c-ice, 0.25);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.4),
+      0 0 8px rgba($c-ice, 0.08),
+      inset 0 1px 0 rgba($c-frost, 0.05);
+  }
+  50% {
+    border-color: rgba($c-acc, 0.5);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.4),
+      0 0 20px rgba($c-acc, 0.2),
+      0 0 40px rgba($c-ice, 0.1),
+      inset 0 1px 0 rgba($c-frost, 0.08);
+  }
 }
 
 .panel-decor {
@@ -556,6 +608,145 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+// ━━━ 坏结局 ━━━
+.container-dead {
+  &::before {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba($c-danger, 0.12), transparent 60%),
+      radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.5), transparent 70%);
+  }
+}
+
+.panel-dead {
+  animation: deadGlow 3s ease-in-out infinite;
+  border-color: rgba($c-danger, 0.3);
+}
+
+@keyframes deadGlow {
+  0%, 100% {
+    border-color: rgba($c-danger, 0.2);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.6),
+      0 0 12px rgba($c-danger, 0.08),
+      inset 0 0 30px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    border-color: rgba($c-danger, 0.45);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.6),
+      0 0 25px rgba($c-danger, 0.15),
+      0 0 50px rgba($c-danger, 0.06),
+      inset 0 0 30px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.decor-dead {
+  background: linear-gradient(90deg, transparent 5%, rgba($c-danger, 0.25) 30%, rgba($c-danger, 0.4) 50%, rgba($c-danger, 0.25) 70%, transparent 95%);
+  opacity: 0.6;
+
+  &::after {
+    background: rgba($c-danger, 0.2);
+  }
+
+  &.bottom {
+    background: linear-gradient(90deg, transparent 5%, rgba($c-danger, 0.15) 30%, rgba($c-danger, 0.25) 50%, rgba($c-danger, 0.15) 70%, transparent 95%);
+  }
+}
+
+.bad-ending-overlay {
+  padding: 28px 20px 24px;
+  text-align: center;
+  animation: badEndingFadeIn 1.2s ease-out;
+}
+
+@keyframes badEndingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bad-ending-icon {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+  animation: iconPulse 3s ease-in-out infinite;
+  filter: grayscale(0.3);
+}
+
+@keyframes iconPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.bad-ending-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: $c-danger;
+  letter-spacing: 4px;
+  text-shadow: 0 0 16px rgba($c-danger, 0.35), 0 0 40px rgba($c-danger, 0.1);
+  margin-bottom: 4px;
+}
+
+.bad-ending-subtitle {
+  font-size: 0.82rem;
+  color: rgba($c-danger, 0.7);
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.bad-ending-divider {
+  width: 60%;
+  height: 1px;
+  margin: 0 auto 16px;
+  background: linear-gradient(90deg, transparent, rgba($c-danger, 0.3), transparent);
+}
+
+.bad-ending-text {
+  font-size: 0.86rem;
+  line-height: 2;
+  color: rgba($c-frost, 0.6);
+  font-style: italic;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+}
+
+.bad-ending-stats {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: rgba($c-sub, 0.7);
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba($c-danger, 0.12);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  b {
+    color: rgba($c-frost, 0.8);
+    font-weight: 800;
+  }
+}
+
+.bad-divider {
+  color: rgba($c-danger, 0.25);
+  font-size: 0.6em;
+}
+
+.bad-ending-footer {
+  font-size: 0.75rem;
+  color: rgba($c-danger, 0.4);
+  letter-spacing: 2px;
+  font-weight: 600;
 }
 
 // ━━━ 移动端适配 ━━━
