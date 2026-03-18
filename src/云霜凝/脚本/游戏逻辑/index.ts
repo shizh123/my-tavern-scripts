@@ -52,6 +52,8 @@ let _scriptFreezeUntil = 0;
 // 脚本管理的消耗品冷却楼层（VARIABLE_UPDATE_ENDED 写入，MESSAGE_RECEIVED 恢复）
 // 防止 getMvuData() 读到 stale 缓存导致 processNewlyActivatedItems 双火重复触发消耗品
 let _scriptConsumableCooldowns: Record<string, number> = {};
+// 上次消费的道具事件（重roll保护：楼层号相同说明是重roll，重注入事件文本）
+let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items: [] };
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
@@ -141,6 +143,12 @@ $(() => {
           }
         }
 
+        // ── 记录本轮消费的事件 + 楼层（重roll保护：供 Phase 1.3b 使用）──
+        const currentFloor = SillyTavern.chat?.length ?? 0;
+        if (items.length > 0) {
+          _lastConsumedEvent = { floor: currentFloor, items: [...items] };
+        }
+
         // ── Phase 1.3: 蚀心露屈辱转变事件重注入（重roll保护） ──
         // 场景：蚀心露触发转变后玩家重roll，_待发送道具事件已被消费清空，
         // AI收不到转变事件文本 → 口胡。检测：_protSnapshot 已标记屈辱但当前数据还没有。
@@ -156,6 +164,26 @@ $(() => {
           _.set(raw, 'stat_data.苗广.疑心值', 0);
           Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
           console.info('[云霜凝] 蚀心露屈辱转变事件重注入（重roll保护）');
+        }
+
+        // ── Phase 1.3b: 通用道具事件重注入（重roll保护）──
+        // 场景：净灵铃/神魂入口等前端道具事件首次消费后，玩家重roll导致事件文本丢失。
+        // 检测：本轮无新事件（items=[]）且楼层号与上次消费楼层相同（重roll时chat长度不变）。
+        // 排除已有专用保护的事件，避免与 Phase 1.3/1.4/1.5 重复注入。
+        {
+          const DEDICATED_EVENTS = ['__蚀心露屈辱转变__', '__打断治疗__', '__打断治疗_神魂__', '__坏结局_愤怒__'];
+          if (
+            items.length === 0 &&
+            _lastConsumedEvent.floor === currentFloor &&
+            _lastConsumedEvent.items.length > 0
+          ) {
+            const rerollItems = _lastConsumedEvent.items.filter(e => !DEDICATED_EVENTS.includes(e));
+            if (rerollItems.length > 0) {
+              const reinjected = buildBatchUseEvent(rerollItems, data);
+              richEvent = richEvent ? richEvent + '\n\n' + reinjected : reinjected;
+              console.info('[云霜凝] 道具事件重注入（重roll保护）:', rerollItems.join(', '));
+            }
+          }
         }
 
         // ── Phase 1.4: 坏结局持续锁定（每轮强制注入，覆盖一切其他事件） ──
@@ -191,7 +219,6 @@ $(() => {
 
         // ── Phase 1.5: 打断冻结期持续提示 / 解除提示 ──
         {
-          const currentFloor = SillyTavern.chat?.length ?? 0;
           // 优先使用脚本管理的冻结值（getMvuData可能读到stale 0）
           const freezeUntil = _scriptFreezeUntil > 0 ? _scriptFreezeUntil : data._打断冻结至楼层;
 
