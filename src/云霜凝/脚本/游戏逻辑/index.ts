@@ -141,6 +141,27 @@ $(() => {
           }
         }
 
+        // ── Phase 1.3: 蚀心露屈辱转变事件重注入（重roll保护） ──
+        // 场景：蚀心露触发转变后玩家重roll，_待发送道具事件已被消费清空，
+        // AI收不到转变事件文本 → 口胡。检测：_protSnapshot 已标记屈辱但当前数据还没有。
+        if (
+          _protSnapshot?.已触发蚀心露屈辱 &&
+          !data._已触发蚀心露屈辱 &&
+          !items.includes('__蚀心露屈辱转变__')
+        ) {
+          const reinjected = buildBatchUseEvent(['__蚀心露屈辱转变__'], data);
+          richEvent = richEvent ? richEvent + '\n\n' + reinjected : reinjected;
+          // 同步更新数据，防止后续逻辑再次误判
+          data._已触发蚀心露屈辱 = true;
+          data.苗广.心态 = '屈辱';
+          data.苗广.疑心值 = 0;
+          _.set(raw, 'stat_data._已触发蚀心露屈辱', true);
+          _.set(raw, 'stat_data.苗广.心态', '屈辱');
+          _.set(raw, 'stat_data.苗广.疑心值', 0);
+          Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+          console.info('[云霜凝] 蚀心露屈辱转变事件重注入（重roll保护）');
+        }
+
         // ── Phase 1.4: 坏结局持续锁定（每轮强制注入，覆盖一切其他事件） ──
         if (data._坏结局已触发) {
           // 触发楼不注入锁定模板（触发楼由 __坏结局_愤怒__ 事件处理）
@@ -175,7 +196,29 @@ $(() => {
         // ── Phase 1.5: 打断冻结期持续提示 / 解除提示 ──
         {
           const currentFloor = SillyTavern.chat?.length ?? 0;
-          const freezeUntil = data._打断冻结至楼层;
+          // 优先使用脚本管理的冻结值（getMvuData可能读到stale 0）
+          const freezeUntil = _scriptFreezeUntil > 0 ? _scriptFreezeUntil : data._打断冻结至楼层;
+
+          // 打断事件重注入（重roll保护）：冻结刚触发但事件文本已被消费
+          // 检测：_scriptFreezeUntil > 0 但 MVU 数据还是 0（stale），且当前没有打断事件
+          if (
+            _scriptFreezeUntil > 0 &&
+            data._打断冻结至楼层 === 0 &&
+            !items.includes('__打断治疗__') &&
+            !items.includes('__打断治疗_神魂__')
+          ) {
+            // 判断是否在神魂空间中被打断（神魂空间激活中已被切为false）
+            const isFromSoul = data._当前互动模式 === '日常' && !data._神魂空间激活中 && _protSnapshot?.当前互动模式 === '神魂空间';
+            const event = isFromSoul ? '__打断治疗_神魂__' : '__打断治疗__';
+            const reinjected = buildBatchUseEvent([event], data);
+            richEvent = richEvent ? richEvent + '\n\n' + reinjected : reinjected;
+            // 同步冻结值到 MVU
+            data._打断冻结至楼层 = _scriptFreezeUntil;
+            _.set(raw, 'stat_data._打断冻结至楼层', _scriptFreezeUntil);
+            Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+            console.info(`[云霜凝] 打断事件重注入（重roll保护）：${event}`);
+          }
+
           if (freezeUntil > 0 && currentFloor < freezeUntil) {
             // 冻结中：注入监视提示
             const freezeNotice = `【系统强制状态：苗广监视期】⚠️ 最高优先级 ⚠️
