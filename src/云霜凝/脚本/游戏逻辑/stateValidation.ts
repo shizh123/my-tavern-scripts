@@ -281,8 +281,10 @@ export function validateAndRecalcState(
 
   // ── 2. 治疗阶段突破 → 里程碑灵石 ───────────────────
   // 用天花板 clamp 后的完成度算真实阶段，防止 AI 写出超天花板的完成度导致虚假突破
-  const ceilingForMilestone = (currentFloor && currentFloor > 0) ? getFloorCeiling(currentFloor) : null;
-  const clampedComp = ceilingForMilestone ? Math.min(新变量.治疗.完成度, ceilingForMilestone.完成度上限) : 新变量.治疗.完成度;
+  const ceilingForMilestone = currentFloor && currentFloor > 0 ? getFloorCeiling(currentFloor) : null;
+  const clampedComp = ceilingForMilestone
+    ? Math.min(新变量.治疗.完成度, ceilingForMilestone.完成度上限)
+    : 新变量.治疗.完成度;
   const realNewStage = calcHealingStage(clampedComp);
   if (realNewStage > oldStage) {
     for (let s = oldStage + 1; s <= realNewStage; s++) {
@@ -329,7 +331,7 @@ export function validateAndRecalcState(
   // 治疗互动判定：云霜凝数值发生变化即算一次
   {
     // 先计算 clamp 后的值（不修改新变量，仅用于比较）
-    const ceiling = (currentFloor && currentFloor > 0) ? getFloorCeiling(currentFloor) : null;
+    const ceiling = currentFloor && currentFloor > 0 ? getFloorCeiling(currentFloor) : null;
     const cTrust = ceiling ? Math.min(新变量.云霜凝.信任度, ceiling.信任上限) : 新变量.云霜凝.信任度;
     const cDef = ceiling ? Math.max(新变量.云霜凝.心理防线, ceiling.防线下限) : 新变量.云霜凝.心理防线;
     const cComp = ceiling ? Math.min(新变量.治疗.完成度, ceiling.完成度上限) : 新变量.治疗.完成度;
@@ -351,15 +353,15 @@ export function validateAndRecalcState(
       cBody.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
 
     // 天花板意图检测：AI 原始输出尝试推进但被天花板压回（clamp 前有变化，clamp 后无变化）
-    const hasCeilingAttempt = !hasActualChange && (
-      新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
-      新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
-      新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
-      新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
-      新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
-      新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
-      新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴
-    );
+    const hasCeilingAttempt =
+      !hasActualChange &&
+      (新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
+        新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
+        新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
+        新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
+        新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
+        新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
+        新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴);
 
     const hasValueChange = hasActualChange || hasCeilingAttempt;
 
@@ -567,7 +569,9 @@ export function validateAndRecalcState(
         // 疑心值惩罚：察觉心态+8，其他+5
         const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
         新变量.苗广.疑心值 += suspicionPenalty;
-        console.warn(`[状态验证] 打断触发疑心值惩罚 +${suspicionPenalty}（心态=${心态}），当前疑心值=${新变量.苗广.疑心值}`);
+        console.warn(
+          `[状态验证] 打断触发疑心值惩罚 +${suspicionPenalty}（心态=${心态}），当前疑心值=${新变量.苗广.疑心值}`,
+        );
         // 打断触发时捕获治疗数值基线（冻结期间用作回滚基准）
         freezeBaseline = {
           信任度: 新变量.云霜凝.信任度,

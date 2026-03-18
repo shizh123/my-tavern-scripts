@@ -1,7 +1,10 @@
 <template>
   <div class="frost-container" :class="{ 'container-dead': is_bad_ending }">
     <div class="bg-pattern"></div>
-    <div class="main-panel" :class="{ 'panel-frozen': freeze_remaining > 0 && !is_bad_ending, 'panel-dead': is_bad_ending }">
+    <div
+      class="main-panel"
+      :class="{ 'panel-frozen': freeze_remaining > 0 && !is_bad_ending, 'panel-dead': is_bad_ending }"
+    >
       <div class="panel-decor top" :class="{ 'decor-dead': is_bad_ending }"></div>
 
       <!-- ═══ 坏结局覆盖层 ═══ -->
@@ -18,11 +21,17 @@
             寒霜门的禁制已将你永远拒之门外。
           </div>
           <div class="bad-ending-stats">
-            <span>存活 <b>{{ store.data.时间.第几天 }}</b> 天</span>
+            <span
+              >存活 <b>{{ store.data.时间.第几天 }}</b> 天</span
+            >
             <span class="bad-divider">·</span>
-            <span>治疗完成 <b>{{ store.data.治疗.完成度.toFixed(1) }}%</b></span>
+            <span
+              >治疗完成 <b>{{ store.data.治疗.完成度.toFixed(1) }}%</b></span
+            >
             <span class="bad-divider">·</span>
-            <span>最终阶段 <b>{{ stage_name }}</b></span>
+            <span
+              >最终阶段 <b>{{ stage_name }}</b></span
+            >
           </div>
           <div class="bad-ending-footer">一切不可挽回。</div>
         </div>
@@ -50,7 +59,9 @@
         </header>
 
         <!-- 打断冻结警告 -->
-        <div v-if="freeze_remaining > 0" class="interrupt-banner">⚠ 苗广监视中 · 治疗冻结（剩余 {{ freeze_remaining }} 楼）</div>
+        <div v-if="freeze_remaining > 0" class="interrupt-banner">
+          ⚠ 苗广监视中 · 治疗冻结（剩余 {{ freeze_remaining }} 楼）
+        </div>
 
         <!-- 治疗进度 -->
         <section class="healing-section">
@@ -236,7 +247,9 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
     0 4px 24px rgba(0, 0, 0, 0.4),
     0 0 40px rgba($c-ice, 0.04),
     inset 0 1px 0 rgba($c-frost, 0.05);
-  transition: border-color 0.6s, box-shadow 0.6s;
+  transition:
+    border-color 0.6s,
+    box-shadow 0.6s;
 
   &.panel-frozen {
     animation: frozenGlow 2.5s ease-in-out infinite;
@@ -244,7 +257,8 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
 }
 
 @keyframes frozenGlow {
-  0%, 100% {
+  0%,
+  100% {
     border-color: rgba($c-ice, 0.25);
     box-shadow:
       0 4px 24px rgba(0, 0, 0, 0.4),
@@ -625,7 +639,8 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
 }
 
 @keyframes deadGlow {
-  0%, 100% {
+  0%,
+  100% {
     border-color: rgba($c-danger, 0.2);
     box-shadow:
       0 4px 24px rgba(0, 0, 0, 0.6),
@@ -643,7 +658,14 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
 }
 
 .decor-dead {
-  background: linear-gradient(90deg, transparent 5%, rgba($c-danger, 0.25) 30%, rgba($c-danger, 0.4) 50%, rgba($c-danger, 0.25) 70%, transparent 95%);
+  background: linear-gradient(
+    90deg,
+    transparent 5%,
+    rgba($c-danger, 0.25) 30%,
+    rgba($c-danger, 0.4) 50%,
+    rgba($c-danger, 0.25) 70%,
+    transparent 95%
+  );
   opacity: 0.6;
 
   &::after {
@@ -651,7 +673,14 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   }
 
   &.bottom {
-    background: linear-gradient(90deg, transparent 5%, rgba($c-danger, 0.15) 30%, rgba($c-danger, 0.25) 50%, rgba($c-danger, 0.15) 70%, transparent 95%);
+    background: linear-gradient(
+      90deg,
+      transparent 5%,
+      rgba($c-danger, 0.15) 30%,
+      rgba($c-danger, 0.25) 50%,
+      rgba($c-danger, 0.15) 70%,
+      transparent 95%
+    );
   }
 }
 
@@ -680,8 +709,15 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
 }
 
 @keyframes iconPulse {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.08); }
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
 }
 
 .bad-ending-title {
@@ -689,7 +725,9 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   font-weight: 900;
   color: $c-danger;
   letter-spacing: 4px;
-  text-shadow: 0 0 16px rgba($c-danger, 0.35), 0 0 40px rgba($c-danger, 0.1);
+  text-shadow:
+    0 0 16px rgba($c-danger, 0.35),
+    0 0 40px rgba($c-danger, 0.1);
   margin-bottom: 4px;
 }
 
