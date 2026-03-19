@@ -172,11 +172,7 @@ $(() => {
         // 排除已有专用保护的事件，避免与 Phase 1.3/1.4/1.5 重复注入。
         {
           const DEDICATED_EVENTS = ['__蚀心露屈辱转变__', '__打断治疗__', '__打断治疗_神魂__', '__坏结局_愤怒__'];
-          if (
-            items.length === 0 &&
-            _lastConsumedEvent.floor === currentFloor &&
-            _lastConsumedEvent.items.length > 0
-          ) {
+          if (items.length === 0 && _lastConsumedEvent.floor === currentFloor && _lastConsumedEvent.items.length > 0) {
             const rerollItems = _lastConsumedEvent.items.filter(e => !DEDICATED_EVENTS.includes(e));
             if (rerollItems.length > 0) {
               const reinjected = buildBatchUseEvent(rerollItems, data);
