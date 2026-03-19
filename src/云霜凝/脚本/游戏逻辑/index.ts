@@ -430,7 +430,6 @@ $(() => {
         }
 
         // ── Phase 4: 苗喧彩蛋（优先级最低，有道具事件时跳过）──
-        const currentFloor = SillyTavern.chat?.length ?? 0;
         const miaoxuanTriggered = pendingRaw ? false : checkMiaoxuanEasterEgg(data, currentFloor);
         if (miaoxuanTriggered) {
           // 持久化触发楼层 + 碎片文本（显示在前端状态栏）

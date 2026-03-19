@@ -4,6 +4,11 @@ import { applyLockRetreat } from './shopSystem';
 /** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
 let _lastSuspicionFloor = -1;
 
+/** 冻结期间是否有治疗尝试（冻结开始时重置，结束时判定奖励） */
+let _freezeHadTreatmentAttempt = false;
+/** 冻结结束奖励是否已发放（防止重roll重复发放） */
+let _freezeRewardGiven = false;
+
 /**
  * 硬保护快照类型
  *
@@ -364,6 +369,12 @@ export function validateAndRecalcState(
         新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴);
 
     const hasValueChange = hasActualChange || hasCeilingAttempt;
+    const isInFreeze = 新变量._打断冻结至楼层 > 0 && (currentFloor ?? 0) < 新变量._打断冻结至楼层;
+
+    // 冻结期间治疗尝试标记（冻结结束时判定奖励用）
+    if (hasValueChange && isInFreeze) {
+      _freezeHadTreatmentAttempt = true;
+    }
 
     if (hasValueChange) {
       const items = 新变量.系统.道具状态;
@@ -427,6 +438,11 @@ export function validateAndRecalcState(
         increment = Math.round(increment * 0.3);
       }
 
+      // 打断冻结期间减免：苗广已打断过，治疗被回滚，未发现新证据，仅维持戒备
+      if (isInFreeze) {
+        increment = Math.max(1, Math.ceil(increment * 0.3));
+      }
+
       if (increment > 0) {
         // 楼层去重：同一楼层重新生成时不重复叠加疑心值
         if (currentFloor !== undefined && currentFloor === _lastSuspicionFloor) {
@@ -462,6 +478,12 @@ export function validateAndRecalcState(
   }
   if (新变量.苗广.心态 === '愤怒') {
     新变量._坏结局已触发 = true;
+    // 神魂空间中触发坏结局：强制退出（同打断处理）
+    if (新变量._当前互动模式 === '神魂空间') {
+      新变量._当前互动模式 = '日常';
+      新变量._神魂空间激活中 = false;
+      console.warn('[状态验证] ⚠️ 神魂空间中触发坏结局，已强制退出');
+    }
     // 注入坏结局事件
     const existing = 新变量._待发送道具事件;
     const event = '__坏结局_愤怒__';
@@ -525,7 +547,7 @@ export function validateAndRecalcState(
   // 阶段1免疫，阶段2+按阶段基础概率 + 疑心加成，cap 35%
   // 隔音灵阵 ×0.5，神魂空间 ×0.5
   // 使用楼层号做种子的确定性伪随机，防止玩家通过重新生成绕过打断
-  // 冻结10楼 + 冷却8楼 = 冻结结束后玩家有8楼自由推进窗口（不回滚、不触发打断）
+  // 冻结5楼 + 冷却8楼 = 冻结结束后玩家有8楼自由推进窗口（不回滚、不触发打断）
   {
     const INTERRUPT_COOLDOWN = 8; // 冻结结束后的安全窗口（楼层数）
 
@@ -565,7 +587,9 @@ export function validateAndRecalcState(
       const floor = currentFloor ?? 0;
       const roll = seededRandom(floor);
       if (roll < prob) {
-        新变量._打断冻结至楼层 = floor + 10;
+        新变量._打断冻结至楼层 = floor + 5;
+        _freezeHadTreatmentAttempt = false; // 冻结开始，重置治疗尝试标记
+        _freezeRewardGiven = false;
         // 疑心值惩罚：察觉心态+8，其他+5
         const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
         新变量.苗广.疑心值 += suspicionPenalty;
@@ -684,6 +708,15 @@ export function validateAndRecalcState(
       } else {
         // 无基线（边界情况：页面刷新后冻结仍在生效）→ 仅阻止AI推进，不回滚
         console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），无基线，跳过回滚`);
+      }
+    } else if (新变量._打断冻结至楼层 > 0 && floor > 0 && floor >= 新变量._打断冻结至楼层 && !_freezeRewardGiven) {
+      // 冻结刚结束：全程无治疗尝试 → 疑心值 -3 奖励
+      _freezeRewardGiven = true;
+      if (!_freezeHadTreatmentAttempt) {
+        新变量.苗广.疑心值 = Math.max(0, 新变量.苗广.疑心值 - 3);
+        console.info(`[状态验证] 打断冻结结束奖励：全程无治疗尝试，疑心值 -3 → ${新变量.苗广.疑心值}`);
+      } else {
+        console.info('[状态验证] 打断冻结结束：冻结期间有治疗尝试，无奖励');
       }
     }
   }
