@@ -1117,9 +1117,20 @@ function handleClick(item: ItemDef) {
     if (item.type === '装备') {
       if (CLOTHING_SLOT[item.name]) {
         unequipClothing(item.name);
+        // 服装卸下事件：通知AI服装被脱下，换回默认
+        const slot = CLOTHING_SLOT[item.name] as ClothingSlot;
+        const defaultName = SLOT_DEFAULTS[slot];
+        const event = `卸下服装:${item.name}→${defaultName}`;
+        const existing = store.data._待发送道具事件;
+        store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
       } else {
         store.data.系统.道具状态[item.name] = '已购买';
+        // 装备卸下事件：通知AI装备被移除
+        const event = `卸下:${item.name}`;
+        const existing = store.data._待发送道具事件;
+        store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
       }
+      store.flush();
       showToast(`已卸下「${item.name}」`, 'info');
     } else {
       showToast(`「${item.name}」效果生效中`, 'info');
@@ -1207,9 +1218,17 @@ function confirmUse() {
       eventNames.push(name);
       needTriggerAI = true;
     } else if (CLOTHING_NAMES.has(name)) {
+      // 记录换装前的旧服装（用于生成换装事件）
+      const slot = CLOTHING_SLOT[name] as ClothingSlot;
+      const oldClothing = slot ? store.data.云霜凝.服装[slot] : undefined;
       equipClothing(name);
       if (GIFTABLE_CLOTHING.has(name)) {
-        eventNames.push(name);
+        // 如果旧服装不是默认且不同于新服装，生成换装事件而非赠礼
+        if (oldClothing && oldClothing !== SLOT_DEFAULTS[slot] && oldClothing !== name) {
+          eventNames.push(`换装:${oldClothing}→${name}`);
+        } else {
+          eventNames.push(name);
+        }
         needTriggerAI = true;
       }
     } else {
@@ -1556,12 +1575,13 @@ $cat-场景: #d8a040;
 
 // ━━━ 道具信息栏 ━━━
 .info-bar {
-  min-height: 42px;
+  height: 80px;
+  overflow-y: auto;
   padding: 8px 12px;
   border-radius: 8px;
   background: rgba($c-panel, 0.65);
   border: 1px solid rgba($c-mute, 0.18);
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 
   &--active {
     background: rgba($c-panel, 0.9);
@@ -1591,7 +1611,7 @@ $cat-场景: #d8a040;
   color: rgba($c-sub, 0.5);
   font-size: 0.78rem;
   text-align: center;
-  line-height: 26px;
+  line-height: 64px; // 垂直居中：80px - padding 16px = 64px
   letter-spacing: 1px;
 }
 .info-head {
@@ -2316,7 +2336,11 @@ $cat-场景: #d8a040;
     padding: 8px 10px;
   }
   .info-bar {
+    height: 92px;
     padding: 6px 10px;
+  }
+  .info-placeholder {
+    line-height: 80px; // 92px - padding 12px
   }
   .liuying-item {
     flex-wrap: wrap;
@@ -2330,6 +2354,12 @@ $cat-场景: #d8a040;
 }
 
 @media (max-width: 480px) {
+  .info-bar {
+    height: 92px; // 移动端文字换行更多，给更多空间
+  }
+  .info-placeholder {
+    line-height: 76px; // 92px - padding 16px
+  }
   .item-list {
     max-height: 300px;
   }

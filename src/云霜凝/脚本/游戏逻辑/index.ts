@@ -34,6 +34,7 @@ import {
   tickTemporaryItems,
   clearSceneTemporaryItems,
   advanceSpecialScene,
+  syncClothingFromState,
 } from './shopSystem';
 
 // ────────────────────────────────────────────────────────
@@ -290,7 +291,7 @@ $(() => {
               // ── 自动退出：轮次已满 ──
               data.苗广.千晶幻术.激活中 = false;
               data.苗广.千晶幻术.冷却结束楼层 = currentFloor + 4;
-              if (已使用次数 >= 5) {
+              if (已使用次数 >= 3) {
                 data.苗广.千晶幻术.认知改写完成 = true;
               }
               data._千晶幻术开始楼层 = 0;
@@ -435,6 +436,10 @@ $(() => {
           console.info('[云霜凝] 苗喧碎片已更新至状态栏');
         }
         // ── 捕获硬保护快照（包含前端写入，用作 VARIABLE_UPDATE_ENDED 回滚基准）──
+        // 蚀心露屈辱刚触发：旧快照残留前半程疑心值，必须强制为0（绿帽值从0开始）
+        const 蚀心露刚触发 =
+          !_protSnapshot?.已触发蚀心露屈辱 &&
+          (data._已触发蚀心露屈辱 || items.includes('__蚀心露屈辱转变__'));
         _protSnapshot = {
           灵石: data.系统.灵石,
           第几天: data.时间.第几天,
@@ -445,13 +450,19 @@ $(() => {
           神魂空间激活中: data._神魂空间激活中,
           // 疑心值/心态由脚本全权管理，前端不能直接写入，保留 VARIABLE_UPDATE_ENDED 更新的值
           // 若从 getMvuData 读取，会因 MVU 缓存未同步而读到旧值，导致每轮重置（2→4→2 循环 bug）
-          疑心值: _protSnapshot?.疑心值 ?? data.苗广.疑心值,
-          心态: _protSnapshot?.心态 ?? data.苗广.心态,
+          // 例外：蚀心露刚触发时强制捕获0，否则旧快照的前半程疑心值会被硬保护回滚回去
+          疑心值: 蚀心露刚触发 ? 0 : (_protSnapshot?.疑心值 ?? data.苗广.疑心值),
+          心态: 蚀心露刚触发 ? '屈辱' : (_protSnapshot?.心态 ?? data.苗广.心态),
           // 蚀心露屈辱标记由 processNewlyActivatedItems 设置，保留脚本已写入的值
-          已触发蚀心露屈辱: _protSnapshot?.已触发蚀心露屈辱 || data._已触发蚀心露屈辱,
+          // 同时检查事件队列：MVU 可能未传播 flag，但事件在队列中说明已触发
+          已触发蚀心露屈辱:
+            _protSnapshot?.已触发蚀心露屈辱 || data._已触发蚀心露屈辱 || items.includes('__蚀心露屈辱转变__'),
           服装: { ...data.云霜凝.服装 },
           道具状态: { ...data.系统.道具状态 },
         };
+        if (蚀心露刚触发) {
+          console.info('[云霜凝] 蚀心露刚触发，快照疑心值强制为0（绿帽值从0开始）');
+        }
       } catch (e) {
         console.error('[云霜凝] CHAT_COMPLETION_PROMPT_READY 处理失败:', e);
       }
@@ -479,6 +490,9 @@ $(() => {
 
         // 装备每轮数值效果（身体器具加速、暖玉佩信任等）
         tickEquipmentEffects(newData);
+
+        // 服装同步：从道具状态重建服装字段（修复快照不一致导致服装被回滚的问题）
+        syncClothingFromState(newData);
 
         // 若打断冻结刚被触发（从0变为>0），清除场景临时道具
         if (newData._打断冻结至楼层 > oldData._打断冻结至楼层) {

@@ -821,7 +821,7 @@ interface UnlockCondition {
   小嘴开发?: number; // 小嘴开发 ≥
   苗广心态?: string[]; // 苗广心态 ∈
   装备任一?: string[]; // 任一装备处于"使用中"
-  千晶幻术完成?: boolean; // 千晶幻术5次完成（认知改写完成）
+  千晶幻术完成?: boolean; // 千晶幻术3次完成（认知改写完成）
 }
 
 const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {

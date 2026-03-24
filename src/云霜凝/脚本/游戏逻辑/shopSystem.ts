@@ -1124,3 +1124,30 @@ export function canActivateItem(
 
   return { allowed: true, reason: '' };
 }
+
+/**
+ * 从道具状态重建服装字段（修复 MVU 传播延迟导致快照不一致的问题）
+ *
+ * 场景：前端 equipClothing → store.flush() → /send 创建新消息，
+ * 但 MVU 数据可能未传播到新消息，导致 PROMPT_READY 快照捕获旧服装值。
+ * validateAndRecalcState 硬回滚到快照后，processNewlyActivatedItems
+ * 因新旧道具状态都是"使用中"而检测不到变化，服装字段不会被修复。
+ *
+ * 此函数遍历道具状态，以"使用中"的服装道具为准重建服装槽位。
+ * 在 VARIABLE_UPDATE_ENDED 的全部处理完成后调用。
+ */
+export function syncClothingFromState(data: SchemaType): void {
+  let changed = false;
+  for (const [itemName, state] of Object.entries(data.系统.道具状态)) {
+    if (state !== '使用中') continue;
+    const slot = CLOTHING_SLOT[itemName];
+    if (slot && data.云霜凝.服装[slot] !== itemName) {
+      data.云霜凝.服装[slot] = itemName;
+      changed = true;
+      console.info(`[商店] 服装同步修复: ${slot} → ${itemName}`);
+    }
+  }
+  if (changed) {
+    data.云霜凝.服装.暴露程度 = calcExposure(data);
+  }
+}

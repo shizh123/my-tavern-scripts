@@ -46,7 +46,7 @@
         <span v-else-if="qjCooling" class="qj-cd">冷却 {{ qjCdRemain }} 楼</span>
         <span v-else class="qj-state">就绪</span>
 
-        <span v-if="qj.已使用次数 > 0 && !qj.认知改写完成" class="qj-uses"> {{ qj.已使用次数 }}/5次 </span>
+        <span v-if="qj.已使用次数 > 0 && !qj.认知改写完成" class="qj-uses"> {{ qj.已使用次数 }}/3次</span>
       </div>
 
       <!-- 施术/退出按钮 -->
@@ -174,10 +174,10 @@ const qjCdRemain = computed(() => {
   return Math.max(0, qj.value.冷却结束楼层 - getCurrentFloor());
 });
 
-const qjCanCast = computed(() => qjUnlocked.value && !qj.value.激活中 && !qjCooling.value && qj.value.已使用次数 < 5);
+const qjCanCast = computed(() => qjUnlocked.value && !qj.value.激活中 && !qjCooling.value && qj.value.已使用次数 < 3);
 
 // ── 千晶幻术轮次配置（与 promptInjection.ts QIANJING_SESSIONS 一致） ──
-const QJ_MAX_ROUNDS = [4, 4, 5, 5, 6]; // 第1~5次施术的最大轮数
+const QJ_MAX_ROUNDS = [4, 4, 4]; // 第1~3次施术的最大轮数
 
 // ── 千晶幻术当前轮次 ──
 const qjCurrentRound = computed(() => {
@@ -215,7 +215,7 @@ function exitQianjing() {
 
   store.data.苗广.千晶幻术.激活中 = false;
   store.data.苗广.千晶幻术.冷却结束楼层 = getCurrentFloor() + 5;
-  if (store.data.苗广.千晶幻术.已使用次数 >= 5) {
+  if (store.data.苗广.千晶幻术.已使用次数 >= 3) {
     store.data.苗广.千晶幻术.认知改写完成 = true;
   }
   store.data._千晶幻术开始楼层 = 0;
