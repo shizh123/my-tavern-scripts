@@ -438,8 +438,7 @@ $(() => {
         // ── 捕获硬保护快照（包含前端写入，用作 VARIABLE_UPDATE_ENDED 回滚基准）──
         // 蚀心露屈辱刚触发：旧快照残留前半程疑心值，必须强制为0（绿帽值从0开始）
         const 蚀心露刚触发 =
-          !_protSnapshot?.已触发蚀心露屈辱 &&
-          (data._已触发蚀心露屈辱 || items.includes('__蚀心露屈辱转变__'));
+          !_protSnapshot?.已触发蚀心露屈辱 && (data._已触发蚀心露屈辱 || items.includes('__蚀心露屈辱转变__'));
         _protSnapshot = {
           灵石: data.系统.灵石,
           第几天: data.时间.第几天,

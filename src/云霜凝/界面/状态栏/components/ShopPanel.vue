@@ -1581,7 +1581,10 @@ $cat-场景: #d8a040;
   border-radius: 8px;
   background: rgba($c-panel, 0.65);
   border: 1px solid rgba($c-mute, 0.18);
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 
   &--active {
     background: rgba($c-panel, 0.9);
