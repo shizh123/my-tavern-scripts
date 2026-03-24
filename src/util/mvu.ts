@@ -71,6 +71,10 @@ export function defineMvuDataStore<T extends z.ZodObject>(
         additional_setup(data);
       }
 
+      // 连续检测不到 stat_data 的次数（用于区分临时缺失 vs 聊天重置）
+      let missCount = 0;
+      const MISS_THRESHOLD = 6; // 连续6次(3秒)未检测到→判定为聊天已重置，清空store
+
       const { pause, resume } = useIntervalFn(() => {
         // Bug #18 八次修复：检查消息变量是否真的存在 stat_data
         // 问题：当 getVariables 返回空对象时，schema.safeParse({}) 会成功返回默认值
@@ -83,8 +87,26 @@ export function defineMvuDataStore<T extends z.ZodObject>(
         // 如果变量对象本身不存在或者没有 stat_data 字段，跳过同步
         // 这可以防止空数据覆盖已有的真实数据
         if (!variables || !_.has(variables, 'stat_data')) {
+          // 聊天重置检测：连续多次缺失 stat_data 时，将 store 重置为默认值
+          // 避免重置聊天/新建对话后前端仍显示旧游戏数据
+          missCount++;
+          if (missCount >= MISS_THRESHOLD) {
+            try {
+              const defaults = schema.parse({});
+              if (!_.isEqual(data.value, defaults)) {
+                ignoreUpdates(() => {
+                  data.value = defaults;
+                });
+                console.info('[MVU] stat_data 持续缺失，已重置为默认值（聊天可能已重置）');
+              }
+            } catch {
+              // schema 没有完整默认值，忽略
+            }
+            missCount = 0; // 重置计数，避免反复打日志
+          }
           return;
         }
+        missCount = 0; // 检测到数据，重置计数
 
         const stat_data = _.get(variables, 'stat_data', {});
         const result = schema.safeParse(stat_data);
