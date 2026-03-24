@@ -472,6 +472,10 @@ $(() => {
     // ────────────────────────────────────────────────────
     eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (新变量: object, 旧变量: object) => {
       try {
+        // 守卫：仅在 AI 回复后处理（CHAT_COMPLETION_PROMPT_READY 设置 _protSnapshot）
+        // 页面刷新/store初始化写回也会触发此事件，若不跳过会导致每次刷新都叠加被动灵石
+        if (!_protSnapshot) return;
+
         const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {});
         const oldData = Schema.parse(_.get(旧变量, 'stat_data') ?? {});
 
