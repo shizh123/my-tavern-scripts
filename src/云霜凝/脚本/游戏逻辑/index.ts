@@ -59,6 +59,11 @@ let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items:
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 let _lastTimeAdvanceFloor = -1;
 
+// AI 生成周期标志：CHAT_COMPLETION_PROMPT_READY 设 true，MESSAGE_RECEIVED 设 false。
+// 用于区分"AI 回复后的变量更新"与"手动 MVU 重新处理"。
+// 手动重新处理时硬保护/去重不应介入，否则会用旧快照覆盖正确的重新解析结果。
+let _isInAiCycle = false;
+
 $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
@@ -76,6 +81,8 @@ $(() => {
           console.info('[云霜凝] dryRun=true，跳过注入');
           return;
         }
+
+        _isInAiCycle = true;
 
         const raw = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(raw, 'stat_data') ?? {});
@@ -435,6 +442,16 @@ $(() => {
           Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
           console.info('[云霜凝] 苗喧碎片已更新至状态栏');
         }
+        // ── 修复：前端消耗品同步疑心值到快照 ──
+        // 定心符/混沌珠/蚀心露在前端直接修改疑心值并 flush 到 MVU，
+        // 但 _protSnapshot.疑心值 仍持有旧值。若不在此处同步，
+        // 下方快照捕获会优先使用旧 _protSnapshot.疑心值，硬保护随后将其回滚，
+        // 导致消耗品效果被完全吞掉（如定心符-8后下一楼反而+13）。
+        if (_protSnapshot && items.some(e => ['定心符', '混沌珠', '蚀心露'].includes(e))) {
+          _protSnapshot.疑心值 = data.苗广.疑心值;
+          _protSnapshot.心态 = data.苗广.心态;
+        }
+
         // ── 捕获硬保护快照（包含前端写入，用作 VARIABLE_UPDATE_ENDED 回滚基准）──
         // 蚀心露屈辱刚触发：旧快照残留前半程疑心值，必须强制为0（绿帽值从0开始）
         const 蚀心露刚触发 =
@@ -472,9 +489,11 @@ $(() => {
     // ────────────────────────────────────────────────────
     eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (新变量: object, 旧变量: object) => {
       try {
-        // 守卫：仅在 AI 回复后处理（CHAT_COMPLETION_PROMPT_READY 设置 _protSnapshot）
-        // 页面刷新/store初始化写回也会触发此事件，若不跳过会导致每次刷新都叠加被动灵石
-        if (!_protSnapshot) return;
+        // 守卫：仅在 AI 生成周期内处理（CHAT_COMPLETION_PROMPT_READY → VARIABLE_UPDATE_ENDED → MESSAGE_RECEIVED）
+        // _isInAiCycle: 区分"AI 回复后的变量更新"与"手动 MVU 重新处理"
+        //   手动重新处理时硬保护/去重不应介入，否则旧快照会覆盖重新解析的正确结果
+        // _protSnapshot: 页面刷新/store 初始化写回也会触发此事件，若不跳过会叠加被动灵石
+        if (!_isInAiCycle || !_protSnapshot) return;
 
         const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {});
         const oldData = Schema.parse(_.get(旧变量, 'stat_data') ?? {});
@@ -561,6 +580,8 @@ $(() => {
     // ────────────────────────────────────────────────────
     eventOn(tavern_events.MESSAGE_RECEIVED, async () => {
       try {
+        _isInAiCycle = false;
+
         await waitUntil(() => {
           const raw = Mvu.getMvuData({ type: 'message', message_id: -1 });
           return _.has(raw, 'stat_data');
