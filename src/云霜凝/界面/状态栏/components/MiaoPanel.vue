@@ -133,9 +133,7 @@ const xjData = computed(() => store.data.苗广.孝敬师父);
 const xjVisible = computed(() => {
   const 心态 = store.data.苗广.心态;
   const 是前半程 = 心态 !== '屈辱' && 心态 !== '默许' && 心态 !== '沉溺';
-  return 是前半程 &&
-    store.data.治疗.阶段 >= 2 &&
-    !store.data._坏结局已触发;
+  return 是前半程 && store.data.治疗.阶段 >= 2 && !store.data._坏结局已触发;
 });
 
 // 启动条件：排除所有不兼容状态
