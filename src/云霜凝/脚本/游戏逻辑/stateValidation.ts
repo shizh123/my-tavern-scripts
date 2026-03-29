@@ -376,7 +376,8 @@ export function validateAndRecalcState(
       _freezeHadTreatmentAttempt = true;
     }
 
-    if (hasValueChange) {
+    // 孝敬师父期间跳过疑心值增长（正在帮苗广做事，不应有治疗泄露风险）
+    if (hasValueChange && !新变量.苗广.孝敬师父.激活中) {
       const items = 新变量.系统.道具状态;
       const 有隔音 = items['隔音灵阵'] === '使用中';
       const 有影绰 = items['影绰纱帘'] === '使用中';
@@ -566,6 +567,7 @@ export function validateAndRecalcState(
       hasValueChange &&
       是前半程 &&
       stage >= 2 &&
+      !新变量.苗广.孝敬师父.激活中 &&
       (currentFloor ?? 0) >= 新变量._打断冻结至楼层 + INTERRUPT_COOLDOWN
     ) {
       // 阶段基础概率

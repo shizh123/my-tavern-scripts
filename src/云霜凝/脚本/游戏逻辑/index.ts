@@ -26,6 +26,10 @@ import {
   getQianjingRoundGuidance,
   getQianjingExitText,
   getQianjingMaxRounds,
+  XIAOJING_MAX_ROUNDS,
+  getXiaojingEntryTrigger,
+  getXiaojingRoundGuidance,
+  getXiaojingExitText,
 } from './promptInjection';
 import {
   processNewlyActivatedItems,
@@ -336,6 +340,66 @@ $(() => {
           }
         }
 
+        // ── Phase 1.8: 孝敬师父轮次追踪与自动退出 ──
+        {
+          const currentFloor = SillyTavern.chat?.length ?? 0;
+          const xjActive = data.苗广.孝敬师父.激活中;
+          const xjStartFloor = data._孝敬师父开始楼层;
+          const hasXjEntry = items.includes('__孝敬师父_进入__');
+
+          if (xjActive && !hasXjEntry && xjStartFloor > 0) {
+            const scenarioIdx = Math.max(0, data.苗广.孝敬师父.上次场景索引);
+            const maxRounds = XIAOJING_MAX_ROUNDS;
+            const currentRound = Math.floor((currentFloor - xjStartFloor) / 2) + 1;
+
+            if (currentRound > maxRounds) {
+              // ── 自动退出：轮次已满，疑心值 -5~8 ──
+              data.苗广.孝敬师父.激活中 = false;
+              data.苗广.孝敬师父.冷却结束楼层 = currentFloor + 5;
+              data._孝敬师父开始楼层 = 0;
+
+              // 降低疑心值 5~8（前半程才生效）
+              const 心态 = data.苗广.心态;
+              const 是前半程 = 心态 !== '屈辱' && 心态 !== '默许' && 心态 !== '沉溺';
+              if (是前半程) {
+                const reduction = 5 + Math.floor(Math.random() * 4); // 5~8
+                const oldSus = data.苗广.疑心值;
+                data.苗广.疑心值 = Math.max(0, data.苗广.疑心值 - reduction);
+                console.info(`[云霜凝] 孝敬师父完成，疑心值 -${reduction}（${oldSus} → ${data.苗广.疑心值}）`);
+              }
+
+              // 持久化变量
+              _.set(raw, 'stat_data.苗广.孝敬师父.激活中', false);
+              _.set(raw, 'stat_data.苗广.孝敬师父.冷却结束楼层', currentFloor + 5);
+              _.set(raw, 'stat_data.苗广.疑心值', data.苗广.疑心值);
+              _.set(raw, 'stat_data._孝敬师父开始楼层', 0);
+              Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+
+              const exitText = getXiaojingExitText(scenarioIdx, false);
+              for (let i = chat.length - 1; i >= 0; i--) {
+                if (chat[i].role === 'user') {
+                  chat[i].content = exitText;
+                  break;
+                }
+              }
+              console.info(`[云霜凝] 孝敬师父自动退出（${maxRounds}轮已满），冷却5楼`);
+            } else if (currentRound >= 2) {
+              // ── 注入逐轮引导 ──
+              const guidance = getXiaojingRoundGuidance(scenarioIdx, currentRound);
+              if (guidance) {
+                for (let i = chat.length - 1; i >= 0; i--) {
+                  if (chat[i].role === 'user') {
+                    const content = chat[i].content;
+                    chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                    break;
+                  }
+                }
+                console.info(`[云霜凝] 孝敬师父·第${currentRound}/${maxRounds}轮引导已注入`);
+              }
+            }
+          }
+        }
+
         // ── Phase 2: 构建状态快照（注入在 Phase 3 之后执行，避免被事件替换覆盖）──
         const snapshot = getStatusSnapshot(data);
 
@@ -392,6 +456,21 @@ $(() => {
               }
             }
             console.info(`[云霜凝] 千晶幻术第${data.苗广.千晶幻术.已使用次数}次入场触发`);
+          }
+
+          // 孝敬师父入场触发：替换玩家消息 + 预填指令
+          if (items.includes('__孝敬师父_进入__')) {
+            const scenarioIdx = Math.max(0, data.苗广.孝敬师父.上次场景索引);
+            const xjTrigger = getXiaojingEntryTrigger(scenarioIdx);
+            const combined =
+              xjTrigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${xjTrigger.prefill}`;
+            for (let i = chat.length - 1; i >= 0; i--) {
+              if (chat[i].role === 'user') {
+                chat[i].content = combined;
+                break;
+              }
+            }
+            console.info(`[云霜凝] 孝敬师父入场触发（场景${scenarioIdx}）`);
           }
 
           // 特殊场景方式3触发：替换玩家消息 + 预填指令

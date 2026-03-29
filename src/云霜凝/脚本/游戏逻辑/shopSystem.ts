@@ -812,8 +812,9 @@ export function tickEquipmentEffects(data: SchemaType): void {
     }
 
     // 隐藏效果：疑心值增加（阶段2+且前半程生效，阶段1和后半程不影响）
+    // 孝敬师父期间跳过：正在帮苗广做事，暖玉佩的隐藏疑心不应累积
     const suspicionDelta = EQUIPMENT_PER_TURN_SUSPICION[itemName];
-    if (suspicionDelta && data.治疗.阶段 >= 2) {
+    if (suspicionDelta && data.治疗.阶段 >= 2 && !data.苗广.孝敬师父.激活中) {
       const 心态 = data.苗广.心态;
       if (心态 !== '屈辱' && 心态 !== '默许' && 心态 !== '沉溺') {
         data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + suspicionDelta);

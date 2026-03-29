@@ -27,6 +27,15 @@
         <span class="sus-stage" :class="susClass">{{ sus_stage }}</span>
       </div>
 
+      <!-- 孝敬师父按钮 -->
+      <div v-if="xjVisible" class="xj-actions">
+        <span v-if="xjData.激活中" class="xj-state xj-on">孝敬中 · 第{{ xjCurrentRound }}/3轮</span>
+        <template v-else>
+          <button class="qj-btn qj-btn-xj" :disabled="!xjCanStart" @click="startXiaojing">⟨ 孝敬师父 ⟩</button>
+          <span v-if="xjCooling" class="xj-cd">冷却 {{ xjCdRemain }} 楼</span>
+        </template>
+      </div>
+
       <!-- 净灵铃摇铃按钮 -->
       <div v-if="jllEquipped" class="jll-actions">
         <button class="qj-btn qj-btn-jll" :disabled="!jllCanUse" @click="ringBell">⟨ 摇铃 ⟩</button>
@@ -85,6 +94,7 @@
 <script setup lang="ts">
 import { useDataStore } from '../store';
 import { useJingLingLing } from '../../../脚本/游戏逻辑/shopSystem';
+import { pickXiaojingScenarioIndex } from '../../../脚本/游戏逻辑/promptInjection';
 const store = useDataStore();
 
 /** 检查当前状态栏是否属于最新消息，旧楼层不允许操作 */
@@ -114,6 +124,61 @@ function ringBell() {
     store.flush();
     triggerSlash('/send （摇铃召唤苗广）|/trigger');
   }
+}
+
+// ── 孝敬师父 ──
+const xjData = computed(() => store.data.苗广.孝敬师父);
+
+// 仅前半程（非绿帽线路）、阶段2+、非其他副本/模式冲突时可见
+const xjVisible = computed(() => {
+  const 心态 = store.data.苗广.心态;
+  const 是前半程 = 心态 !== '屈辱' && 心态 !== '默许' && 心态 !== '沉溺';
+  return 是前半程 &&
+    store.data.治疗.阶段 >= 2 &&
+    !store.data._坏结局已触发;
+});
+
+// 启动条件：排除所有不兼容状态
+const xjCanStart = computed(() => {
+  if (!xjVisible.value || xjData.value.激活中 || xjCooling.value) return false;
+  // 神魂空间中不能孝敬师父（苗广感知不到神魂空间内的行为）
+  if (store.data._当前互动模式 === '神魂空间') return false;
+  // 千晶幻术激活中不能同时进行
+  if (store.data.苗广.千晶幻术.激活中) return false;
+  // 特殊场景进行中不能同时进行
+  if (store.data._特殊场景.进行中) return false;
+  return true;
+});
+
+const xjCooling = computed(() => {
+  const cd = xjData.value.冷却结束楼层;
+  return cd > 0 && getCurrentFloor() < cd;
+});
+
+const xjCdRemain = computed(() => Math.max(0, xjData.value.冷却结束楼层 - getCurrentFloor()));
+
+const xjCurrentRound = computed(() => {
+  const startFloor = store.data._孝敬师父开始楼层;
+  if (!startFloor || !xjData.value.激活中) return 0;
+  return Math.floor((getCurrentFloor() - startFloor) / 2) + 1;
+});
+
+function startXiaojing() {
+  if (!xjCanStart.value || !isLatestMessage()) return;
+  store.pull();
+
+  // 随机选场景（避免与上次重复）
+  const scenarioIdx = pickXiaojingScenarioIndex(store.data.苗广.孝敬师父.上次场景索引);
+  store.data.苗广.孝敬师父.激活中 = true;
+  store.data.苗广.孝敬师父.上次场景索引 = scenarioIdx;
+  store.data._孝敬师父开始楼层 = getCurrentFloor();
+
+  const existing = store.data._待发送道具事件;
+  store.data._待发送道具事件 = existing ? existing + '|||__孝敬师父_进入__' : '__孝敬师父_进入__';
+
+  store.data._系统操作中 = true;
+  store.flush();
+  triggerSlash('/send （孝敬师父）|/trigger');
 }
 
 // ── 苗广心态 ──
@@ -653,6 +718,48 @@ $c-danger: #e05050;
   }
 }
 .jll-cd {
+  color: rgba($c-sub, 0.6);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+// ── 孝敬师父 ──
+.xj-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  padding: 2px 0;
+}
+.qj-btn-xj {
+  color: $c-good;
+  border-color: rgba($c-good, 0.4);
+  background: linear-gradient(135deg, rgba($c-good, 0.08) 0%, transparent 100%);
+  box-shadow: 0 0 8px rgba($c-good, 0.1);
+
+  &:hover:not(:disabled) {
+    border-color: rgba($c-good, 0.6);
+    box-shadow: 0 0 14px rgba($c-good, 0.2);
+    background: linear-gradient(135deg, rgba($c-good, 0.14) 0%, rgba($c-good, 0.04) 100%);
+  }
+}
+.xj-btn {
+  font-size: 0.7rem;
+  padding: 4px 16px;
+}
+.xj-state {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+.xj-on {
+  color: $c-good;
+  border: 1px solid rgba($c-good, 0.4);
+  background: linear-gradient(135deg, rgba($c-good, 0.14) 0%, rgba($c-good, 0.04) 100%);
+  box-shadow: 0 0 8px rgba($c-good, 0.15);
+}
+.xj-cd {
   color: rgba($c-sub, 0.6);
   font-size: 0.68rem;
   font-weight: 600;

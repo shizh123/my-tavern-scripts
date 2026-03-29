@@ -149,12 +149,29 @@ export const Schema = z.object({
           认知改写完成: z.boolean().prefault(false),
         })
         .prefault({ 激活中: false, 冷却结束楼层: 0, 已使用次数: 0, 幻境摘要: '', 认知改写完成: false }),
+
+      // 孝敬师父系统：主动帮苗广做事降低疑心值
+      孝敬师父: z
+        .object({
+          激活中: z.boolean().prefault(false),
+          冷却结束楼层: z.coerce
+            .number()
+            .transform(v => Math.max(0, Math.floor(v)))
+            .prefault(0),
+          // 上次使用的场景索引（避免连续重复）
+          上次场景索引: z.coerce
+            .number()
+            .transform(v => Math.max(-1, Math.floor(v)))
+            .prefault(-1),
+        })
+        .prefault({ 激活中: false, 冷却结束楼层: 0, 上次场景索引: -1 }),
     })
     .prefault({
       疑心值: 0,
       心态: '正常',
       心理活动: '',
       千晶幻术: { 激活中: false, 冷却结束楼层: 0, 已使用次数: 0, 幻境摘要: '', 认知改写完成: false },
+      孝敬师父: { 激活中: false, 冷却结束楼层: 0, 上次场景索引: -1 },
     }),
 
   // ============================================
@@ -278,6 +295,11 @@ export const Schema = z.object({
   _苗喧碎片: z.string().prefault(''),
   // 千晶幻术当前施术开始的楼层（用于计算当前第几轮）
   _千晶幻术开始楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 孝敬师父当前开始的楼层（用于计算当前第几轮）
+  _孝敬师父开始楼层: z.coerce
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
