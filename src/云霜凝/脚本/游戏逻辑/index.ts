@@ -13,6 +13,7 @@
  */
 
 import { waitUntil } from 'async-wait-until';
+import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
 import { validateAndRecalcState, applyFloorCeiling, calcHealingStage } from './stateValidation';
 import { advanceTimeFromText, onDayChanged } from './timeSystem';
@@ -71,7 +72,8 @@ let _isInAiCycle = false;
 $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
-    console.info('[云霜凝] 游戏逻辑脚本已加载');
+    registerMvuSchema(Schema);
+    console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
 
     // ────────────────────────────────────────────────────
     // 事件1：AI生成前 → 注入状态快照 + 附加道具事件到玩家消息
