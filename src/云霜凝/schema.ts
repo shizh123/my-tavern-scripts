@@ -281,8 +281,13 @@ export const Schema = z.object({
     .prefault({}),
   // 系统操作标记（道具使用、模式切换等触发的triggerSlash，MESSAGE_RECEIVED应跳过时间推进）
   _系统操作中: z.boolean().prefault(false),
-  // 留影石录制计数（每购买一块+1，出售时-1，key="留影石_N"表示第N块）
+  // 留影石录制计数（每购买一块+1，key="留影石_N"表示第N块）
   _留影石计数: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 留影石上次出售楼层（全局冷却，出售后需间隔N楼才能再次出售任意留影石）
+  _留影石上次出售楼层: z.coerce
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),

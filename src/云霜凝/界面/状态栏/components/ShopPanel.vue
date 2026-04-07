@@ -113,9 +113,15 @@
           <button
             v-if="canSellLiuyingshi && item.state === '使用中'"
             class="liuying-sell-btn"
+            :disabled="liuyingshiSellCooldown.inCooldown"
             @click="handleSellLiuyingshi(item.name)"
           >
-            出售 <span class="p-icon">◈</span>{{ sellPrice }}
+            <template v-if="liuyingshiSellCooldown.inCooldown">
+              冷却中({{ liuyingshiSellCooldown.remainingFloors }}楼)
+            </template>
+            <template v-else>
+              出售 <span class="p-icon">◈</span>{{ sellPrice }}
+            </template>
           </button>
         </div>
       </div>
@@ -167,6 +173,7 @@ import {
   buyLiuyingshi,
   sellLiuyingshi,
   getConsumableCooldownInfo,
+  getLiuyingshiSellCooldownInfo,
   canActivateItem,
   INSTANT_EFFECTS,
   enforceExclusiveGroup,
@@ -1324,6 +1331,10 @@ const canSellLiuyingshi = computed(() => ['默许', '沉溺'].includes(store.dat
 
 const sellPrice = computed(() => (store.data.苗广.心态 === '沉溺' ? 800 : 500));
 
+const liuyingshiSellCooldown = computed(() =>
+  getLiuyingshiSellCooldownInfo(store.data as any, getCurrentFloor()),
+);
+
 function handleBuyLiuyingshi() {
   if (!isLatestMessage()) {
     showToast('只能在最新楼层操作商店', 'err');
@@ -1357,7 +1368,7 @@ function handleSellLiuyingshi(name: string) {
     showToast('只能在最新楼层操作商店', 'err');
     return;
   }
-  const result = sellLiuyingshi(store.data, name);
+  const result = sellLiuyingshi(store.data, name, getCurrentFloor());
   if (result.success) {
     store.flush();
     triggerSlash('/send （留影石出售）|/trigger');
@@ -2143,10 +2154,17 @@ $cat-场景: #d8a040;
     font-size: 0.5rem;
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: rgba($c-gold, 0.5);
     background: linear-gradient(135deg, rgba($c-gold, 0.2) 0%, transparent 100%);
     box-shadow: 0 0 8px rgba($c-gold, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba($c-gold, 0.15);
+    background: rgba($c-gold, 0.04);
   }
 }
 

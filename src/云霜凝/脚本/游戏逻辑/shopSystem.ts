@@ -1024,6 +1024,7 @@ export function useJingLingLing(data: SchemaType): { success: boolean; reason: s
 // ────────────────────────────────────────────
 
 const LIUYINGSHI_PRICE = 60;
+const LIUYINGSHI_SELL_COOLDOWN = 15; // 出售冷却：15楼
 
 /**
  * 购买一块新留影石
@@ -1048,9 +1049,14 @@ export function buyLiuyingshi(data: SchemaType): { success: boolean; reason: str
 
 /**
  * 出售一块已录制的留影石给苗广
+ * 出售后留影石回到"已购买"状态（可重复使用），全局进入冷却
  * 返回 { success, reason }
  */
-export function sellLiuyingshi(data: SchemaType, itemName: string): { success: boolean; reason: string } {
+export function sellLiuyingshi(
+  data: SchemaType,
+  itemName: string,
+  currentFloor: number,
+): { success: boolean; reason: string } {
   if (!isLiuyingshi(itemName)) {
     return { success: false, reason: '不是留影石' };
   }
@@ -1065,9 +1071,23 @@ export function sellLiuyingshi(data: SchemaType, itemName: string): { success: b
     return { success: false, reason: '苗广心态未达默许' };
   }
 
+  // 全局冷却检查
+  if (currentFloor > 0) {
+    const lastSoldFloor = data._留影石上次出售楼层 ?? 0;
+    if (lastSoldFloor > 0 && currentFloor - lastSoldFloor < LIUYINGSHI_SELL_COOLDOWN) {
+      const remaining = LIUYINGSHI_SELL_COOLDOWN - (currentFloor - lastSoldFloor);
+      return { success: false, reason: `出售冷却中（还需${remaining}楼）` };
+    }
+  }
+
   const price = 心态 === '沉溺' ? 800 : 500;
   data.系统.灵石 += price;
-  delete data.系统.道具状态[itemName];
+  // 回到已购买状态（可重复录制出售）
+  data.系统.道具状态[itemName] = '已购买';
+  // 记录出售楼层（全局冷却）
+  if (currentFloor > 0) {
+    data._留影石上次出售楼层 = currentFloor;
+  }
 
   // 方式3事件
   const eventKey = 心态 === '沉溺' ? '__留影石出售_沉溺__' : '__留影石出售_默许__';
@@ -1075,8 +1095,23 @@ export function sellLiuyingshi(data: SchemaType, itemName: string): { success: b
   data._待发送道具事件 = existing ? existing + '|||' + eventKey : eventKey;
   data._系统操作中 = true;
 
-  console.info(`[商店] 留影石出售: ${itemName}，售价${price}灵石，心态=${心态}`);
+  console.info(`[商店] 留影石出售: ${itemName}，售价${price}灵石，心态=${心态}，冷却${LIUYINGSHI_SELL_COOLDOWN}楼`);
   return { success: true, reason: '' };
+}
+
+/**
+ * 查询留影石出售是否仍在冷却中
+ */
+export function getLiuyingshiSellCooldownInfo(
+  data: SchemaType,
+  currentFloor: number,
+): { inCooldown: boolean; remainingFloors: number } {
+  if (currentFloor <= 0) return { inCooldown: false, remainingFloors: 0 };
+  const lastSoldFloor = data._留影石上次出售楼层 ?? 0;
+  if (lastSoldFloor <= 0) return { inCooldown: false, remainingFloors: 0 };
+  const elapsed = currentFloor - lastSoldFloor;
+  if (elapsed >= LIUYINGSHI_SELL_COOLDOWN) return { inCooldown: false, remainingFloors: 0 };
+  return { inCooldown: true, remainingFloors: LIUYINGSHI_SELL_COOLDOWN - elapsed };
 }
 
 // ────────────────────────────────────────────
