@@ -73,7 +73,8 @@ $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
     registerMvuSchema(Schema);
-    (window as any).__云霜凝_脚本已加载 = true;
+    sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
+    toastr.success('游戏逻辑脚本加载正常', '云霜凝');
     console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
 
     // ────────────────────────────────────────────────────
