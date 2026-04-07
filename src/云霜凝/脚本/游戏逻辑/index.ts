@@ -41,6 +41,7 @@ import {
   advanceSpecialScene,
   syncClothingFromState,
 } from './shopSystem';
+import { reloadOnChatChange } from '@/util/script';
 
 // ────────────────────────────────────────────────────────
 // 初始化
@@ -73,6 +74,7 @@ $(() => {
   (async () => {
     await waitGlobalInitialized('Mvu');
     registerMvuSchema(Schema);
+    reloadOnChatChange();
     sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
     const _top = (window.parent ?? window) as any;
     _top.toastr?.success?.('游戏逻辑脚本加载正常', '云霜凝');
