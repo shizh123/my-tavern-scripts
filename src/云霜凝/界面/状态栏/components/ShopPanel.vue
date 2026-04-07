@@ -119,9 +119,7 @@
             <template v-if="liuyingshiSellCooldown.inCooldown">
               冷却中({{ liuyingshiSellCooldown.remainingFloors }}楼)
             </template>
-            <template v-else>
-              出售 <span class="p-icon">◈</span>{{ sellPrice }}
-            </template>
+            <template v-else> 出售 <span class="p-icon">◈</span>{{ sellPrice }} </template>
           </button>
         </div>
       </div>
@@ -1331,9 +1329,7 @@ const canSellLiuyingshi = computed(() => ['默许', '沉溺'].includes(store.dat
 
 const sellPrice = computed(() => (store.data.苗广.心态 === '沉溺' ? 800 : 500));
 
-const liuyingshiSellCooldown = computed(() =>
-  getLiuyingshiSellCooldownInfo(store.data as any, getCurrentFloor()),
-);
+const liuyingshiSellCooldown = computed(() => getLiuyingshiSellCooldownInfo(store.data as any, getCurrentFloor()));
 
 function handleBuyLiuyingshi() {
   if (!isLatestMessage()) {
