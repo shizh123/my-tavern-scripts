@@ -158,7 +158,8 @@ const xjCdRemain = computed(() => Math.max(0, xjData.value.冷却结束楼层 - 
 const xjCurrentRound = computed(() => {
   const startFloor = store.data._孝敬师父开始楼层;
   if (!startFloor || !xjData.value.激活中) return 0;
-  return Math.floor((getCurrentFloor() - startFloor) / 2) + 1;
+  // 显示"已完成的轮数"：每2楼（user+AI）算1轮，clamp到最大轮数
+  return Math.max(1, Math.min(3, Math.floor((getCurrentFloor() - startFloor) / 2)));
 });
 
 function startXiaojing() {

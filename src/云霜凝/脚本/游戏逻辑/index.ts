@@ -383,9 +383,16 @@ $(() => {
               Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
 
               const exitText = getXiaojingExitText(scenarioIdx, false);
+              const sceneBreak = `【系统指令：场景强制切换】
+以上孝敬师父的师徒互动剧情已经结束，达到约定轮数。{{user}}已经离开苗广，回到自己的修炼场所。
+从此刻起，场景回到主线日常剧情。严禁继续描写、引用或延续任何师徒互动内容。
+下方是本轮必须演绎的场景结束文本，演绎完毕后即回归主线。`;
               for (let i = chat.length - 1; i >= 0; i--) {
                 if (chat[i].role === 'user') {
-                  chat[i].content = exitText;
+                  // 在 user 消息前插入 system 场景切换指令，截断上文影响
+                  chat.splice(i, 0, { role: 'system', content: sceneBreak });
+                  // splice 后 user 消息在 i+1
+                  chat[i + 1].content = exitText;
                   break;
                 }
               }
