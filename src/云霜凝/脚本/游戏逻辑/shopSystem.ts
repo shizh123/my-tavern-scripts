@@ -1070,6 +1070,10 @@ export function sellLiuyingshi(
   if (心态 !== '默许' && 心态 !== '沉溺') {
     return { success: false, reason: '苗广心态未达默许' };
   }
+  // 需先完成夫前凌辱（苗广至少亲眼目击过一次）
+  if (!data._已完成特殊场景['夫前凌辱']) {
+    return { success: false, reason: '需先完成「夫前凌辱」' };
+  }
 
   // 全局冷却检查
   if (currentFloor > 0) {

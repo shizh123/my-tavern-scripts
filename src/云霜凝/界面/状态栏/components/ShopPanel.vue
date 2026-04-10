@@ -743,8 +743,15 @@ function isUnlocked(item: ItemDef): boolean {
       ['屈辱', '默许', '沉溺'].includes(d.苗广.心态) &&
       (d.系统.道具状态['影绰纱帘'] === '使用中' || d.系统.道具状态['透灵幔'] === '使用中'),
     寝取宣告: () =>
-      d.治疗.阶段 >= 7 && ['默许', '沉溺'].includes(d.苗广.心态) && d.系统.道具状态['透灵幔'] === '使用中',
-    绿帽奴调教: () => d.治疗.阶段 >= 8 && d.苗广.心态 === '沉溺',
+      d.治疗.阶段 >= 7 &&
+      ['默许', '沉溺'].includes(d.苗广.心态) &&
+      d.系统.道具状态['透灵幔'] === '使用中' &&
+      !!d._已完成特殊场景['夫前凌辱'],
+    绿帽奴调教: () =>
+      d.治疗.阶段 >= 7 &&
+      d.苗广.心态 === '沉溺' &&
+      !!d._已完成特殊场景['寝取宣告'] &&
+      !d.苗广.千晶幻术.认知改写完成,
     掌门改嫁: () => d.治疗.阶段 >= 8 && d.苗广.心态 === '沉溺' && d.苗广.千晶幻术.认知改写完成,
   };
 
@@ -795,7 +802,8 @@ const KINK_EFFECTS: Record<string, { name: string; tag: string }> = {
 
 const MAX_KINKS = 3;
 function activeKinkCount(): number {
-  return Object.keys(store.data.云霜凝.性癖列表).length;
+  // 只统计商店性癖，特殊场景奖励（镜前记忆、改嫁认知等）不占槽位
+  return Object.keys(store.data.云霜凝.性癖列表).filter(k => k in KINK_EFFECTS).length;
 }
 
 // 体改道具
@@ -1325,7 +1333,9 @@ const liuyingshiItems = computed(() => {
   return result;
 });
 
-const canSellLiuyingshi = computed(() => ['默许', '沉溺'].includes(store.data.苗广.心态));
+const canSellLiuyingshi = computed(
+  () => ['默许', '沉溺'].includes(store.data.苗广.心态) && !!store.data._已完成特殊场景['夫前凌辱'],
+);
 
 const sellPrice = computed(() => (store.data.苗广.心态 === '沉溺' ? 800 : 500));
 

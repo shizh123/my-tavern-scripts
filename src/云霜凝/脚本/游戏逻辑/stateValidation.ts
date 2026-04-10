@@ -629,11 +629,14 @@ export function validateAndRecalcState(
   }
 
   // ── 8. 千晶幻术解锁条件验证 ───────────────────────
-  if (新变量.苗广.千晶幻术.激活中 && 新变量.治疗.阶段 < 7) {
+  if (新变量.苗广.千晶幻术.激活中 && (新变量.治疗.阶段 < 7 || !新变量._已完成特殊场景['寝取宣告'])) {
     新变量.苗广.千晶幻术.激活中 = false;
-    console.warn('[状态验证] 千晶幻术未解锁（阶段<7），已强制关闭');
+    console.warn('[状态验证] 千晶幻术未解锁（阶段<7或寝取宣告未完成），已强制关闭');
   }
-  // 千晶幻术不再依赖苗广位置（位置已改为脚本驱动）
+  // 千晶幻术完成后冻结幻境摘要为旧值，防止AI继续更新
+  if (新变量.苗广.千晶幻术.认知改写完成 && !新变量.苗广.千晶幻术.激活中) {
+    新变量.苗广.千晶幻术.幻境摘要 = 旧变量.苗广.千晶幻术.幻境摘要;
+  }
 
   // ── 8. 数值变化 → 灵石奖励（宽松经济，所有治疗相关数值变化都给灵石） ──────
   // 注：神魂空间解锁已移至 MESSAGE_RECEIVED 基于楼层触发
@@ -824,6 +827,8 @@ interface UnlockCondition {
   苗广心态?: string[]; // 苗广心态 ∈
   装备任一?: string[]; // 任一装备处于"使用中"
   千晶幻术完成?: boolean; // 千晶幻术3次完成（认知改写完成）
+  千晶幻术未完成?: boolean; // 千晶幻术未完成（认知改写未完成）
+  需完成场景?: string[]; // 需要已完成的特殊场景
 }
 
 const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
@@ -949,13 +954,13 @@ const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
   留影石: { 阶段: 3 },
 
   // ── 千晶幻术 ──
-  千晶幻术: { 阶段: 7, 苗广心态: ['屈辱', '默许', '沉溺'] },
+  千晶幻术: { 阶段: 7, 苗广心态: ['屈辱', '默许', '沉溺'], 需完成场景: ['寝取宣告'] },
 
   // ── 特殊场景 ──
   镜前调教: { 阶段: 4, 防线: 50 },
   夫前凌辱: { 阶段: 5, 苗广心态: ['屈辱', '默许', '沉溺'], 装备任一: ['影绰纱帘', '透灵幔'] },
-  寝取宣告: { 阶段: 7, 苗广心态: ['默许', '沉溺'], 装备任一: ['透灵幔'] },
-  绿帽奴调教: { 阶段: 8, 苗广心态: ['沉溺'] },
+  寝取宣告: { 阶段: 7, 苗广心态: ['默许', '沉溺'], 装备任一: ['透灵幔'], 需完成场景: ['夫前凌辱'] },
+  绿帽奴调教: { 阶段: 7, 苗广心态: ['沉溺'], 需完成场景: ['寝取宣告'], 千晶幻术未完成: true },
   掌门改嫁: { 阶段: 8, 苗广心态: ['沉溺'], 千晶幻术完成: true },
 };
 
@@ -979,6 +984,11 @@ export function canUnlockItem(itemName: string, data: SchemaType): boolean {
     if (!hasAny) return false;
   }
   if (cond.千晶幻术完成 && !data.苗广.千晶幻术.认知改写完成) return false;
+  if (cond.千晶幻术未完成 && data.苗广.千晶幻术.认知改写完成) return false;
+  if (cond.需完成场景 !== undefined) {
+    const done = data._已完成特殊场景;
+    if (!cond.需完成场景.every(s => !!done[s])) return false;
+  }
 
   return true;
 }
@@ -1001,6 +1011,8 @@ export function getUnlockDescription(itemName: string): string {
   if (cond.苗广心态 !== undefined) parts.push(`苗广心态∈[${cond.苗广心态.join('/')}]`);
   if (cond.装备任一 !== undefined) parts.push(`需装备[${cond.装备任一.join('/')}]之一`);
   if (cond.千晶幻术完成) parts.push('千晶幻术完成');
+  if (cond.千晶幻术未完成) parts.push('千晶幻术未完成');
+  if (cond.需完成场景 !== undefined) parts.push(`需完成[${cond.需完成场景.join('+')}]`);
 
   return parts.length > 0 ? parts.join('，') : '无';
 }

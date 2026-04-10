@@ -51,7 +51,7 @@
         <span v-else-if="qj.激活中" class="qj-state qj-on"
           >施术中 · 第{{ qjCurrentRound }}/{{ qjMaxRoundsDisplay }}轮</span
         >
-        <span v-else-if="!qjUnlocked" class="qj-locked">阶段≥7 · 苗广≥屈辱</span>
+        <span v-else-if="!qjUnlocked" class="qj-locked">阶段≥7 · 苗广≥屈辱 · 寝取宣告</span>
         <span v-else-if="qjCooling" class="qj-cd">冷却 {{ qjCdRemain }} 楼</span>
         <span v-else class="qj-state">就绪</span>
 
@@ -227,7 +227,12 @@ function getCurrentFloor(): number {
   return (window as any).SillyTavern?.chat?.length ?? 0;
 }
 
-const qjUnlocked = computed(() => store.data.治疗.阶段 >= 7 && ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态));
+const qjUnlocked = computed(
+  () =>
+    store.data.治疗.阶段 >= 7 &&
+    ['屈辱', '默许', '沉溺'].includes(store.data.苗广.心态) &&
+    !!store.data._已完成特殊场景['寝取宣告'],
+);
 
 const qjCooling = computed(() => {
   const cd = qj.value.冷却结束楼层;
