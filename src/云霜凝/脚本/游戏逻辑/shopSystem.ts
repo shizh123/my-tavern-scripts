@@ -1,4 +1,5 @@
 import type { Schema as SchemaType } from '../../schema';
+import { isSpecialScene, getSpecialSceneMaxRounds } from './promptInjection';
 
 /**
  * 商店系统 v2
@@ -451,84 +452,7 @@ export const KINK_ITEM_MAP: Record<string, { name: string; tag: string }> = {
   精液面膜: { name: '精液面膜', tag: '渴望被射在脸上，临近高潮时主动要求颜射，精液覆面时表现出满足和陶醉' },
 };
 
-// ────────────────────────────────────────────
-// 特殊场景触发类
-// ────────────────────────────────────────────
-
-/** 每阶段的轮次配置 */
-interface StageTimingConfig {
-  minTurns: number;
-  maxTurns: number;
-}
-
-/** 特殊场景配置：场景名 → { 总阶段数, 每阶段轮次 } */
-const SPECIAL_SCENE_CONFIG: Record<
-  string,
-  {
-    totalStages: number;
-    stages: Record<number, StageTimingConfig>;
-  }
-> = {
-  镜前调教: {
-    totalStages: 6,
-    stages: {
-      0: { minTurns: 2, maxTurns: 3 },
-      1: { minTurns: 2, maxTurns: 4 },
-      2: { minTurns: 2, maxTurns: 3 },
-      3: { minTurns: 3, maxTurns: 5 },
-      4: { minTurns: 2, maxTurns: 4 },
-      5: { minTurns: 1, maxTurns: 3 },
-    },
-  },
-  夫前凌辱: {
-    totalStages: 6,
-    stages: {
-      0: { minTurns: 1, maxTurns: 2 },
-      1: { minTurns: 2, maxTurns: 3 },
-      2: { minTurns: 3, maxTurns: 5 },
-      3: { minTurns: 2, maxTurns: 3 },
-      4: { minTurns: 2, maxTurns: 4 },
-      5: { minTurns: 1, maxTurns: 3 },
-    },
-  },
-  寝取宣告: {
-    totalStages: 5,
-    stages: {
-      0: { minTurns: 1, maxTurns: 2 },
-      1: { minTurns: 2, maxTurns: 3 },
-      2: { minTurns: 3, maxTurns: 5 },
-      3: { minTurns: 2, maxTurns: 3 },
-      4: { minTurns: 1, maxTurns: 3 },
-    },
-  },
-  绿帽奴调教: {
-    totalStages: 6,
-    stages: {
-      0: { minTurns: 1, maxTurns: 2 },
-      1: { minTurns: 2, maxTurns: 3 },
-      2: { minTurns: 3, maxTurns: 5 },
-      3: { minTurns: 2, maxTurns: 3 },
-      4: { minTurns: 2, maxTurns: 4 },
-      5: { minTurns: 1, maxTurns: 2 },
-    },
-  },
-  掌门改嫁: {
-    totalStages: 6,
-    stages: {
-      0: { minTurns: 1, maxTurns: 2 },
-      1: { minTurns: 2, maxTurns: 3 },
-      2: { minTurns: 2, maxTurns: 4 },
-      3: { minTurns: 2, maxTurns: 3 },
-      4: { minTurns: 2, maxTurns: 4 },
-      5: { minTurns: 1, maxTurns: 3 },
-    },
-  },
-};
-
-/** 获取特殊场景总阶段数（兼容旧接口） */
-export function getSpecialSceneTotalStages(sceneName: string): number {
-  return SPECIAL_SCENE_CONFIG[sceneName]?.totalStages ?? 0;
-}
+// 特殊场景配置已迁移到 promptInjection.ts（轮次制），通过 isSpecialScene/getSpecialSceneMaxRounds 访问
 
 // ────────────────────────────────────────────
 // 装备每轮数值效果（在 VARIABLE_UPDATE_ENDED 中调用）
@@ -641,9 +565,9 @@ export function processNewlyActivatedItems(newData: SchemaType, oldData: SchemaT
     const inSoulSpace = newData._当前互动模式 === '神魂空间';
     if (inSoulSpace) {
       const isClothing = !!CLOTHING_SLOT[itemName];
-      const isSpecialScene = !!SPECIAL_SCENE_CONFIG[itemName];
+      const isScene = isSpecialScene(itemName);
 
-      if (isClothing || isSpecialScene) {
+      if (isClothing || isScene) {
         newData.系统.道具状态[itemName] = '已购买';
         console.warn(`[商店] 神魂空间中禁用: ${itemName}，已退回`);
         continue;
@@ -714,15 +638,13 @@ export function processNewlyActivatedItems(newData: SchemaType, oldData: SchemaT
       continue;
     }
 
-    // ─── 特殊场景触发类 ───────────────────────
-    if (SPECIAL_SCENE_CONFIG[itemName]) {
-      const sceneConfig = SPECIAL_SCENE_CONFIG[itemName];
+    // ─── 特殊场景触发类（轮次制，类似千晶幻术）───
+    if (isSpecialScene(itemName)) {
       newData._特殊场景.进行中 = itemName;
-      newData._特殊场景.当前阶段 = 0;
-      newData._特殊场景.总阶段数 = sceneConfig.totalStages;
-      newData._特殊场景.当前阶段轮次 = 0;
+      newData._特殊场景开始楼层 = currentFloor ?? 0;
       delete newData.系统.道具状态[itemName];
-      console.info(`[商店] 特殊场景启动: ${itemName}，共${sceneConfig.totalStages}阶段`);
+      const maxRounds = getSpecialSceneMaxRounds(itemName);
+      console.info(`[商店] 特殊场景启动: ${itemName}，共${maxRounds}轮`);
       continue;
     }
 
@@ -857,56 +779,9 @@ export function applyLockRetreat(data: SchemaType): void {
 }
 
 /**
- * 特殊场景阶段推进（在 MESSAGE_RECEIVED 后调用）
- *
- * 每阶段有 minTurns/maxTurns：
- * - 轮次 < minTurns：停留在当前阶段（AI继续按引导词推进）
- * - 轮次 >= minTurns：自动推进到下一阶段
- * - 轮次 >= maxTurns：强制推进（兜底）
+ * 特殊场景结束后的永久后果（由 index.ts Phase 1.9 自动退出时调用）
  */
-export function advanceSpecialScene(data: SchemaType): void {
-  if (!data._特殊场景.进行中) return;
-
-  const scene = data._特殊场景.进行中;
-  const currentStage = data._特殊场景.当前阶段;
-  const config = SPECIAL_SCENE_CONFIG[scene];
-  if (!config) return;
-
-  // 递增当前阶段轮次
-  const turns = (data._特殊场景.当前阶段轮次 ?? 0) + 1;
-  data._特殊场景.当前阶段轮次 = turns;
-
-  const stageTiming = config.stages[currentStage];
-  const minTurns = stageTiming?.minTurns ?? 2;
-
-  // 未达到最小轮次，继续停留
-  if (turns < minTurns) {
-    console.info(`[商店] 特殊场景: ${scene} 阶段${currentStage} 轮次${turns}/${minTurns}(min)，继续`);
-    return;
-  }
-
-  // 达到minTurns，推进到下一阶段
-  const nextStage = currentStage + 1;
-  if (nextStage >= config.totalStages) {
-    // 场景结束，应用永久后果
-    applySpecialSceneConsequences(scene, data);
-    data._已完成特殊场景[scene] = true;
-    data._特殊场景.进行中 = '';
-    data._特殊场景.当前阶段 = 0;
-    data._特殊场景.总阶段数 = 0;
-    data._特殊场景.当前阶段轮次 = 0;
-    console.info(`[商店] 特殊场景结束: ${scene}`);
-  } else {
-    data._特殊场景.当前阶段 = nextStage;
-    data._特殊场景.当前阶段轮次 = 0;
-    console.info(`[商店] 特殊场景推进: ${scene} 阶段${currentStage}→${nextStage}/${config.totalStages}`);
-  }
-}
-
-/**
- * 特殊场景结束后的永久后果
- */
-function applySpecialSceneConsequences(scene: string, data: SchemaType): void {
+export function applySpecialSceneConsequences(scene: string, data: SchemaType): void {
   switch (scene) {
     case '镜前调教':
       // 数值：防线-3, 完成度+2
@@ -1155,7 +1030,7 @@ export function canActivateItem(
   // 神魂空间限制：服装 + 方式3触发类（消耗品允许）
   if (data._当前互动模式 === '神魂空间') {
     if (CLOTHING_SLOT[itemName]) return { allowed: false, reason: '神魂空间中无法更换服装' };
-    if (SPECIAL_SCENE_CONFIG[itemName]) return { allowed: false, reason: '神魂空间中无法触发特殊场景' };
+    if (isSpecialScene(itemName)) return { allowed: false, reason: '神魂空间中无法触发特殊场景' };
   }
 
   // 消耗品冷却

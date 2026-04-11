@@ -16,7 +16,7 @@
         <div v-if="store.data._特殊场景.进行中" class="scene-badge">
           <span class="scene-icon">⟐</span>
           {{ store.data._特殊场景.进行中 }}
-          <span class="scene-progress">{{ store.data._特殊场景.当前阶段 }}/{{ store.data._特殊场景.总阶段数 }}</span>
+          <span class="scene-progress">进行中</span>
         </div>
       </div>
     </div>
@@ -830,8 +830,8 @@ const BODY_MOD_EFFECTS: Record<string, () => void> = {
 
 // 特殊场景轮数
 const SCENE_TURNS: Record<string, number> = {
-  镜前调教: 5,
-  夫前凌辱: 8,
+  镜前调教: 6,
+  夫前凌辱: 7,
   寝取宣告: 6,
   绿帽奴调教: 8,
   掌门改嫁: 10,
@@ -1222,8 +1222,7 @@ function confirmUse() {
       needTriggerAI = true;
     } else if (SCENE_TURNS[name]) {
       store.data._特殊场景.进行中 = name;
-      store.data._特殊场景.当前阶段 = 1;
-      store.data._特殊场景.总阶段数 = SCENE_TURNS[name];
+      store.data._特殊场景开始楼层 = getCurrentFloor();
       delete store.data.系统.道具状态[name];
       eventNames.push(name);
       needTriggerAI = true;

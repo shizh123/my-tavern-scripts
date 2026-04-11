@@ -27,6 +27,9 @@ import {
   getQianjingRoundGuidance,
   getQianjingExitText,
   getQianjingMaxRounds,
+  getSpecialSceneMaxRounds,
+  getSpecialSceneRoundGuidance,
+  getSpecialSceneExitText,
   XIAOJING_MAX_ROUNDS,
   getXiaojingEntryTrigger,
   getXiaojingRoundGuidance,
@@ -38,7 +41,7 @@ import {
   tickEquipmentEffects,
   tickTemporaryItems,
   clearSceneTemporaryItems,
-  advanceSpecialScene,
+  applySpecialSceneConsequences,
   syncClothingFromState,
 } from './shopSystem';
 import { reloadOnChatChange } from '@/util/script';
@@ -414,6 +417,60 @@ $(() => {
           }
         }
 
+        // ── Phase 1.9: 特殊场景轮次追踪与自动退出（类似千晶幻术 Phase 1.7）──
+        {
+          const currentFloor = SillyTavern.chat?.length ?? 0;
+          const sceneName = data._特殊场景.进行中;
+          const sceneStartFloor = data._特殊场景开始楼层;
+
+          if (sceneName && sceneStartFloor > 0) {
+            const maxRounds = getSpecialSceneMaxRounds(sceneName);
+            const currentRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
+
+            if (currentRound > maxRounds) {
+              // ── 自动退出：轮次已满 ──
+              applySpecialSceneConsequences(sceneName, data);
+              data._已完成特殊场景[sceneName] = true;
+              data._特殊场景.进行中 = '';
+              data._特殊场景开始楼层 = 0;
+
+              // 持久化变量
+              _.set(raw, 'stat_data._已完成特殊场景', data._已完成特殊场景);
+              _.set(raw, 'stat_data._特殊场景.进行中', '');
+              _.set(raw, 'stat_data._特殊场景开始楼层', 0);
+              Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+
+              const exitText = getSpecialSceneExitText(sceneName);
+              // 在 user 消息前插入 system 场景切换指令，截断上文影响
+              const sceneBreak = `【系统指令：场景强制切换】
+以上特殊场景「${sceneName}」的剧情已经结束，达到约定轮数。
+从此刻起，场景回到主线日常剧情。严禁继续描写、引用或延续特殊场景内容。
+下方是本轮必须演绎的场景结束文本，演绎完毕后即回归主线。`;
+              for (let i = chat.length - 1; i >= 0; i--) {
+                if (chat[i].role === 'user') {
+                  chat.splice(i, 0, { role: 'system', content: sceneBreak });
+                  chat[i + 1].content = exitText;
+                  break;
+                }
+              }
+              console.info(`[云霜凝] 特殊场景自动退出: ${sceneName}（${maxRounds}轮已满）`);
+            } else if (currentRound >= 2) {
+              // ── 注入逐轮引导到 user 消息 ──
+              const guidance = getSpecialSceneRoundGuidance(sceneName, currentRound);
+              if (guidance) {
+                for (let i = chat.length - 1; i >= 0; i--) {
+                  if (chat[i].role === 'user') {
+                    const content = chat[i].content;
+                    chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                    break;
+                  }
+                }
+                console.info(`[云霜凝] 特殊场景·${sceneName}·第${currentRound}/${maxRounds}轮引导已注入`);
+              }
+            }
+          }
+        }
+
         // ── Phase 2: 构建状态快照（注入在 Phase 3 之后执行，避免被事件替换覆盖）──
         const snapshot = getStatusSnapshot(data);
 
@@ -689,9 +746,6 @@ $(() => {
         if (!isSystemAction) {
           // 临时道具轮次递减（每轮-1，到期则移除）
           tickTemporaryItems(data);
-
-          // 特殊场景阶段推进（每轮AI回复后+1阶段）
-          advanceSpecialScene(data);
         } else {
           console.info('[云霜凝] 系统操作触发的回复，跳过临时道具/场景推进');
         }

@@ -244,24 +244,17 @@ export const Schema = z.object({
       z.coerce.number().transform(v => Math.max(0, Math.floor(v))),
     )
     .prefault({}),
-  // 特殊场景状态机（里程碑剧情多轮引导）
+  // 特殊场景状态（里程碑剧情轮次制引导）
   _特殊场景: z
     .object({
       进行中: z.string().prefault(''), // 场景名，空串=无进行中场景
-      当前阶段: z.coerce
-        .number()
-        .transform(v => Math.max(0, Math.floor(v)))
-        .prefault(0),
-      总阶段数: z.coerce
-        .number()
-        .transform(v => Math.max(0, Math.floor(v)))
-        .prefault(0),
-      当前阶段轮次: z.coerce
-        .number()
-        .transform(v => Math.max(0, Math.floor(v)))
-        .prefault(0), // 当前阶段已经过的轮数
     })
-    .prefault({ 进行中: '', 当前阶段: 0, 总阶段数: 0, 当前阶段轮次: 0 }),
+    .prefault({ 进行中: '' }),
+  // 特殊场景当前开始的楼层（用于计算当前第几轮，类似千晶幻术）
+  _特殊场景开始楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
   // 已完成的特殊场景列表（防止重复触发）
   _已完成特殊场景: z.record(z.string(), z.boolean()).prefault({}),
   // 神魂空间是否已解锁（首次信任度增加后解锁）
