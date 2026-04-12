@@ -125,7 +125,7 @@
       </div>
     </div>
 
-    <!-- 淫纹刻印位置选择 -->
+    <!-- 淫纹刻印位置选择 + 文字输入 -->
     <Transition name="slide-up">
       <div v-if="showYinwenPicker" class="yinwen-picker">
         <div class="yinwen-title">选择淫纹刻印位置</div>
@@ -134,12 +134,22 @@
             v-for="pos in YINWEN_POSITIONS"
             :key="pos"
             class="yinwen-opt"
-            :class="{ selected: yinwenPos === pos, done: store.data.云霜凝.肉体改造.淫纹位置.includes(pos) }"
-            :disabled="store.data.云霜凝.肉体改造.淫纹位置.includes(pos)"
+            :class="{ selected: yinwenPos === pos, done: !!store.data.云霜凝.肉体改造.淫纹[pos] }"
+            :disabled="!!store.data.云霜凝.肉体改造.淫纹[pos]"
             @click="yinwenPos = pos"
           >
-            {{ pos }}<span v-if="store.data.云霜凝.肉体改造.淫纹位置.includes(pos)" class="done-mark">已有</span>
+            {{ pos }}<span v-if="store.data.云霜凝.肉体改造.淫纹[pos]" class="done-mark">已有</span>
           </button>
+        </div>
+        <div v-if="yinwenPos" class="yinwen-text-row">
+          <label class="yinwen-text-label">刻印文字（2-8字，留空默认"淫"）</label>
+          <input
+            v-model="yinwenText"
+            class="yinwen-text-input"
+            type="text"
+            maxlength="8"
+            placeholder="淫"
+          />
         </div>
       </div>
     </Transition>
@@ -155,6 +165,24 @@
         <span class="confirm-text">确定使用</span>
         <span class="confirm-count">{{ checkedItems.size }}件</span>
       </button>
+    </Transition>
+
+    <!-- 共用道具目标选择浮层 -->
+    <Transition name="fade">
+      <div v-if="showTargetDialog" class="target-dialog-mask" @click.self="showTargetDialog = false">
+        <div class="target-dialog">
+          <div class="target-dialog-title">作用于谁？</div>
+          <div class="target-dialog-desc">以下道具可作用于云霜凝或洛书晴</div>
+          <div class="target-dialog-items">
+            <span v-for="n in sharedItemsPending" :key="n" class="target-dialog-chip">{{ n }}</span>
+          </div>
+          <div class="target-dialog-btns">
+            <button class="target-btn tb-yun" @click="pickTarget('云霜凝')">云霜凝</button>
+            <button class="target-btn tb-luo" @click="pickTarget('洛书晴')">洛书晴</button>
+          </div>
+          <button class="target-dialog-cancel" @click="showTargetDialog = false">取消</button>
+        </div>
+      </div>
     </Transition>
 
     <!-- Toast -->
@@ -405,10 +433,9 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       name: '淫纹刻印',
       price: 250,
       type: '体改',
-      desc: '位置可选（腰腹/胸前/大腿内侧）',
+      desc: '位置可选（腰腹/胸前/大腿内侧/臀部）',
       unlockDesc: '阶段≥4，防线≤50',
     },
-    { name: '堕落烙印', price: 500, type: '体改', desc: '臀部所有权烙印', unlockDesc: '阶段≥6，防线≤20' },
   ],
   性癖: [
     { name: '阿黑颜体质', price: 300, type: '性癖', desc: '高潮时表情崩坏', unlockDesc: '阶段≥3，防线≤50' },
@@ -491,6 +518,63 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       type: '特殊场景',
       desc: '6阶段·苗广主持改嫁',
       unlockDesc: '阶段≥8，千晶幻术完成，苗广=沉溺',
+    },
+    // ── 联动场景（洛书晴线已激活后） ──
+    {
+      name: '婆媳教导',
+      price: 500,
+      type: '特殊场景',
+      desc: '5阶段·云霜凝向洛书晴"传授"如何服侍夫君',
+      unlockDesc: '洛书晴线已激活，洛≥3，云≥4',
+    },
+    {
+      name: '两人同侍',
+      price: 700,
+      type: '特殊场景',
+      desc: '6阶段·师徒并列侍奉同一人',
+      unlockDesc: '洛书晴线已激活，洛≥5，云≥6，需先完成婆媳教导',
+    },
+    {
+      name: '寝取宣告增强',
+      price: 900,
+      type: '特殊场景',
+      desc: '10阶段·洛书晴见证并参与宣告（增强版寝取宣告）',
+      unlockDesc: '洛书晴线已激活，洛≥6，云≥7，需先完成两人同侍',
+    },
+    {
+      name: '门缝春光',
+      price: 900,
+      type: '特殊场景',
+      desc: '10阶段·苗广门外偷窥，洛书晴心机萌芽',
+      unlockDesc: '洛书晴线已激活，洛≥7，云≥7，苗广≥屈辱，需先完成寝取宣告增强',
+    },
+    {
+      name: '双重目击',
+      price: 1000,
+      type: '特殊场景',
+      desc: '10阶段·苗喧目睹父亲偷窥与门内画面',
+      unlockDesc: '洛书晴线已激活，洛≥8，云≥8，苗广≥屈辱，需先完成门缝春光',
+    },
+    {
+      name: '儿媳调教公公',
+      price: 1100,
+      type: '特殊场景',
+      desc: '12阶段·洛书晴主导调教苗广（增强版绿帽奴调教）',
+      unlockDesc: '洛书晴线已激活，洛≥8，云≥8，苗广=沉溺，需先完成双重目击',
+    },
+    {
+      name: '双重改嫁',
+      price: 1500,
+      type: '特殊场景',
+      desc: '15阶段·终局·云霜凝改嫁同时洛书晴解除婚约',
+      unlockDesc: '洛书晴线已激活，洛≥9，云≥10，千晶幻术完成，苗广=沉溺，需先完成儿媳调教公公',
+    },
+    {
+      name: '千晶告知洛书晴',
+      price: 300,
+      type: '特殊场景',
+      desc: '4阶段·彩蛋·云霜凝亲口告诉洛书晴千晶幻术的秘密',
+      unlockDesc: '洛书晴线已激活，千晶幻术完成（一次性彩蛋）',
     },
   ],
 };
@@ -711,7 +795,6 @@ function isUnlocked(item: ItemDef): boolean {
     乳环: () => d.治疗.阶段 >= 4 && d.云霜凝.身体开发.胸部 >= 40,
     阴环: () => d.治疗.阶段 >= 4 && d.云霜凝.身体开发.小屄 >= 40,
     淫纹刻印: () => d.治疗.阶段 >= 4 && d.云霜凝.心理防线 <= 50,
-    堕落烙印: () => d.治疗.阶段 >= 6 && d.云霜凝.心理防线 <= 20,
     肉棒口罩: () => d.治疗.阶段 >= 5 && d.云霜凝.身体开发.小嘴 >= 40,
     // 永久性癖（设计文档第八节最终20个）
     阿黑颜体质: () => d.治疗.阶段 >= 3 && d.云霜凝.心理防线 <= 50,
@@ -750,6 +833,49 @@ function isUnlocked(item: ItemDef): boolean {
     绿帽奴调教: () =>
       d.治疗.阶段 >= 7 && d.苗广.心态 === '沉溺' && !!d._已完成特殊场景['寝取宣告'] && !d.苗广.千晶幻术.认知改写完成,
     掌门改嫁: () => d.治疗.阶段 >= 8 && d.苗广.心态 === '沉溺' && d.苗广.千晶幻术.认知改写完成,
+    // ── 联动场景（洛书晴线已激活后） ──
+    婆媳教导: () => !!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= 3 && d.治疗.阶段 >= 4,
+    两人同侍: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 5 &&
+      d.治疗.阶段 >= 6 &&
+      !!d._已完成特殊场景['婆媳教导'],
+    寝取宣告增强: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 6 &&
+      d.治疗.阶段 >= 7 &&
+      d.系统.道具状态['透灵幔'] === '使用中' &&
+      ['默许', '沉溺'].includes(d.苗广.心态) &&
+      !!d._已完成特殊场景['两人同侍'],
+    门缝春光: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 7 &&
+      d.治疗.阶段 >= 7 &&
+      ['屈辱', '默许', '沉溺'].includes(d.苗广.心态) &&
+      !!d._已完成特殊场景['寝取宣告增强'],
+    双重目击: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 8 &&
+      d.治疗.阶段 >= 8 &&
+      ['屈辱', '默许', '沉溺'].includes(d.苗广.心态) &&
+      !!d._已完成特殊场景['门缝春光'],
+    儿媳调教公公: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 8 &&
+      d.治疗.阶段 >= 8 &&
+      d.苗广.心态 === '沉溺' &&
+      !!d._已完成特殊场景['双重目击'],
+    双重改嫁: () =>
+      !!d._洛书晴线已激活 &&
+      d.洛书晴.调教阶段 >= 9 &&
+      d.治疗.阶段 >= 10 &&
+      d.苗广.心态 === '沉溺' &&
+      d.苗广.千晶幻术.认知改写完成 &&
+      !!d._已完成特殊场景['儿媳调教公公'],
+    千晶告知洛书晴: () =>
+      !!d._洛书晴线已激活 &&
+      d.苗广.千晶幻术.认知改写完成 &&
+      !d._已完成特殊场景['千晶告知洛书晴'],
   };
 
   return conds[name] ? conds[name]() : true;
@@ -823,9 +949,6 @@ const BODY_MOD_EFFECTS: Record<string, () => void> = {
   阴环: () => {
     store.data.云霜凝.肉体改造.阴环 = true;
   },
-  堕落烙印: () => {
-    store.data.云霜凝.肉体改造.堕落烙印 = true;
-  },
 };
 
 // 特殊场景轮数
@@ -835,10 +958,33 @@ const SCENE_TURNS: Record<string, number> = {
   寝取宣告: 6,
   绿帽奴调教: 8,
   掌门改嫁: 10,
+  // 联动场景
+  婆媳教导: 5,
+  两人同侍: 6,
+  寝取宣告增强: 10,
+  门缝春光: 10,
+  双重目击: 10,
+  儿媳调教公公: 12,
+  双重改嫁: 15,
+  千晶告知洛书晴: 4,
 };
 
 // ── 服装→槽位映射 ──
-type ClothingSlot = '上装' | '下装' | '内衣' | '内裤' | '特殊配饰';
+type MainClothingSlot = '上装' | '下装' | '内衣' | '内裤';
+type AccessorySubSlot = '脚踝' | '颈部' | '耳部' | '腰部' | '大腿' | '胸部' | '阴蒂' | '前后穴';
+type ClothingSlot = MainClothingSlot | '特殊配饰';
+const ACCESSORY_SUB_SLOT: Record<string, AccessorySubSlot> = {
+  脚链铃铛: '脚踝',
+  精液项链: '颈部',
+  精液耳坠: '耳部',
+  红绳: '腰部',
+  子宫纹章: '腰部',
+  大腿皮环: '大腿',
+  乳环挂饰: '胸部',
+  阴蒂夹坠: '阴蒂',
+  名字阴环: '阴蒂',
+  双穴珠链: '前后穴',
+};
 const CLOTHING_SLOT: Record<string, ClothingSlot> = {
   素色道袍: '上装',
   宽领道袍: '上装',
@@ -893,12 +1039,24 @@ const CLOTHING_SLOT: Record<string, ClothingSlot> = {
 };
 const CLOTHING_NAMES = new Set(Object.keys(CLOTHING_SLOT));
 
-const SLOT_DEFAULTS: Record<ClothingSlot, string> = {
+// 共用道具（洛书晴激活后可选择作用目标）
+const EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
+const LUO_CONSUMABLES = new Set(['安抚符', '真心符', '神魂共鸣石', '安神香']);
+function isSharedItem(name: string): boolean {
+  if (CLOTHING_NAMES.has(name)) return true;
+  if (EQUIPMENT_NAMES.has(name)) return true;
+  if (KINK_EFFECTS[name]) return true;
+  if (BODY_MOD_EFFECTS[name]) return true;
+  if (name === '淫纹刻印') return true;
+  if (LUO_CONSUMABLES.has(name)) return true;
+  return false;
+}
+
+const SLOT_DEFAULTS: Record<MainClothingSlot, string> = {
   上装: '寒霜门道袍',
   下装: '寒霜门长裙',
   内衣: '素白抹胸',
   内裤: '素白亵裤',
-  特殊配饰: '无',
 };
 
 const CLOTHING_SCORE: Record<string, number> = {
@@ -964,12 +1122,20 @@ const EXPOSURE_THRESHOLDS: [number, string][] = [
 
 function recalcExposure() {
   const s = store.data.云霜凝.服装;
+  const pei = s.特殊配饰;
   const total =
     (CLOTHING_SCORE[s.上装] ?? 0) +
     (CLOTHING_SCORE[s.下装] ?? 0) +
     (CLOTHING_SCORE[s.内衣] ?? 0) +
     (CLOTHING_SCORE[s.内裤] ?? 0) +
-    (CLOTHING_SCORE[s.特殊配饰] ?? 0);
+    (CLOTHING_SCORE[pei.脚踝] ?? 0) +
+    (CLOTHING_SCORE[pei.颈部] ?? 0) +
+    (CLOTHING_SCORE[pei.耳部] ?? 0) +
+    (CLOTHING_SCORE[pei.腰部] ?? 0) +
+    (CLOTHING_SCORE[pei.大腿] ?? 0) +
+    (CLOTHING_SCORE[pei.胸部] ?? 0) +
+    (CLOTHING_SCORE[pei.阴蒂] ?? 0) +
+    (CLOTHING_SCORE[pei.前后穴] ?? 0);
   if (total === 0) {
     s.暴露程度 = '遮蔽';
     return;
@@ -987,6 +1153,20 @@ function recalcExposure() {
 function equipClothing(name: string) {
   const slot = CLOTHING_SLOT[name];
   if (!slot) return;
+  if (slot === '特殊配饰') {
+    const sub = ACCESSORY_SUB_SLOT[name];
+    if (!sub) return;
+    // 同子槽位（腰部/阴蒂互斥组）的旧配饰卸下
+    for (const [itemName, itemSub] of Object.entries(ACCESSORY_SUB_SLOT)) {
+      if (itemSub === sub && itemName !== name && store.data.系统.道具状态[itemName] === '使用中') {
+        store.data.系统.道具状态[itemName] = '已购买';
+      }
+    }
+    store.data.系统.道具状态[name] = '使用中';
+    store.data.云霜凝.服装.特殊配饰[sub] = name;
+    recalcExposure();
+    return;
+  }
   // 卸下同槽旧服装
   for (const [itemName, itemSlot] of Object.entries(CLOTHING_SLOT)) {
     if (itemSlot === slot && itemName !== name && store.data.系统.道具状态[itemName] === '使用中') {
@@ -1002,6 +1182,14 @@ function equipClothing(name: string) {
 function unequipClothing(name: string) {
   const slot = CLOTHING_SLOT[name];
   if (!slot) return;
+  if (slot === '特殊配饰') {
+    const sub = ACCESSORY_SUB_SLOT[name];
+    if (!sub) return;
+    store.data.系统.道具状态[name] = '已购买';
+    store.data.云霜凝.服装.特殊配饰[sub] = '';
+    recalcExposure();
+    return;
+  }
   store.data.系统.道具状态[name] = '已购买';
   store.data.云霜凝.服装[slot] = SLOT_DEFAULTS[slot];
   recalcExposure();
@@ -1011,11 +1199,16 @@ function unequipClothing(name: string) {
 const GIFTABLE_CLOTHING = new Set([...CLOTHING_NAMES]);
 
 // ── 淫纹刻印位置 ──
-const YINWEN_POSITIONS = ['腰腹', '胸前', '大腿内侧'] as const;
+const YINWEN_POSITIONS = ['腰腹', '胸前', '大腿内侧', '臀部'] as const;
 const yinwenPos = ref<string>('');
+const yinwenText = ref<string>('');
 
 const needYinwenPos = computed(() => checkedItems.has('淫纹刻印'));
 const showYinwenPicker = computed(() => checkedItems.has('淫纹刻印'));
+
+// ── 共用道具目标选择浮层 ──
+const showTargetDialog = ref(false);
+const sharedItemsPending = computed(() => [...checkedItems].filter(isSharedItem));
 
 // ── 购买/使用逻辑 ──────────────────────────────────────────
 const toast = ref('');
@@ -1039,6 +1232,7 @@ function findItem(name: string): ItemDef | undefined {
     const found = list.find(i => i.name === name);
     if (found) return found;
   }
+  return undefined;
 }
 
 function handleClick(item: ItemDef) {
@@ -1129,7 +1323,7 @@ function handleClick(item: ItemDef) {
         unequipClothing(item.name);
         // 服装卸下事件：通知AI服装被脱下，换回默认
         const slot = CLOTHING_SLOT[item.name] as ClothingSlot;
-        const defaultName = SLOT_DEFAULTS[slot];
+        const defaultName = slot === '特殊配饰' ? '无' : SLOT_DEFAULTS[slot];
         const event = `卸下服装:${item.name}→${defaultName}`;
         const existing = store.data._待发送道具事件;
         store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
@@ -1155,7 +1349,20 @@ function confirmUse() {
     showToast('只能在最新楼层操作商店', 'err');
     return;
   }
+  // 洛书晴激活 + 有共用道具 → 弹目标选择
+  if (store.data._洛书晴线已激活 && sharedItemsPending.value.length > 0) {
+    showTargetDialog.value = true;
+    return;
+  }
+  executeConfirmUse('云霜凝');
+}
 
+function pickTarget(target: '云霜凝' | '洛书晴') {
+  showTargetDialog.value = false;
+  executeConfirmUse(target);
+}
+
+function executeConfirmUse(target: '云霜凝' | '洛书晴') {
   store.pull(); // 从 MVU 拉取最新数据，防止读到已消费的旧事件
   const names = [...checkedItems];
   const eventNames: string[] = [];
@@ -1177,6 +1384,33 @@ function confirmUse() {
         showToast(`「${name}」冷却中（还需${remainingFloors}楼）`, 'err');
         continue;
       }
+    }
+
+    // 共用道具且目标=洛书晴：写入 _洛书晴道具状态，后端 processNewlyActivatedLuoItems 处理
+    if (target === '洛书晴' && isSharedItem(name)) {
+      // 淫纹刻印带位置参数
+      if (name === '淫纹刻印') {
+        if (!yinwenPos.value) continue;
+        const pos = yinwenPos.value;
+        const text = (yinwenText.value || '淫').trim().slice(0, 8);
+        store.data._洛书晴道具状态[`淫纹刻印·${pos}·${text}`] = '使用中';
+        delete store.data.系统.道具状态[name];
+        eventNames.push(`洛书晴·淫纹刻印·${pos}·${text}`);
+        needTriggerAI = true;
+        yinwenPos.value = '';
+        yinwenText.value = '';
+      } else {
+        // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
+        store.data._洛书晴道具状态[name] = '使用中';
+        delete store.data.系统.道具状态[name];
+        if (KINK_EFFECTS[name] || EQUIPMENT_NAMES.has(name)) {
+          // 性癖/身体器具：不触发 AI（效果通过快照注入）
+        } else {
+          eventNames.push(`洛书晴·${name}`);
+          needTriggerAI = true;
+        }
+      }
+      continue;
     }
 
     // 消耗品：前端直接执行效果（store.flush不触发VARIABLE_UPDATE_ENDED，
@@ -1207,14 +1441,16 @@ function confirmUse() {
       // 性癖不写入 _待发送道具事件：效果通过 buildKinkDirectives() 读取 性癖列表+道具状态 注入
     } else if (name === '淫纹刻印') {
       if (!yinwenPos.value) continue;
-      const pos = yinwenPos.value as '腰腹' | '胸前' | '大腿内侧';
-      if (!store.data.云霜凝.肉体改造.淫纹位置.includes(pos)) {
-        store.data.云霜凝.肉体改造.淫纹位置.push(pos);
+      const pos = yinwenPos.value as '腰腹' | '胸前' | '大腿内侧' | '臀部';
+      const text = (yinwenText.value || '淫').trim().slice(0, 8);
+      if (!store.data.云霜凝.肉体改造.淫纹[pos]) {
+        store.data.云霜凝.肉体改造.淫纹[pos] = text;
       }
       delete store.data.系统.道具状态[name];
-      eventNames.push(`淫纹刻印·${pos}`);
+      eventNames.push(`淫纹刻印·${pos}·${text}`);
       needTriggerAI = true;
       yinwenPos.value = '';
+      yinwenText.value = '';
     } else if (BODY_MOD_EFFECTS[name]) {
       BODY_MOD_EFFECTS[name]();
       delete store.data.系统.道具状态[name];
@@ -1229,11 +1465,20 @@ function confirmUse() {
     } else if (CLOTHING_NAMES.has(name)) {
       // 记录换装前的旧服装（用于生成换装事件）
       const slot = CLOTHING_SLOT[name] as ClothingSlot;
-      const oldClothing = slot ? store.data.云霜凝.服装[slot] : undefined;
+      let oldClothing: string | undefined;
+      let slotDefault: string = '';
+      if (slot === '特殊配饰') {
+        const sub = ACCESSORY_SUB_SLOT[name];
+        oldClothing = sub ? store.data.云霜凝.服装.特殊配饰[sub] : undefined;
+        slotDefault = '';
+      } else if (slot) {
+        oldClothing = store.data.云霜凝.服装[slot];
+        slotDefault = SLOT_DEFAULTS[slot];
+      }
       equipClothing(name);
       if (GIFTABLE_CLOTHING.has(name)) {
         // 如果旧服装不是默认且不同于新服装，生成换装事件而非赠礼
-        if (oldClothing && oldClothing !== SLOT_DEFAULTS[slot] && oldClothing !== name) {
+        if (oldClothing && oldClothing !== slotDefault && oldClothing !== name) {
           eventNames.push(`换装:${oldClothing}→${name}`);
         } else {
           eventNames.push(name);
@@ -1282,7 +1527,6 @@ function isAlreadyOwned(name: string): boolean {
     丰臀圆玉丹: () => d.云霜凝.肉体改造.臀部 !== '默认',
     乳环: () => d.云霜凝.肉体改造.乳环,
     阴环: () => d.云霜凝.肉体改造.阴环,
-    堕落烙印: () => d.云霜凝.肉体改造.堕落烙印,
   };
   if (bodyModChecks[name]) return bodyModChecks[name]();
   return false;
@@ -1323,7 +1567,7 @@ const liuyingshiItems = computed(() => {
   const result: { name: string; state: string }[] = [];
   for (const [name, state] of Object.entries(store.data.系统.道具状态)) {
     if (name.startsWith('留影石_')) {
-      result.push({ name, state });
+      result.push({ name, state: state as string });
     }
   }
   return result;
@@ -2222,6 +2466,127 @@ $cat-场景: #d8a040;
   font-size: 0.54rem;
   color: rgba($c-sub, 0.35);
   margin-top: 2px;
+}
+.yinwen-text-row {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.yinwen-text-label {
+  font-size: 0.62rem;
+  color: rgba($c-sub, 0.7);
+}
+.yinwen-text-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba($c-acc, 0.25);
+  border-radius: 6px;
+  background: rgba($c-panel, 0.6);
+  color: $c-frost;
+  font-size: 0.78rem;
+  font-family: inherit;
+  &:focus {
+    outline: none;
+    border-color: rgba($c-acc, 0.5);
+    box-shadow: 0 0 6px rgba($c-acc, 0.15);
+  }
+  &::placeholder {
+    color: rgba($c-sub, 0.4);
+  }
+}
+
+// ━━━ 共用道具目标选择浮层 ━━━
+.target-dialog-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.target-dialog {
+  width: min(320px, 90vw);
+  padding: 18px 20px;
+  background: linear-gradient(145deg, rgba($c-panel, 0.96) 0%, rgba($c-bg, 0.98) 100%);
+  border: 1px solid rgba($c-acc, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
+  color: $c-frost;
+}
+.target-dialog-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  margin-bottom: 6px;
+  color: $c-acc;
+  text-align: center;
+}
+.target-dialog-desc {
+  font-size: 0.7rem;
+  color: rgba($c-sub, 0.75);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.target-dialog-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  justify-content: center;
+}
+.target-dialog-chip {
+  padding: 3px 8px;
+  background: rgba($c-acc, 0.1);
+  border: 1px solid rgba($c-acc, 0.2);
+  border-radius: 10px;
+  font-size: 0.68rem;
+  color: rgba($c-frost, 0.85);
+}
+.target-dialog-btns {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.target-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid rgba($c-acc, 0.35);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba($c-pri, 0.25) 0%, rgba($c-acc, 0.15) 100%);
+  color: $c-frost;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    border-color: rgba($c-acc, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($c-acc, 0.2);
+  }
+  &.tb-luo {
+    background: linear-gradient(135deg, rgba(#a855f7, 0.25) 0%, rgba(#7c3aed, 0.15) 100%);
+    border-color: rgba(#a855f7, 0.35);
+    &:hover {
+      border-color: rgba(#a855f7, 0.6);
+      box-shadow: 0 4px 12px rgba(#a855f7, 0.2);
+    }
+  }
+}
+.target-dialog-cancel {
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  color: rgba($c-sub, 0.6);
+  font-size: 0.72rem;
+  font-family: inherit;
+  cursor: pointer;
+  &:hover {
+    color: $c-sub;
+  }
 }
 
 // ━━━ 确定按钮 ━━━
