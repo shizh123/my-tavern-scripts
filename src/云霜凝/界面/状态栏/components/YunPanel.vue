@@ -58,7 +58,7 @@
         </div>
         <div class="attire-item">
           <span class="a-slot">特殊配饰</span>
-          <span class="a-val">{{ store.data.云霜凝.服装.特殊配饰 }}</span>
+          <span class="a-val">{{ accessoryDisplay || '无' }}</span>
         </div>
         <div class="attire-item">
           <span class="a-slot">性具</span>
@@ -94,13 +94,9 @@
             <span class="mod-label">阴环</span>
             <span class="mod-value">已穿环</span>
           </div>
-          <div v-if="store.data.云霜凝.肉体改造.淫纹位置.length > 0" class="mod-tag">
+          <div v-if="yinwenDisplay" class="mod-tag">
             <span class="mod-label">淫纹</span>
-            <span class="mod-value">{{ store.data.云霜凝.肉体改造.淫纹位置.join('、') }}</span>
-          </div>
-          <div v-if="store.data.云霜凝.肉体改造.堕落烙印" class="mod-tag">
-            <span class="mod-label">烙印</span>
-            <span class="mod-value">臀部所有权</span>
+            <span class="mod-value">{{ yinwenDisplay }}</span>
           </div>
         </div>
       </div>
@@ -182,9 +178,30 @@ const exposeClass = computed(() => {
   };
   return map[store.data.云霜凝.服装.暴露程度] ?? '';
 });
+const yinwenDisplay = computed(() => {
+  const yw = store.data.云霜凝.肉体改造.淫纹;
+  const parts: string[] = [];
+  if (yw.腰腹) parts.push(`腰腹·${yw.腰腹}`);
+  if (yw.胸前) parts.push(`胸前·${yw.胸前}`);
+  if (yw.大腿内侧) parts.push(`大腿内侧·${yw.大腿内侧}`);
+  if (yw.臀部) parts.push(`臀部·${yw.臀部}`);
+  return parts.join('、');
+});
+const accessoryDisplay = computed(() => {
+  const pei = store.data.云霜凝.服装.特殊配饰;
+  return [pei.脚踝, pei.颈部, pei.耳部, pei.腰部, pei.大腿, pei.胸部, pei.阴蒂, pei.前后穴]
+    .filter(s => s && s.trim().length > 0)
+    .join('、');
+});
 const hasBodyMods = computed(() => {
   const mod = store.data.云霜凝.肉体改造;
-  return mod.胸部 !== '默认' || mod.臀部 !== '默认' || mod.乳环 || mod.阴环 || mod.淫纹位置.length > 0 || mod.堕落烙印;
+  return (
+    mod.胸部 !== '默认' ||
+    mod.臀部 !== '默认' ||
+    mod.乳环 ||
+    mod.阴环 ||
+    !!(mod.淫纹.腰腹 || mod.淫纹.胸前 || mod.淫纹.大腿内侧 || mod.淫纹.臀部)
+  );
 });
 
 // 身体器具（性具）列表

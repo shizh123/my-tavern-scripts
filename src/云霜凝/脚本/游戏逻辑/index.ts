@@ -15,8 +15,7 @@
 import { waitUntil } from 'async-wait-until';
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
-import { validateAndRecalcState, applyFloorCeiling, calcHealingStage } from './stateValidation';
-import { advanceTimeFromText, onDayChanged } from './timeSystem';
+import { validateAndRecalcState, calcHealingStage } from './stateValidation';
 import {
   getStatusSnapshot,
   buildBatchUseEvent,
@@ -37,6 +36,7 @@ import {
 } from './promptInjection';
 import {
   processNewlyActivatedItems,
+  processNewlyActivatedLuoItems,
   processEquipmentUnequip,
   tickEquipmentEffects,
   tickTemporaryItems,
@@ -66,7 +66,6 @@ let _scriptConsumableCooldowns: Record<string, number> = {};
 let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items: [] };
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
-let _lastTimeAdvanceFloor = -1;
 
 // AI 生成周期标志：CHAT_COMPLETION_PROMPT_READY 设 true，MESSAGE_RECEIVED 设 false。
 // 用于区分"AI 回复后的变量更新"与"手动 MVU 重新处理"。
@@ -608,8 +607,6 @@ $(() => {
           !_protSnapshot?.已触发蚀心露屈辱 && (data._已触发蚀心露屈辱 || items.includes('__蚀心露屈辱转变__'));
         _protSnapshot = {
           灵石: data.系统.灵石,
-          第几天: data.时间.第几天,
-          当前小时: data.时间.当前小时,
           神魂空间已解锁: data._神魂空间已解锁,
           神魂空间已进入过: data._神魂空间已进入过,
           当前互动模式: data._当前互动模式,
@@ -651,11 +648,15 @@ $(() => {
         // 处理本轮新激活的道具（消耗品/装备/体改/性癖/特殊场景）
         const currentFloor = SillyTavern.chat?.length ?? 0;
 
-        // 状态自动计算（治疗阶段、苗广心态、灵石里程碑、各种限制、天花板clamp）
+        // 状态自动计算（治疗阶段、苗广心态、灵石里程碑、delta cap）
         // _protSnapshot 包含前端写入（灵石扣款、模式切换等），旧变量可能是新消息默认值
         // _freezeBaseline: 打断触发时捕获的治疗基线，冻结期间用作回滚基准
         _freezeBaseline = validateAndRecalcState(newData, oldData, currentFloor, _protSnapshot, _freezeBaseline);
         processNewlyActivatedItems(newData, oldData, currentFloor);
+        // 洛书晴独立道具状态表（共用道具各买各的）
+        if (newData._洛书晴线已激活) {
+          processNewlyActivatedLuoItems(newData, oldData, currentFloor);
+        }
 
         // 处理装备卸下（使用中→已购买），传入快照道具状态防止AI篡改
         processEquipmentUnequip(newData, oldData, _protSnapshot?.道具状态);
@@ -671,26 +672,7 @@ $(() => {
           clearSceneTemporaryItems(newData);
         }
 
-        // ── 时间推进（统一在此处执行，避免与 MESSAGE_RECEIVED 冲突导致天数回滚）──
-        if (currentFloor > _lastTimeAdvanceFloor && currentFloor > 0) {
-          _lastTimeAdvanceFloor = currentFloor;
-          const chatArr = (window as any).SillyTavern?.chat;
-          const lastAiMsg = chatArr?.findLast?.((m: { is_user: boolean }) => !m.is_user);
-          const aiText: string = lastAiMsg?.mes ?? '';
-          if (aiText) {
-            const timeResult = advanceTimeFromText(newData, aiText);
-            if (timeResult.dayChanged) {
-              onDayChanged(newData);
-            }
-            console.info(
-              `[云霜凝] 时间推进: ${timeResult.reason}`,
-              `| ${timeResult.oldDay}天${timeResult.oldHour.toFixed(1)}h → ${timeResult.newDay}天${timeResult.newHour.toFixed(1)}h`,
-            );
-          }
-        }
-
-        // 天花板 clamp（所有效果之后最后执行）
-        applyFloorCeiling(newData, currentFloor);
+        // 阶段最终校正（delta cap 可能改完成度）
         newData.治疗.阶段 = calcHealingStage(newData.治疗.完成度);
 
         // 将计算结果写回
@@ -756,8 +738,6 @@ $(() => {
         // 更新保护快照：从当前 MVU 数据读取最新状态（灵石/服装等前端可写字段）
         _protSnapshot = {
           灵石: data.系统.灵石,
-          第几天: data.时间.第几天,
-          当前小时: data.时间.当前小时,
           神魂空间已解锁: data._神魂空间已解锁,
           神魂空间已进入过: data._神魂空间已进入过,
           当前互动模式: data._当前互动模式,

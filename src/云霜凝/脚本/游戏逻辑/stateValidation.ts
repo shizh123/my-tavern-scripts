@@ -4,6 +4,11 @@ import { applyLockRetreat } from './shopSystem';
 /** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
 let _lastSuspicionFloor = -1;
 
+/** 上次苗喧绝望值被动涨的楼层 */
+let _lastMiaoXuanPassiveFloor = -1;
+/** 上次苗喧压抑值涨的楼层 */
+let _lastMiaoXuanPressureFloor = -1;
+
 /** 冻结期间是否有治疗尝试（冻结开始时重置，结束时判定奖励） */
 let _freezeHadTreatmentAttempt = false;
 /** 冻结结束奖励是否已发放（防止重roll重复发放） */
@@ -18,8 +23,6 @@ let _freezeRewardGiven = false;
  */
 export interface ProtectionSnapshot {
   灵石: number;
-  第几天: number;
-  当前小时: number;
   神魂空间已解锁: boolean;
   神魂空间已进入过: boolean;
   当前互动模式: string;
@@ -32,7 +35,16 @@ export interface ProtectionSnapshot {
     下装: string;
     内衣: string;
     内裤: string;
-    特殊配饰: string;
+    特殊配饰: {
+      脚踝: string;
+      颈部: string;
+      耳部: string;
+      腰部: string;
+      大腿: string;
+      胸部: string;
+      阴蒂: string;
+      前后穴: string;
+    };
     暴露程度: string;
   };
   道具状态: Record<string, string>;
@@ -83,6 +95,62 @@ export function calcHealingStage(完成度: number): number {
  * 后半程(绿帽值): 屈辱/默许/沉溺 由绿帽值自动推算
  *   0~40=屈辱, 40~75=默许, 75+=沉溺
  */
+/**
+ * 由绝望值推算苗喧心态
+ *
+ * 0-15=蔑视, 16-30=困惑, 31-50=不安, 51-70=恐惧, 71-90=崩溃, 91-100=失去
+ */
+export function calcMiaoxuanMind(
+  绝望值: number,
+): '蔑视' | '困惑' | '不安' | '恐惧' | '崩溃' | '失去' {
+  if (绝望值 >= 91) return '失去';
+  if (绝望值 >= 71) return '崩溃';
+  if (绝望值 >= 51) return '恐惧';
+  if (绝望值 >= 31) return '不安';
+  if (绝望值 >= 16) return '困惑';
+  return '蔑视';
+}
+
+/**
+ * 洛书晴阶段边界表（防线下限 + 顺从上限，刚好等于下一阶段跳转门槛）
+ */
+export function getLuoStageBound(stage: number): { 防线下限: number; 顺从上限: number } {
+  const bounds: Record<number, { 防线下限: number; 顺从上限: number }> = {
+    1: { 防线下限: 90, 顺从上限: 10 },
+    2: { 防线下限: 80, 顺从上限: 20 },
+    3: { 防线下限: 70, 顺从上限: 30 },
+    4: { 防线下限: 60, 顺从上限: 40 },
+    5: { 防线下限: 50, 顺从上限: 50 },
+    6: { 防线下限: 40, 顺从上限: 60 },
+    7: { 防线下限: 30, 顺从上限: 70 },
+    8: { 防线下限: 20, 顺从上限: 80 },
+    9: { 防线下限: 10, 顺从上限: 90 },
+    10: { 防线下限: 0, 顺从上限: 100 },
+  };
+  return bounds[Math.max(1, Math.min(10, Math.floor(stage)))] ?? bounds[1];
+}
+
+/**
+ * 洛书晴阶段跳转条件（当前阶段 → 下一阶段需要：防线≤X, 顺从≥Y, 云霜凝阶段≥Z）
+ * 阶段10 无跳转
+ */
+export function getLuoStageJumpRequirement(
+  fromStage: number,
+): { 防线上限: number; 顺从下限: number; 云霜凝阶段下限: number } | null {
+  const table: Record<number, { 防线上限: number; 顺从下限: number; 云霜凝阶段下限: number }> = {
+    1: { 防线上限: 90, 顺从下限: 10, 云霜凝阶段下限: 1 },
+    2: { 防线上限: 80, 顺从下限: 20, 云霜凝阶段下限: 4 },
+    3: { 防线上限: 70, 顺从下限: 30, 云霜凝阶段下限: 5 },
+    4: { 防线上限: 60, 顺从下限: 40, 云霜凝阶段下限: 6 },
+    5: { 防线上限: 50, 顺从下限: 50, 云霜凝阶段下限: 7 },
+    6: { 防线上限: 40, 顺从下限: 60, 云霜凝阶段下限: 7 },
+    7: { 防线上限: 30, 顺从下限: 70, 云霜凝阶段下限: 8 },
+    8: { 防线上限: 20, 顺从下限: 80, 云霜凝阶段下限: 9 },
+    9: { 防线上限: 10, 顺从下限: 90, 云霜凝阶段下限: 10 },
+  };
+  return table[fromStage] ?? null;
+}
+
 export function calcMiaoguangMind(疑心值: number, 当前心态: string): string {
   // 后半程：屈辱/默许/沉溺 由绿帽值（同变量）自动推算
   if (当前心态 === '屈辱' || 当前心态 === '默许' || 当前心态 === '沉溺') {
@@ -107,78 +175,6 @@ function getMilestoneReward(stage: number): number {
   return 200;
 }
 
-// ────────────────────────────────────────────
-// 10. 楼层天花板 clamp 系统
-// ────────────────────────────────────────────
-
-/**
- * 楼层天花板表：30档（5楼一档，150楼完美结局）
- * 每档 [信任上限, 防线下限, 完成度上限, 身体开发上限]
- * 索引0 = 1-5楼, 索引1 = 6-10楼, ..., 索引29 = 146-150楼
- */
-/**
- * S型慢热曲线（前慢→中快→后慢）
- *
- * 阶段1 冷启动 (1-25楼):    信任 8→17,   防线 95→85, 完成度≤10, 身体≤10  — 有感知的探索期
- * 阶段2 升温期 (26-55楼):   信任 20→40,  防线 80→60, 完成度≤35, 身体≤35  — 道具解锁，节奏加快
- * 阶段3 主推进 (56-110楼):  信任 45→83,  防线 55→16, 完成度≤88, 身体≤88  — 核心体验，最大变化
- * 阶段4 深入期 (111-140楼): 信任 86→99,  防线 13→1,  完成度≤99, 身体≤99  — 逐渐收尾
- * 阶段5 终局   (141-150楼): 信任 100,    防线 0,     完成度100, 身体100  — 完美结局
- */
-const FLOOR_CEILING_TABLE: [number, number, number, number][] = [
-  //       [信任, 防线, 完成度, 身体开发]
-  // ── 阶段1：冷启动（1-25楼）──
-  [8, 95, 3, 2], // 1-5
-  [10, 93, 5, 4], // 6-10
-  [12, 91, 6, 5], // 11-15
-  [14, 88, 8, 7], // 16-20
-  [17, 85, 10, 10], // 21-25
-  // ── 阶段2：升温期（26-55楼）──
-  [20, 80, 14, 14], // 26-30
-  [24, 76, 18, 18], // 31-35
-  [28, 72, 22, 22], // 36-40
-  [32, 68, 26, 26], // 41-45
-  [36, 64, 30, 30], // 46-50
-  [40, 60, 35, 35], // 51-55
-  // ── 阶段3：主推进期（56-110楼）──
-  [45, 55, 40, 40], // 56-60
-  [50, 50, 45, 45], // 61-65
-  [55, 45, 50, 50], // 66-70
-  [60, 40, 56, 56], // 71-75
-  [65, 35, 62, 62], // 76-80
-  [68, 32, 68, 68], // 81-85
-  [72, 28, 74, 74], // 86-90
-  [75, 25, 78, 78], // 91-95
-  [78, 22, 82, 82], // 96-100
-  [80, 19, 85, 85], // 101-105
-  [83, 16, 88, 88], // 106-110
-  // ── 阶段4：深入期（111-140楼）──
-  [86, 13, 91, 91], // 111-115
-  [89, 10, 93, 93], // 116-120
-  [92, 7, 95, 95], // 121-125
-  [95, 4, 97, 97], // 126-130
-  [97, 2, 98, 98], // 131-135
-  [99, 1, 99, 99], // 136-140
-  // ── 阶段5：终局（141-150楼）──
-  [100, 0, 100, 100], // 141-145
-  [100, 0, 100, 100], // 146-150
-];
-
-/**
- * 根据当前楼层获取天花板
- * 楼层0或负数返回第一档，超过150返回最后一档
- */
-export function getFloorCeiling(floor: number): {
-  信任上限: number;
-  防线下限: number;
-  完成度上限: number;
-  身体开发上限: number;
-} {
-  const idx = Math.min(FLOOR_CEILING_TABLE.length - 1, Math.max(0, Math.ceil(floor / 5) - 1));
-  const [trustMax, defMin, compMax, bodyMax] = FLOOR_CEILING_TABLE[idx];
-  return { 信任上限: trustMax, 防线下限: defMin, 完成度上限: compMax, 身体开发上限: bodyMax };
-}
-
 /**
  * 执行一轮全量状态验证与自动计算
  * 在 VARIABLE_UPDATE_ENDED 中调用
@@ -197,8 +193,6 @@ export function validateAndRecalcState(
   const base = snapshot
     ? {
         灵石: snapshot.灵石,
-        第几天: snapshot.第几天,
-        当前小时: snapshot.当前小时,
         神魂空间已解锁: snapshot.神魂空间已解锁,
         神魂空间已进入过: snapshot.神魂空间已进入过,
         当前互动模式: snapshot.当前互动模式,
@@ -211,8 +205,6 @@ export function validateAndRecalcState(
       }
     : {
         灵石: 旧变量.系统.灵石,
-        第几天: 旧变量.时间.第几天,
-        当前小时: 旧变量.时间.当前小时,
         神魂空间已解锁: 旧变量._神魂空间已解锁,
         神魂空间已进入过: 旧变量._神魂空间已进入过,
         当前互动模式: 旧变量._当前互动模式,
@@ -226,9 +218,7 @@ export function validateAndRecalcState(
 
   // 灵石：回滚到快照值（包含前端购买扣款），脚本在后续步骤中叠加奖励
   新变量.系统.灵石 = base.灵石;
-  // 天数+小时：时间推进完全由脚本控制（advanceTimeFromText）
-  新变量.时间.第几天 = base.第几天;
-  新变量.时间.当前小时 = base.当前小时;
+  // 时间.玄霜历：AI 通过 SET 命令自由更新，脚本不冻结
   // 脚本管理字段：AI不得修改，回滚到快照值（前端按钮/脚本控制）
   // 一次性 boolean 用 OR 逻辑：快照可能因 MVU 传播延迟而丢失前端写入，
   // 只要任一来源（快照/旧变量/AI写入）为 true，就保持 true 不可逆
@@ -259,7 +249,7 @@ export function validateAndRecalcState(
   新变量.云霜凝.服装.下装 = base.服装.下装;
   新变量.云霜凝.服装.内衣 = base.服装.内衣;
   新变量.云霜凝.服装.内裤 = base.服装.内裤;
-  新变量.云霜凝.服装.特殊配饰 = base.服装.特殊配饰;
+  新变量.云霜凝.服装.特殊配饰 = { ...base.服装.特殊配饰 };
   新变量.云霜凝.服装.暴露程度 = base.服装.暴露程度 as SchemaType['云霜凝']['服装']['暴露程度'];
 
   // ── 0b. 神魂空间自动解锁（floor>=5 时首次触发）──────────
@@ -285,14 +275,9 @@ export function validateAndRecalcState(
   新变量.治疗.阶段 = newStage;
 
   // ── 2. 治疗阶段突破 → 里程碑灵石 ───────────────────
-  // 用天花板 clamp 后的完成度算真实阶段，防止 AI 写出超天花板的完成度导致虚假突破
-  const ceilingForMilestone = currentFloor && currentFloor > 0 ? getFloorCeiling(currentFloor) : null;
-  const clampedComp = ceilingForMilestone
-    ? Math.min(新变量.治疗.完成度, ceilingForMilestone.完成度上限)
-    : 新变量.治疗.完成度;
-  const realNewStage = calcHealingStage(clampedComp);
-  if (realNewStage > oldStage) {
-    for (let s = oldStage + 1; s <= realNewStage; s++) {
+  // 6b 的 delta cap 已经把 AI 乱输入截回合法范围，直接用新阶段判定即可
+  if (newStage > oldStage) {
+    for (let s = oldStage + 1; s <= newStage; s++) {
       const key = `阶段${s}`;
       if (!新变量._已发放里程碑灵石[key]) {
         const reward = getMilestoneReward(s);
@@ -335,40 +320,15 @@ export function validateAndRecalcState(
   // ── 4. 环境被动疑心/绿帽增长（每次治疗互动触发） ────
   // 治疗互动判定：云霜凝数值发生变化即算一次
   {
-    // 先计算 clamp 后的值（不修改新变量，仅用于比较）
-    const ceiling = currentFloor && currentFloor > 0 ? getFloorCeiling(currentFloor) : null;
-    const cTrust = ceiling ? Math.min(新变量.云霜凝.信任度, ceiling.信任上限) : 新变量.云霜凝.信任度;
-    const cDef = ceiling ? Math.max(新变量.云霜凝.心理防线, ceiling.防线下限) : 新变量.云霜凝.心理防线;
-    const cComp = ceiling ? Math.min(新变量.治疗.完成度, ceiling.完成度上限) : 新变量.治疗.完成度;
-    const cBody = {
-      小嘴: ceiling ? Math.min(新变量.云霜凝.身体开发.小嘴, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.小嘴,
-      胸部: ceiling ? Math.min(新变量.云霜凝.身体开发.胸部, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.胸部,
-      小屄: ceiling ? Math.min(新变量.云霜凝.身体开发.小屄, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.小屄,
-      屁穴: ceiling ? Math.min(新变量.云霜凝.身体开发.屁穴, ceiling.身体开发上限) : 新变量.云霜凝.身体开发.屁穴,
-    };
+    const hasValueChange =
+      新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
+      新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
+      新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
+      新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
+      新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
+      新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
+      新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
 
-    // 主判定：clamp 后的值与旧值比较（实际数值变化）
-    const hasActualChange =
-      cTrust > 旧变量.云霜凝.信任度 ||
-      cDef < 旧变量.云霜凝.心理防线 ||
-      cComp > 旧变量.治疗.完成度 ||
-      cBody.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
-      cBody.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
-      cBody.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
-      cBody.屁穴 > 旧变量.云霜凝.身体开发.屁穴;
-
-    // 天花板意图检测：AI 原始输出尝试推进但被天花板压回（clamp 前有变化，clamp 后无变化）
-    const hasCeilingAttempt =
-      !hasActualChange &&
-      (新变量.云霜凝.信任度 > 旧变量.云霜凝.信任度 ||
-        新变量.云霜凝.心理防线 < 旧变量.云霜凝.心理防线 ||
-        新变量.治疗.完成度 > 旧变量.治疗.完成度 ||
-        新变量.云霜凝.身体开发.小嘴 > 旧变量.云霜凝.身体开发.小嘴 ||
-        新变量.云霜凝.身体开发.胸部 > 旧变量.云霜凝.身体开发.胸部 ||
-        新变量.云霜凝.身体开发.小屄 > 旧变量.云霜凝.身体开发.小屄 ||
-        新变量.云霜凝.身体开发.屁穴 > 旧变量.云霜凝.身体开发.屁穴);
-
-    const hasValueChange = hasActualChange || hasCeilingAttempt;
     const isInFreeze = 新变量._打断冻结至楼层 > 0 && (currentFloor ?? 0) < 新变量._打断冻结至楼层;
 
     // 冻结期间治疗尝试标记（冻结结束时判定奖励用）
@@ -427,11 +387,6 @@ export function validateAndRecalcState(
         else if (暴露 === '大露' || 暴露 === '极露') increment += 3;
         else if (暴露 === '轻露') increment += 1;
         // 微露和遮蔽不加成
-      }
-
-      // 天花板意图减半：AI尝试推进但被天花板压回，苗广只察觉到微弱波动
-      if (hasCeilingAttempt) {
-        increment = Math.max(1, Math.floor(increment * 0.5));
       }
 
       // 神魂空间减免：苗广无法感知神魂空间内的活动，增长大幅降低
@@ -493,56 +448,58 @@ export function validateAndRecalcState(
     return freezeBaseline ?? null;
   }
 
-  // ── 6. 身体开发幅度限制（脚本二次限制） ──────────────
-  const MAX_BODY_DELTA = 8;
-  const bodyParts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
-  for (const part of bodyParts) {
-    const oldVal = 旧变量.云霜凝.身体开发[part];
-    const newVal = 新变量.云霜凝.身体开发[part];
-    if (newVal - oldVal > MAX_BODY_DELTA) {
-      新变量.云霜凝.身体开发[part] = oldVal + MAX_BODY_DELTA;
-      console.warn(`[状态验证] 身体开发.${part} 增幅过大，限制至 +${MAX_BODY_DELTA}`);
-    }
-  }
-
-  // ── 6b. 核心数值单轮变化幅度限制（防止AI乱加数值） ──────
-  // 注意：此限制包含了道具效果的合计变化，阈值设置宽松以容纳合法的道具+AI叠加
-  // 三把锁不再锁定数值，所有幅度限制对所有情况生效
+  // ── 6. 核心数值单轮 delta cap（唯一作用：兜底 AI 违反单轮增量指令） ──────
+  // yaml 规则告诉 AI "每轮 +N"，这里给 1.5~2 倍 buffer 作为硬兜底
+  // 正常 AI 输出不会撞 cap，玩家感觉不到；AI 乱输出 +15 会被截回
   {
+    // 信任度 ±8
     const trustDelta = 新变量.云霜凝.信任度 - 旧变量.云霜凝.信任度;
-    const MAX_TRUST_DELTA = 10;
-    if (trustDelta > MAX_TRUST_DELTA) {
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 + MAX_TRUST_DELTA;
-      console.warn(`[状态验证] 信任度增幅过大(+${trustDelta})，限制至 +${MAX_TRUST_DELTA}`);
-    } else if (trustDelta < -MAX_TRUST_DELTA) {
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - MAX_TRUST_DELTA;
-      console.warn(`[状态验证] 信任度降幅过大(${trustDelta})，限制至 -${MAX_TRUST_DELTA}`);
+    if (trustDelta > 8) {
+      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 + 8;
+      console.warn(`[delta cap] 信任度增幅 +${trustDelta} → +8`);
+    } else if (trustDelta < -8) {
+      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - 8;
+      console.warn(`[delta cap] 信任度降幅 ${trustDelta} → -8`);
     }
   }
   {
+    // 心理防线 ±8
     const defDelta = 新变量.云霜凝.心理防线 - 旧变量.云霜凝.心理防线;
-    const MAX_DEF_DELTA = 15;
-    if (defDelta > MAX_DEF_DELTA) {
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + MAX_DEF_DELTA;
-      console.warn(`[状态验证] 心理防线增幅过大(+${defDelta})，限制至 +${MAX_DEF_DELTA}`);
-    } else if (defDelta < -MAX_DEF_DELTA) {
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 - MAX_DEF_DELTA;
-      console.warn(`[状态验证] 心理防线降幅过大(${defDelta})，限制至 -${MAX_DEF_DELTA}`);
+    if (defDelta > 8) {
+      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + 8;
+      console.warn(`[delta cap] 心理防线增幅 +${defDelta} → +8`);
+    } else if (defDelta < -8) {
+      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 - 8;
+      console.warn(`[delta cap] 心理防线降幅 ${defDelta} → -8`);
     }
   }
-  // 疑心值 delta clamp 已移除：疑心值由硬保护+脚本全权管理，AI无法修改，
-  // 脚本增量（第4节）每轮不超过6，无需额外限制。
   {
+    // 治疗完成度 +5/-3
     const compDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
-    const MAX_COMP_DELTA = 2;
-    if (compDelta > MAX_COMP_DELTA) {
-      新变量.治疗.完成度 = 旧变量.治疗.完成度 + MAX_COMP_DELTA;
-      console.warn(`[状态验证] 完成度增幅过大(+${compDelta})，限制至 +${MAX_COMP_DELTA}`);
-    } else if (compDelta < -MAX_COMP_DELTA) {
-      新变量.治疗.完成度 = 旧变量.治疗.完成度 - MAX_COMP_DELTA;
-      console.warn(`[状态验证] 完成度降幅过大(${compDelta})，限制至 -${MAX_COMP_DELTA}`);
+    if (compDelta > 5) {
+      新变量.治疗.完成度 = 旧变量.治疗.完成度 + 5;
+      console.warn(`[delta cap] 完成度增幅 +${compDelta} → +5`);
+    } else if (compDelta < -3) {
+      新变量.治疗.完成度 = 旧变量.治疗.完成度 - 3;
+      console.warn(`[delta cap] 完成度降幅 ${compDelta} → -3`);
     }
   }
+  {
+    // 身体开发每部位 +10/-5
+    const bodyParts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
+    for (const part of bodyParts) {
+      const oldVal = 旧变量.云霜凝.身体开发[part];
+      const bodyDelta = 新变量.云霜凝.身体开发[part] - oldVal;
+      if (bodyDelta > 10) {
+        新变量.云霜凝.身体开发[part] = oldVal + 10;
+        console.warn(`[delta cap] 身体开发.${part} 增幅 +${bodyDelta} → +10`);
+      } else if (bodyDelta < -5) {
+        新变量.云霜凝.身体开发[part] = oldVal - 5;
+        console.warn(`[delta cap] 身体开发.${part} 降幅 ${bodyDelta} → -5`);
+      }
+    }
+  }
+  // 疑心值 delta clamp 已移除：疑心值由硬保护+脚本全权管理，AI无法修改
 
   // ── 7. 打断治疗概率判定（脚本驱动，单层掷骰） ────────
   // 阶段1免疫，阶段2+按阶段基础概率 + 疑心加成，cap 35%
@@ -560,7 +517,6 @@ export function validateAndRecalcState(
     const 心态 = 新变量.苗广.心态;
     const 是前半程 = 心态 !== '屈辱' && 心态 !== '默许' && 心态 !== '沉溺';
     // 用旧阶段判定：必须上一轮已确认在阶段2+才可能被打断
-    // 防止AI写的高完成度被天花板压回阶段1时误触发打断
     const stage = 旧变量.治疗.阶段;
 
     if (
@@ -729,8 +685,6 @@ export function validateAndRecalcState(
   // ── 9b. 三把锁每轮回退（信任-2/防线+3/完成度-0.5）──────
   applyLockRetreat(新变量);
 
-  // ── 10. 天花板 clamp 已移至 applyFloorCeiling()，在所有效果之后最后执行 ──
-
   // ── 11. 地仙境突破剧情（阶段3+且现实互动中，一次性方式1注入） ──
   if (新变量.治疗.阶段 >= 3 && 新变量._当前互动模式 === '现实互动' && !新变量._已发放里程碑灵石['地仙境突破']) {
     新变量._已发放里程碑灵石['地仙境突破'] = true;
@@ -738,6 +692,191 @@ export function validateAndRecalcState(
     const event = '__地仙境突破__';
     新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
     console.info('[状态验证] 地仙境突破剧情触发！阶段3+且在现实互动中');
+  }
+
+  // ── 11a. 洛书晴激活剧情轮次推进（5 轮后正式激活） ──
+  if (新变量._洛书晴激活轮次进度 >= 1 && 新变量._洛书晴激活轮次进度 < 5) {
+    // 本轮已经展示了第 N 轮的引导，下一轮推进到 N+1
+    // 使用旧值作为基准避免重复+1（前端可能已经写过1）
+    const next = (旧变量._洛书晴激活轮次进度 || 0) + 1;
+    if (next > 旧变量._洛书晴激活轮次进度 && next <= 5) {
+      新变量._洛书晴激活轮次进度 = next;
+    }
+  } else if (新变量._洛书晴激活轮次进度 === 5 && !新变量._洛书晴线已激活) {
+    // 第5轮完成 → 正式激活洛书晴线
+    新变量._洛书晴线已激活 = true;
+    新变量._洛书晴激活轮次进度 = 0; // 重置
+    新变量._当前互动模式 = '日常';
+    新变量._神魂空间激活中 = false;
+    console.info('[状态验证] 洛书晴线已正式激活！');
+  }
+
+  // ── 11b. 洛书晴数值硬限制 + 阶段边界截断 + 自动阶段跳转 ──
+  if (新变量._洛书晴线已激活) {
+    // (1) 阶段脚本管理：AI 不得改调教阶段，强制回滚
+    新变量.洛书晴.调教阶段 = 旧变量.洛书晴.调教阶段 || 1;
+    // (2) 服装/肉体改造/性癖列表：脚本管理，AI 不得修改
+    新变量.洛书晴.服装 = { ...旧变量.洛书晴.服装, 特殊配饰: { ...旧变量.洛书晴.服装.特殊配饰 } };
+    新变量.洛书晴.肉体改造 = { ...旧变量.洛书晴.肉体改造, 淫纹: { ...旧变量.洛书晴.肉体改造.淫纹 } };
+    新变量.洛书晴.性癖列表 = { ...旧变量.洛书晴.性癖列表 };
+
+    // (3) 心理防线 单轮 ±15 硬限制
+    {
+      const delta = 新变量.洛书晴.心理防线 - 旧变量.洛书晴.心理防线;
+      const MAX = 15;
+      if (delta > MAX) {
+        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 + MAX;
+        console.warn(`[状态验证] 洛书晴心理防线增幅过大(+${delta})，限制至 +${MAX}`);
+      } else if (delta < -MAX) {
+        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 - MAX;
+        console.warn(`[状态验证] 洛书晴心理防线降幅过大(${delta})，限制至 -${MAX}`);
+      }
+    }
+
+    // (4) 顺从度 单轮 ±10 硬限制
+    {
+      const delta = 新变量.洛书晴.顺从度 - 旧变量.洛书晴.顺从度;
+      const MAX = 10;
+      if (delta > MAX) {
+        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 + MAX;
+        console.warn(`[状态验证] 洛书晴顺从度增幅过大(+${delta})，限制至 +${MAX}`);
+      } else if (delta < -MAX) {
+        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 - MAX;
+        console.warn(`[状态验证] 洛书晴顺从度降幅过大(${delta})，限制至 -${MAX}`);
+      }
+    }
+
+    // (5) 身体开发 单轮单部位 +8 硬限制
+    {
+      const MAX = 8;
+      const parts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
+      for (const part of parts) {
+        const oldVal = 旧变量.洛书晴.身体开发[part];
+        const newVal = 新变量.洛书晴.身体开发[part];
+        if (newVal - oldVal > MAX) {
+          新变量.洛书晴.身体开发[part] = oldVal + MAX;
+          console.warn(`[状态验证] 洛书晴身体开发.${part} 增幅过大，限制至 +${MAX}`);
+        }
+      }
+    }
+
+    // (6) 阶段边界硬截断：防线 ≥ 下限，顺从 ≤ 上限
+    {
+      const bound = getLuoStageBound(新变量.洛书晴.调教阶段);
+      if (新变量.洛书晴.心理防线 < bound.防线下限) {
+        新变量.洛书晴.心理防线 = bound.防线下限;
+      }
+      if (新变量.洛书晴.顺从度 > bound.顺从上限) {
+        新变量.洛书晴.顺从度 = bound.顺从上限;
+      }
+    }
+
+    // (7) 自动阶段跳转检查：数值达上限 + 云霜凝阶段达同步门槛
+    {
+      const currentStage = 新变量.洛书晴.调教阶段;
+      const req = getLuoStageJumpRequirement(currentStage);
+      if (req) {
+        const 防线到位 = 新变量.洛书晴.心理防线 <= req.防线上限;
+        const 顺从到位 = 新变量.洛书晴.顺从度 >= req.顺从下限;
+        const 云霜凝到位 = 新变量.治疗.阶段 >= req.云霜凝阶段下限;
+        if (防线到位 && 顺从到位 && 云霜凝到位) {
+          新变量.洛书晴.调教阶段 = currentStage + 1;
+          console.info(
+            `[状态验证] 洛书晴阶段跳转: ${currentStage} → ${currentStage + 1}（防线${新变量.洛书晴.心理防线} 顺从${新变量.洛书晴.顺从度} 云霜凝阶段${新变量.治疗.阶段}）`,
+          );
+          // 阶段 2 → 3 瞬间：触发"洛书晴现实初遇"脚本场景
+          if (currentStage === 2) {
+            const existing = 新变量._待发送道具事件;
+            const event = '__洛书晴现实初遇__';
+            新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
+            新变量._特殊场景.进行中 = '洛书晴现实初遇';
+            新变量._特殊场景开始楼层 = currentFloor ?? 0;
+          }
+        }
+      }
+    }
+  }
+
+  // ── 11c. 苗喧数值联动（仅激活后） ──
+  if (新变量._洛书晴线已激活) {
+    // 脚本管理字段：绝望值/压抑值/心态，AI 不得修改
+    新变量.苗喧.绝望值 = 旧变量.苗喧.绝望值;
+    新变量.苗喧.压抑值 = 旧变量.苗喧.压抑值;
+
+    // 绝望值被动背景氛围 + 苗广心态联动（阶梯式）
+    {
+      const floor = currentFloor ?? 0;
+      // 被动慢涨：每 8 楼 +1（用楼层号做计数）
+      if (floor > 0 && floor % 8 === 0 && floor !== _lastMiaoXuanPassiveFloor) {
+        _lastMiaoXuanPassiveFloor = floor;
+        新变量.苗喧.绝望值 = Math.min(100, 新变量.苗喧.绝望值 + 1);
+      }
+      // 苗广心态联动：心态进入新阶段时阶梯增加
+      const oldMiaoGMind = 旧变量.苗广.心态;
+      const newMiaoGMind = 新变量.苗广.心态;
+      if (oldMiaoGMind !== newMiaoGMind) {
+        const jump: Partial<Record<typeof newMiaoGMind, number>> = {
+          屈辱: 10,
+          默许: 15,
+          沉溺: 20,
+        };
+        const bonus = jump[newMiaoGMind] ?? 0;
+        if (bonus > 0) {
+          新变量.苗喧.绝望值 = Math.min(100, 新变量.苗喧.绝望值 + bonus);
+          console.info(`[状态验证] 苗喧绝望值+${bonus}（苗广心态→${newMiaoGMind}）`);
+        }
+      }
+    }
+
+    // 压抑值被动慢涨：每楼 +2（神魂空间内不涨，苗喧观察不到）
+    if (新变量._当前互动模式 !== '神魂空间' && currentFloor !== undefined && currentFloor !== _lastMiaoXuanPressureFloor) {
+      _lastMiaoXuanPressureFloor = currentFloor;
+      新变量.苗喧.压抑值 = Math.min(100, 新变量.苗喧.压抑值 + 2);
+    }
+
+    // 心态由绝望值映射
+    新变量.苗喧.心态 = calcMiaoxuanMind(新变量.苗喧.绝望值);
+
+    // ── 11c2. 后期反抗事件触发（被动通知，玩家面板红点） ──
+    // 设计：3 个一次性反抗事件，触发节点到达即写入 _苗喧未读反抗事件，
+    // 玩家点击"查看"后清空。去重通过 _已完成特殊场景['_反抗_X'] flag。
+    if (!新变量._苗喧未读反抗事件) {
+      // #3 千晶后求父：千晶幻术认知改写完成后
+      if (
+        新变量.苗广.千晶幻术.认知改写完成 &&
+        !新变量._已完成特殊场景['_反抗_千晶后求父']
+      ) {
+        新变量._苗喧未读反抗事件 = '千晶后求父';
+        新变量._已完成特殊场景['_反抗_千晶后求父'] = true;
+        console.info('[状态验证] 苗喧反抗事件触发：千晶后求父');
+      }
+      // #4 掌门改嫁前：阶段≥8 + 千晶完成 + 苗广沉溺（掌门改嫁的前置条件接近满足）
+      else if (
+        新变量.治疗.阶段 >= 8 &&
+        新变量.苗广.千晶幻术.认知改写完成 &&
+        新变量.苗广.心态 === '沉溺' &&
+        !新变量._已完成特殊场景['_反抗_掌门改嫁前']
+      ) {
+        新变量._苗喧未读反抗事件 = '掌门改嫁前';
+        新变量._已完成特殊场景['_反抗_掌门改嫁前'] = true;
+        console.info('[状态验证] 苗喧反抗事件触发：掌门改嫁前');
+      }
+      // #5 找未婚妻求助：洛书晴阶段9 时
+      else if (
+        新变量.洛书晴.调教阶段 >= 9 &&
+        !新变量._已完成特殊场景['_反抗_找未婚妻求助']
+      ) {
+        新变量._苗喧未读反抗事件 = '找未婚妻求助';
+        新变量._已完成特殊场景['_反抗_找未婚妻求助'] = true;
+        console.info('[状态验证] 苗喧反抗事件触发：找未婚妻求助');
+      }
+    }
+  } else {
+    // 未激活：冻结所有苗喧数值为 0/蔑视
+    新变量.苗喧.绝望值 = 0;
+    新变量.苗喧.压抑值 = 0;
+    新变量.苗喧.心态 = '蔑视';
+    新变量.苗喧.心理活动 = '';
   }
 
   // ── 12. 阶段最终校正：delta clamp/三把锁/冻结可能修改完成度，阶段需重算 ──
@@ -749,40 +888,6 @@ export function validateAndRecalcState(
 
   // 返回 freezeBaseline（新创建或透传），由 index.ts 管理生命周期
   return freezeBaseline ?? null;
-}
-
-/**
- * 楼层天花板 clamp（必须在所有数值效果之后最后执行）
- * 信任度不超过楼层上限，心理防线不低于楼层下限
- * 完成度不超过楼层上限，身体开发不超过楼层上限
- * 三把锁与天花板不冲突：三把锁往反方向拉（降信任/升防线），天花板限制正方向
- */
-export function applyFloorCeiling(data: SchemaType, currentFloor: number): void {
-  if (currentFloor <= 0) return;
-
-  const ceiling = getFloorCeiling(currentFloor);
-
-  if (data.云霜凝.信任度 > ceiling.信任上限) {
-    console.info(`[天花板] 信任度 ${data.云霜凝.信任度} → ${ceiling.信任上限}（楼层${currentFloor}上限）`);
-    data.云霜凝.信任度 = ceiling.信任上限;
-  }
-  if (data.云霜凝.心理防线 < ceiling.防线下限) {
-    console.info(`[天花板] 心理防线 ${data.云霜凝.心理防线} → ${ceiling.防线下限}（楼层${currentFloor}下限）`);
-    data.云霜凝.心理防线 = ceiling.防线下限;
-  }
-  if (data.治疗.完成度 > ceiling.完成度上限) {
-    console.info(`[天花板] 完成度 ${data.治疗.完成度} → ${ceiling.完成度上限}（楼层${currentFloor}上限）`);
-    data.治疗.完成度 = ceiling.完成度上限;
-  }
-  const bodyParts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
-  for (const part of bodyParts) {
-    if (data.云霜凝.身体开发[part] > ceiling.身体开发上限) {
-      console.info(
-        `[天花板] ${part}开发 ${data.云霜凝.身体开发[part]} → ${ceiling.身体开发上限}（楼层${currentFloor}上限）`,
-      );
-      data.云霜凝.身体开发[part] = ceiling.身体开发上限;
-    }
-  }
 }
 
 /**
@@ -912,11 +1017,13 @@ const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
   项圈: { 阶段: 7, 防线: 20, 信任度: 60 },
   肉棒口罩: { 阶段: 5, 小嘴开发: 40 },
 
-  // ── 装备：辅助灵物 ──
-  暖玉佩: {},
-  寒心锁: { 阶段: 3 },
-  破心锁: { 阶段: 3 },
-  断情锁: { 阶段: 4 },
+  // ── 装备：环境类（暖玉佩从辅助灵物移到此处）──
+  // 暖玉佩 无门槛，普通的温暖灵物
+  // 三把锁 已从商店删除（寒心锁/破心锁/断情锁不再存在）
+
+  // ── 洛书晴专属消耗品（方式2注入型，仅阶段1-2有效，阶段3+脚本自动失效）──
+  安抚符: {},
+  真心符: {},
 
   // ── 永久体改 ──
   '丰胸灵乳丹·中': { 阶段: 3, 胸部开发: 30 },
@@ -926,7 +1033,6 @@ const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
   乳环: { 阶段: 4, 胸部开发: 40 },
   阴环: { 阶段: 4, 小屄开发: 40 },
   淫纹刻印: { 阶段: 4, 防线: 50 },
-  堕落烙印: { 阶段: 6, 防线: 20 },
 
   // ── 永久性癖（设计文档第八节最终20个） ──
   阿黑颜体质: { 阶段: 3, 防线: 50 },
@@ -1102,11 +1208,12 @@ export const ITEM_PRICE: Record<string, number> = {
   项圈: 90,
   肉棒口罩: 350,
 
-  // 装备：辅助灵物
-  暖玉佩: 10,
-  寒心锁: 60,
-  破心锁: 60,
-  断情锁: 80,
+  // 装备：环境类（暖玉佩移到此类）
+  // 三把锁 已删除
+
+  // 洛书晴专属消耗品
+  安抚符: 30,
+  真心符: 40,
 
   // 永久体改
   '丰胸灵乳丹·中': 150,
@@ -1116,7 +1223,6 @@ export const ITEM_PRICE: Record<string, number> = {
   乳环: 300,
   阴环: 300,
   淫纹刻印: 250,
-  堕落烙印: 500,
 
   // 永久性癖（设计文档第八节最终20个）
   阿黑颜体质: 300,

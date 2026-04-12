@@ -75,10 +75,22 @@ export const Schema = z.object({
           臀部: z.enum(['默认', '丰满']).prefault('默认'),
           乳环: z.boolean().prefault(false),
           阴环: z.boolean().prefault(false),
-          淫纹位置: z.array(z.enum(['腰腹', '胸前', '大腿内侧'])).prefault([]),
-          堕落烙印: z.boolean().prefault(false),
+          淫纹: z
+            .object({
+              腰腹: z.string().prefault(''),
+              胸前: z.string().prefault(''),
+              大腿内侧: z.string().prefault(''),
+              臀部: z.string().prefault(''),
+            })
+            .prefault({ 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' }),
         })
-        .prefault({ 胸部: '默认', 臀部: '默认', 乳环: false, 阴环: false, 淫纹位置: [], 堕落烙印: false }),
+        .prefault({
+          胸部: '默认',
+          臀部: '默认',
+          乳环: false,
+          阴环: false,
+          淫纹: { 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' },
+        }),
 
       服装: z
         .object({
@@ -86,7 +98,27 @@ export const Schema = z.object({
           下装: z.string().prefault('寒霜门长裙'),
           内衣: z.string().prefault('素白抹胸'),
           内裤: z.string().prefault('素白亵裤'),
-          特殊配饰: z.string().prefault('无'),
+          特殊配饰: z
+            .object({
+              脚踝: z.string().prefault(''),
+              颈部: z.string().prefault(''),
+              耳部: z.string().prefault(''),
+              腰部: z.string().prefault(''),
+              大腿: z.string().prefault(''),
+              胸部: z.string().prefault(''),
+              阴蒂: z.string().prefault(''),
+              前后穴: z.string().prefault(''),
+            })
+            .prefault({
+              脚踝: '',
+              颈部: '',
+              耳部: '',
+              腰部: '',
+              大腿: '',
+              胸部: '',
+              阴蒂: '',
+              前后穴: '',
+            }),
           暴露程度: z.enum(['遮蔽', '微露', '轻露', '半露', '大露', '极露']).prefault('遮蔽'),
         })
         .prefault({
@@ -94,7 +126,16 @@ export const Schema = z.object({
           下装: '寒霜门长裙',
           内衣: '素白抹胸',
           内裤: '素白亵裤',
-          特殊配饰: '无',
+          特殊配饰: {
+            脚踝: '',
+            颈部: '',
+            耳部: '',
+            腰部: '',
+            大腿: '',
+            胸部: '',
+            阴蒂: '',
+            前后穴: '',
+          },
           暴露程度: '遮蔽',
         }),
 
@@ -106,13 +147,28 @@ export const Schema = z.object({
       心理防线: 100,
       身体开发: { 小嘴: 0, 胸部: 0, 小屄: 0, 屁穴: 0 },
       性癖列表: {},
-      肉体改造: { 胸部: '默认', 臀部: '默认', 乳环: false, 阴环: false, 淫纹位置: [], 堕落烙印: false },
+      肉体改造: {
+        胸部: '默认',
+        臀部: '默认',
+        乳环: false,
+        阴环: false,
+        淫纹: { 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' },
+      },
       服装: {
         上装: '寒霜门道袍',
         下装: '寒霜门长裙',
         内衣: '素白抹胸',
         内裤: '素白亵裤',
-        特殊配饰: '无',
+        特殊配饰: {
+          脚踝: '',
+          颈部: '',
+          耳部: '',
+          腰部: '',
+          大腿: '',
+          胸部: '',
+          阴蒂: '',
+          前后穴: '',
+        },
         暴露程度: '遮蔽',
       },
       心理活动: '',
@@ -175,6 +231,174 @@ export const Schema = z.object({
     }),
 
   // ============================================
+  // 洛书晴状态（激活后才显示/注入）
+  // ============================================
+  洛书晴: z
+    .object({
+      心理防线: z.coerce
+        .number()
+        .transform(v => Math.max(0, Math.min(100, v)))
+        .prefault(100),
+      顺从度: z.coerce
+        .number()
+        .transform(v => Math.max(0, Math.min(100, v)))
+        .prefault(0),
+      // 脚本管理，由数值门槛+云霜凝阶段同步驱动
+      调教阶段: z.coerce
+        .number()
+        .transform(v => Math.max(1, Math.min(10, Math.floor(v))))
+        .prefault(1),
+
+      身体开发: z
+        .object({
+          小嘴: z.coerce
+            .number()
+            .transform(v => Math.max(0, Math.min(100, v)))
+            .prefault(0),
+          胸部: z.coerce
+            .number()
+            .transform(v => Math.max(0, Math.min(100, v)))
+            .prefault(0),
+          小屄: z.coerce
+            .number()
+            .transform(v => Math.max(0, Math.min(100, v)))
+            .prefault(0),
+          屁穴: z.coerce
+            .number()
+            .transform(v => Math.max(0, Math.min(100, v)))
+            .prefault(0),
+        })
+        .prefault({ 小嘴: 0, 胸部: 0, 小屄: 0, 屁穴: 0 }),
+
+      // 共用性癖道具写入此表，与云霜凝独立（3槽位"使用中"上限由脚本在 _洛书晴道具状态 处维护）
+      性癖列表: z.record(z.string(), z.string()).prefault({}),
+
+      // 阶段≥3 解锁的现实限定肉体改造
+      肉体改造: z
+        .object({
+          胸部: z.enum(['默认', 'E罩杯', 'G罩杯', 'H罩杯']).prefault('默认'),
+          臀部: z.enum(['默认', '丰满']).prefault('默认'),
+          乳环: z.boolean().prefault(false),
+          阴环: z.boolean().prefault(false),
+          淫纹: z
+            .object({
+              腰腹: z.string().prefault(''),
+              胸前: z.string().prefault(''),
+              大腿内侧: z.string().prefault(''),
+              臀部: z.string().prefault(''),
+            })
+            .prefault({ 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' }),
+        })
+        .prefault({
+          胸部: '默认',
+          臀部: '默认',
+          乳环: false,
+          阴环: false,
+          淫纹: { 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' },
+        }),
+
+      // 阶段≥3 解锁的现实限定服装（初始为寒霜门天骄装束，和云霜凝共用款式列表）
+      服装: z
+        .object({
+          上装: z.string().prefault('寒霜门弟子服'),
+          下装: z.string().prefault('寒霜门白裙'),
+          内衣: z.string().prefault('素白抹胸'),
+          内裤: z.string().prefault('素白亵裤'),
+          特殊配饰: z
+            .object({
+              脚踝: z.string().prefault(''),
+              颈部: z.string().prefault(''),
+              耳部: z.string().prefault(''),
+              腰部: z.string().prefault(''),
+              大腿: z.string().prefault(''),
+              胸部: z.string().prefault(''),
+              阴蒂: z.string().prefault(''),
+              前后穴: z.string().prefault(''),
+            })
+            .prefault({
+              脚踝: '',
+              颈部: '',
+              耳部: '',
+              腰部: '',
+              大腿: '',
+              胸部: '',
+              阴蒂: '',
+              前后穴: '',
+            }),
+        })
+        .prefault({
+          上装: '寒霜门弟子服',
+          下装: '寒霜门白裙',
+          内衣: '素白抹胸',
+          内裤: '素白亵裤',
+          特殊配饰: {
+            脚踝: '',
+            颈部: '',
+            耳部: '',
+            腰部: '',
+            大腿: '',
+            胸部: '',
+            阴蒂: '',
+            前后穴: '',
+          },
+        }),
+
+      // AI每轮生成；约100-150字
+      心理活动: z.string().prefault(''),
+    })
+    .prefault({
+      心理防线: 100,
+      顺从度: 0,
+      调教阶段: 1,
+      身体开发: { 小嘴: 0, 胸部: 0, 小屄: 0, 屁穴: 0 },
+      性癖列表: {},
+      肉体改造: {
+        胸部: '默认',
+        臀部: '默认',
+        乳环: false,
+        阴环: false,
+        淫纹: { 腰腹: '', 胸前: '', 大腿内侧: '', 臀部: '' },
+      },
+      服装: {
+        上装: '寒霜门弟子服',
+        下装: '寒霜门白裙',
+        内衣: '素白抹胸',
+        内裤: '素白亵裤',
+        特殊配饰: {
+          脚踝: '',
+          颈部: '',
+          耳部: '',
+          腰部: '',
+          大腿: '',
+          胸部: '',
+          阴蒂: '',
+          前后穴: '',
+        },
+      },
+      心理活动: '',
+    }),
+
+  // ============================================
+  // 苗喧状态（洛书晴激活后才显示/注入；激活前只有隐藏彩蛋用 _苗喧碎片）
+  // ============================================
+  苗喧: z
+    .object({
+      绝望值: z.coerce
+        .number()
+        .transform(v => Math.max(0, Math.min(100, v)))
+        .prefault(0),
+      压抑值: z.coerce
+        .number()
+        .transform(v => Math.max(0, Math.min(100, v)))
+        .prefault(0),
+      // 脚本根据绝望值区间映射：蔑视/困惑/不安/恐惧/崩溃/失去
+      心态: z.enum(['蔑视', '困惑', '不安', '恐惧', '崩溃', '失去']).prefault('蔑视'),
+      // AI每轮生成，约100-150字
+      心理活动: z.string().prefault(''),
+    })
+    .prefault({ 绝望值: 0, 压抑值: 0, 心态: '蔑视', 心理活动: '' }),
+
+  // ============================================
   // 系统（{{user}}脑内商店）
   // ============================================
   系统: z
@@ -189,24 +413,13 @@ export const Schema = z.object({
     .prefault({ 灵石: 100, 道具状态: {} }),
 
   // ============================================
-  // 时间（脚本自动推进，AI不要修改）
+  // 时间（玄霜历叙事字符串，AI 通过 SET 命令更新）
   // ============================================
   时间: z
     .object({
-      第几天: z.coerce
-        .number()
-        .transform(v => Math.max(1, Math.floor(v)))
-        .prefault(1),
-      // 以小时为单位存储，如 14.5 = 14:30
-      当前小时: z.coerce
-        .number()
-        .transform(v => {
-          const clamped = Math.max(0, Math.min(23.9, v));
-          return Math.round(clamped * 10) / 10;
-        })
-        .prefault(8.0),
+      玄霜历: z.string().prefault('玄霜历九百七十三年·霜降月'),
     })
-    .prefault({ 第几天: 1, 当前小时: 8.0 }),
+    .prefault({ 玄霜历: '玄霜历九百七十三年·霜降月' }),
 
   // ============================================
   // 内部标志（下划线前缀，AI不要修改）
@@ -298,6 +511,43 @@ export const Schema = z.object({
     .prefault(0),
   // 孝敬师父当前开始的楼层（用于计算当前第几轮）
   _孝敬师父开始楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+
+  // ── 洛书晴/苗喧线相关隐藏变量 ──
+  // 洛书晴线是否已激活（新婚之夜后第一次点击进入神魂空间触发）
+  _洛书晴线已激活: z.boolean().prefault(false),
+  // 洛书晴激活剧情的当前轮次进度（0-5，0=未开始，1-5=第N轮，5完成后自动切换正式激活）
+  _洛书晴激活轮次进度: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.min(5, Math.floor(v))))
+    .prefault(0),
+  // 苗喧前期惩罚反抗事件已触发次数（0-2）
+  _苗喧前期反抗已触发: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.min(2, Math.floor(v))))
+    .prefault(0),
+  // 当前是否有未解除的苗喧反抗限制（孝敬师父按钮激活条件之一）
+  _苗喧反抗限制中: z.boolean().prefault(false),
+  // 后期反抗事件未读：null=无，否则为事件名（如 "千晶后苗喧求父"）
+  _苗喧未读反抗事件: z.string().nullable().prefault(null),
+  // 倾诉按钮冷却结束楼层
+  _倾诉冷却结束楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 当前神魂空间角色（按钮点击后的遮罩层选择结果）
+  _当前神魂空间角色: z.enum(['云霜凝', '洛书晴']).prefault('云霜凝'),
+  // 洛书晴独立的道具状态表（与系统.道具状态分开，共用道具各买各的）
+  _洛书晴道具状态: z.record(z.string(), z.enum(['未购买', '已购买', '使用中'])).prefault({}),
+  // 洛书晴安抚符消耗品生效楼层（方式2注入型；阶段3+不再生效）
+  _洛书晴_安抚符生效至: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 洛书晴真心符消耗品生效楼层（方式2注入型；阶段3+不再生效）
+  _洛书晴_真心符生效至: z.coerce
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),

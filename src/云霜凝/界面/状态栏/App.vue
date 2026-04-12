@@ -21,9 +21,7 @@
             寒霜门的禁制已将你永远拒之门外。
           </div>
           <div class="bad-ending-stats">
-            <span
-              >存活 <b>{{ store.data.时间.第几天 }}</b> 天</span
-            >
+            <span>{{ store.data.时间.玄霜历 }}</span>
             <span class="bad-divider">·</span>
             <span
               >治疗完成 <b>{{ store.data.治疗.完成度.toFixed(1) }}%</b></span
@@ -42,18 +40,11 @@
         <!-- 顶栏 -->
         <header class="header">
           <div class="world-info">
-            <span class="info-item"
-              >第 <b>{{ store.data.时间.第几天 }}</b> 天</span
-            >
+            <span class="info-item">{{ store.data.时间.玄霜历 || '玄霜历九百七十三年·霜降月' }}</span>
             <span class="divider">·</span>
-            <span v-if="!hide_time" class="info-item">{{ formatted_time }}</span>
-            <span v-if="!hide_time" class="divider">·</span>
             <span class="info-item ling"
               >灵石 <b class="ling-val">{{ store.data.系统.灵石 }}</b></span
             >
-            <button class="time-toggle" :title="hide_time ? '显示时间' : '隐藏时间'" @click="hide_time = !hide_time">
-              {{ hide_time ? '◷' : '◴' }}
-            </button>
           </div>
           <span class="mode-tag" :class="mode_class">{{ store.data._当前互动模式 }}</span>
         </header>
@@ -78,10 +69,12 @@
         <!-- 神魂空间入口 -->
         <div class="mode-entry">
           <template v-if="store.data._当前互动模式 === '神魂空间'">
-            <button class="mode-btn soul-btn active" @click="exitSoulSpace">⟨ 退出神魂 ⟩</button>
+            <button class="mode-btn soul-btn active" @click="exitSoulSpace">
+              ⟨ 退出{{ store.data._当前神魂空间角色 === '洛书晴' ? '洛书晴神魂' : '神魂' }} ⟩
+            </button>
           </template>
           <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining <= 0">
-            <button class="mode-btn soul-btn" @click="enterSoulSpace">⟨ 进入神魂 ⟩</button>
+            <button class="mode-btn soul-btn" @click="handleEnterSoulClick">⟨ 进入神魂 ⟩</button>
           </template>
           <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining > 0">
             <button class="mode-btn soul-btn locked" disabled>⟨ 监视中({{ freeze_remaining }}楼) ⟩</button>
@@ -90,6 +83,24 @@
             <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
           </template>
         </div>
+
+        <!-- 神魂空间角色选择浮层（洛书晴激活后） -->
+        <Teleport to="body">
+          <div v-if="showSoulPicker" class="soul-picker-mask" @click.self="showSoulPicker = false">
+            <div class="soul-picker-dialog">
+              <div class="soul-picker-title">进入谁的神魂空间？</div>
+              <button class="soul-picker-opt" @click="enterSoulSpaceFor('云霜凝')">
+                <div class="soul-picker-name">云霜凝</div>
+                <div class="soul-picker-sub">霜雪意识空间</div>
+              </button>
+              <button class="soul-picker-opt luo" @click="enterSoulSpaceFor('洛书晴')">
+                <div class="soul-picker-name">洛书晴</div>
+                <div class="soul-picker-sub">闺房意识空间</div>
+              </button>
+              <button class="soul-picker-cancel" @click="showSoulPicker = false">取消</button>
+            </div>
+          </div>
+        </Teleport>
 
         <!-- 标签页 -->
         <nav class="tabs">
@@ -107,7 +118,9 @@
         <!-- 面板内容 -->
         <div v-if="active_tab" class="content-area">
           <YunPanel v-if="active_tab === '云霜凝'" />
+          <LuoPanel v-else-if="active_tab === '洛书晴'" />
           <MiaoPanel v-else-if="active_tab === '苗广'" />
+          <MiaoXuanPanel v-else-if="active_tab === '苗喧'" />
           <ShopPanel v-else-if="active_tab === '商店'" />
         </div>
       </template>
@@ -120,18 +133,27 @@
 <script setup lang="ts">
 import { useDataStore } from './store';
 import YunPanel from './components/YunPanel.vue';
+import LuoPanel from './components/LuoPanel.vue';
 import MiaoPanel from './components/MiaoPanel.vue';
+import MiaoXuanPanel from './components/MiaoXuanPanel.vue';
 import ShopPanel from './components/ShopPanel.vue';
 
 const store = useDataStore();
 
-const tabs = [
-  { id: '云霜凝', label: '云霜凝' },
-  { id: '苗广', label: '苗广' },
-  { id: '商店', label: '商店' },
-];
+const tabs = computed(() => {
+  const base = [
+    { id: '云霜凝', label: '云霜凝' },
+    { id: '苗广', label: '苗广' },
+  ];
+  // 洛书晴激活后：新增洛书晴 + 苗喧 tab
+  if (store.data._洛书晴线已激活) {
+    base.push({ id: '洛书晴', label: '洛书晴' }, { id: '苗喧', label: '苗喧' });
+  }
+  base.push({ id: '商店', label: '商店' });
+  return base;
+});
 const active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', null);
-const hide_time = useLocalStorage<boolean>('云霜凝:status_bar:hide_time', false);
+const showSoulPicker = ref(false);
 
 function toggleTab(id: string) {
   active_tab.value = active_tab.value === id ? null : id;
@@ -139,13 +161,6 @@ function toggleTab(id: string) {
 
 const STAGE_NAMES = ['', '破冰', '初感', '温润', '渐通', '融合', '深化', '贯通', '共鸣', '圆融', '圆满'];
 const stage_name = computed(() => STAGE_NAMES[Math.min(10, Math.max(1, store.data.治疗.阶段))] ?? '');
-
-const formatted_time = computed(() => {
-  const h = store.data.时间.当前小时;
-  const hour = Math.floor(h);
-  const min = Math.round((h - hour) * 60);
-  return `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-});
 
 const freeze_remaining = computed(() => {
   const floor = (window as any).SillyTavern?.chat?.length ?? 0;
@@ -168,16 +183,51 @@ function isLatestMessage(): boolean {
   return currentId === chat.length - 1;
 }
 
-function enterSoulSpace() {
+function handleEnterSoulClick() {
   if (!isLatestMessage()) return;
-  store.pull(); // 从 MVU 拉取最新数据，防止读到已消费的旧事件
+  // 洛书晴线已激活 → 弹角色选择浮层
+  if (store.data._洛书晴线已激活) {
+    showSoulPicker.value = true;
+    return;
+  }
+  // 激活剧情进行中（兜底：理论上此时模式应已是神魂空间）
+  if (store.data._洛书晴激活轮次进度 > 0) {
+    enterSoulSpaceFor('洛书晴');
+    return;
+  }
+  // 新婚夜已触发但激活剧情未开始 → 强制走洛书晴激活
+  // 玩家以为是云霜凝的神魂空间，实际被潜意识拉入洛书晴的闺房意识
+  if (store.data._新婚夜已触发) {
+    enterSoulSpaceFor('洛书晴');
+    return;
+  }
+  // 默认 → 进云霜凝（阶段3+首次会自动触发新婚夜）
+  enterSoulSpaceFor('云霜凝');
+}
+
+function enterSoulSpaceFor(role: '云霜凝' | '洛书晴') {
+  if (!isLatestMessage()) return;
+  showSoulPicker.value = false;
+  store.pull();
+  store.data._当前神魂空间角色 = role;
   store.data._当前互动模式 = '神魂空间';
   store.data._神魂空间激活中 = true;
   const existing = store.data._待发送道具事件;
-  const event = '__神魂空间入口__';
+  // 洛书晴首次进入尚未激活线时触发第一次激活剧情
+  let event = '__神魂空间入口__';
+  if (role === '洛书晴') {
+    if (!store.data._洛书晴线已激活 && store.data._洛书晴激活轮次进度 === 0) {
+      store.data._洛书晴激活轮次进度 = 1;
+      event = '__洛书晴激活剧情_轮1__';
+    } else {
+      event = '__神魂空间入口_洛书晴__';
+    }
+  }
   store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
   store.flush();
 }
+
+// 兼容占位：旧名称 enterSoulSpace 已合并进 handleEnterSoulClick
 
 function exitSoulSpace() {
   if (!isLatestMessage()) return;
@@ -192,6 +242,81 @@ function exitSoulSpace() {
   triggerSlash('/send （退出神魂空间）|/trigger');
 }
 </script>
+
+<style lang="scss">
+// ── 神魂空间角色选择浮层（非 scoped，因 Teleport 到 body） ──
+.soul-picker-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.soul-picker-dialog {
+  min-width: 280px;
+  background: linear-gradient(170deg, #1a0a10 0%, #0c0406 100%);
+  border: 1px solid rgba(192, 48, 80, 0.4);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+.soul-picker-title {
+  color: #ffe8ec;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 14px;
+}
+.soul-picker-opt {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(192, 48, 80, 0.15);
+  border: 1px solid rgba(192, 48, 80, 0.35);
+  border-radius: 6px;
+  color: #ffe8ec;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  &:hover {
+    background: rgba(192, 48, 80, 0.3);
+  }
+  &.luo {
+    background: rgba(211, 108, 134, 0.15);
+    border-color: rgba(211, 108, 134, 0.4);
+    &:hover {
+      background: rgba(211, 108, 134, 0.3);
+    }
+  }
+}
+.soul-picker-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.soul-picker-sub {
+  font-size: 11px;
+  color: #a07080;
+  margin-top: 2px;
+}
+.soul-picker-cancel {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid rgba(160, 112, 128, 0.3);
+  color: #a07080;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 4px;
+  &:hover {
+    color: #ffe8ec;
+  }
+}
+</style>
 
 <style lang="scss" scoped>
 // ── 色彩系统（绛红主题） ──
@@ -352,30 +477,6 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   color: $c-ice;
   font-size: 0.6em;
 }
-.time-toggle {
-  background: none;
-  border: 1px solid rgba($c-ice, 0.15);
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  color: $c-sub;
-  cursor: pointer;
-  padding: 0;
-  margin-left: 2px;
-  transition: all 0.2s;
-  font-family: $font-main;
-
-  &:hover {
-    color: $c-frost;
-    border-color: rgba($c-ice, 0.35);
-    background: rgba($c-ice, 0.08);
-  }
-}
-
 .mode-tag {
   font-size: 0.75rem;
   font-weight: bold;
