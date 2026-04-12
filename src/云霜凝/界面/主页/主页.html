@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>云霜凝 · 主页</title>
+  <style>
+    :root {
+      --bg: #0c0406;
+      --bg2: #1a0a10;
+      --bg3: #0c0a1e;
+      --ice: #c03050;
+      --ice-dim: #8a2038;
+      --acc: #ff6080;
+      --frost: #ffd0d8;
+      --text: #ffe8ec;
+      --sub: #a07080;
+      --gold: #e8be58;
+      --good: #40c880;
+      --font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background: linear-gradient(170deg, var(--bg) 0%, var(--bg3) 30%, var(--bg2) 60%, #060205 100%);
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 15% -5%, rgba(192, 48, 80, 0.15), transparent 50%),
+        radial-gradient(ellipse at 85% 105%, rgba(138, 32, 56, 0.10), transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(255, 96, 128, 0.02), transparent 70%);
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(192, 48, 80, 0.018) 20px, rgba(192, 48, 80, 0.018) 21px),
+        repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(192, 48, 80, 0.012) 20px, rgba(192, 48, 80, 0.012) 21px);
+    }
+
+    .page {
+      position: relative;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    /* ============ Header ============ */
+    header {
+      text-align: center;
+      padding: 24px 16px 32px;
+      border-bottom: 1px solid rgba(192, 48, 80, 0.18);
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -1px;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 2%, var(--ice-dim) 20%, var(--acc) 50%, var(--ice-dim) 80%, transparent 98%);
+      box-shadow: 0 0 8px rgba(255, 96, 128, 0.4);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: 6px;
+      color: var(--frost);
+      text-shadow: 0 0 12px rgba(255, 96, 128, 0.35), 0 0 24px rgba(192, 48, 80, 0.15);
+    }
+
+    .subtitle {
+      margin: 0 0 6px;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: var(--ice);
+      text-shadow: 0 0 6px rgba(192, 48, 80, 0.25);
+    }
+
+    .version {
+      margin: 8px 0 0;
+      font-size: 11px;
+      color: var(--sub);
+      letter-spacing: 2px;
+    }
+
+    /* ============ Section ============ */
+    section {
+      margin-bottom: 32px;
+      background: linear-gradient(180deg, rgba(192, 48, 80, 0.04) 0%, rgba(192, 48, 80, 0.01) 100%);
+      border: 1px solid rgba(192, 48, 80, 0.18);
+      border-radius: 10px;
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(192, 48, 80, 0.04),
+        inset 0 1px 0 rgba(255, 208, 216, 0.05);
+      padding: 20px 22px;
+    }
+
+    section h2 {
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--acc);
+      letter-spacing: 3px;
+      text-shadow: 0 0 6px rgba(255, 96, 128, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    section h2::before,
+    section h2::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(192, 48, 80, 0.4), transparent);
+    }
+
+    /* ============ Intro Info Rows ============ */
+    .info-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      transition: background-color 0.3s;
+    }
+
+    .info-row:hover {
+      background: rgba(192, 48, 80, 0.06);
+    }
+
+    .info-label {
+      flex: 0 0 96px;
+      color: var(--sub);
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .info-value {
+      flex: 1;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .info-row.highlight {
+      background: linear-gradient(135deg, rgba(232, 190, 88, 0.06) 0%, rgba(232, 190, 88, 0.02) 100%);
+      border: 1px solid rgba(232, 190, 88, 0.18);
+      margin-top: 8px;
+    }
+
+    .info-row.highlight .info-label {
+      color: var(--gold);
+      text-shadow: 0 0 6px rgba(232, 190, 88, 0.2);
+    }
+
+    .info-row.highlight .info-value {
+      color: var(--frost);
+    }
+
+    /* ============ Entry Cards ============ */
+    .entry-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .entry-card {
+      display: flex;
+      gap: 16px;
+      padding: 16px 18px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(192, 48, 80, 0.18);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.4s, box-shadow 0.4s, transform 0.2s;
+      box-shadow: inset 0 1px 0 rgba(255, 208, 216, 0.04);
+    }
+
+    .entry-card:hover {
+      border-color: rgba(255, 96, 128, 0.5);
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.4),
+        0 0 16px rgba(255, 96, 128, 0.18),
+        0 0 32px rgba(192, 48, 80, 0.08),
+        inset 0 1px 0 rgba(255, 208, 216, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .entry-card:active {
+      transform: translateY(0);
+    }
+
+    .entry-num {
+      flex: 0 0 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(192, 48, 80, 0.25) 0%, rgba(138, 32, 56, 0.15) 100%);
+      border: 1px solid rgba(192, 48, 80, 0.4);
+      border-radius: 50%;
+      color: var(--frost);
+      font-size: 16px;
+      font-weight: 600;
+      text-shadow: 0 0 6px rgba(255, 96, 128, 0.3);
+    }
+
+    .entry-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .entry-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--frost);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .entry-tag {
+      display: inline-block;
+      padding: 1px 8px;
+      font-size: 10px;
+      font-weight: normal;
+      letter-spacing: 1px;
+      border-radius: 10px;
+      border: 1px solid;
+    }
+
+    .tag-start {
+      color: var(--good);
+      border-color: rgba(64, 200, 128, 0.4);
+      background: rgba(64, 200, 128, 0.08);
+    }
+
+    .tag-mid {
+      color: var(--ice);
+      border-color: rgba(192, 48, 80, 0.4);
+      background: rgba(192, 48, 80, 0.08);
+    }
+
+    .tag-deep {
+      color: var(--acc);
+      border-color: rgba(255, 96, 128, 0.4);
+      background: rgba(255, 96, 128, 0.08);
+    }
+
+    .tag-end {
+      color: var(--gold);
+      border-color: rgba(232, 190, 88, 0.4);
+      background: rgba(232, 190, 88, 0.08);
+    }
+
+    .entry-desc {
+      font-size: 12.5px;
+      color: var(--text);
+      line-height: 1.7;
+      margin-bottom: 8px;
+      opacity: 0.92;
+    }
+
+    .entry-meta {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--sub);
+      letter-spacing: 0.5px;
+    }
+
+    .entry-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* ============ Footer ============ */
+    footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--sub);
+      letter-spacing: 2px;
+      opacity: 0.7;
+      padding: 12px;
+      border-top: 1px dashed rgba(192, 48, 80, 0.12);
+    }
+
+    /* ============ Responsive ============ */
+    @media (max-width: 480px) {
+      .page { padding: 20px 14px 32px; }
+      h1 { font-size: 28px; letter-spacing: 4px; }
+      section { padding: 16px; }
+      .info-label { flex-basis: 78px; font-size: 12px; }
+      .info-value { font-size: 12px; }
+      .entry-card { padding: 14px; gap: 12px; }
+      .entry-num { flex-basis: 32px; height: 32px; font-size: 14px; }
+      .entry-title { font-size: 14px; }
+      .entry-desc { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>云霜凝</h1>
+      <p class="subtitle">寒霜羽化 · 神魂相伴</p>
+      <p class="version">v 0.1</p>
+    </header>
+
+    <section class="intro">
+      <h2>故事简介</h2>
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="info-label">主角</span>
+          <span class="info-value">{{user}}（苏斌）· 圣阳之体的现代少年，意外坠入修真界</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">背景</span>
+          <span class="info-value">寒霜门掌门云霜凝冲击地仙境时身中地劫寒毒，神魂沉睡。其夫苗广寻得圣阳之体的{{user}}前来神魂相伴，名为治疗，实为漫长棋局的开端。</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">主题</span>
+          <span class="info-value">治疗与堕落的多线博弈：信任、心防、神魂、千晶幻术、现实初遇、绿帽宣告、终局改嫁——每一步都通向不同的结局。</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">视角</span>
+          <span class="info-value">云霜凝主视角的细腻第三人称叙事，用她的感知与心绪折射{{user}}与苗广。</span>
+        </div>
+        <div class="info-row highlight">
+          <span class="info-label">机制提示</span>
+          <span class="info-value">苗广绿帽值触发方式：苗广心态进入「察觉」时，先在前一楼层使用「隔音灵阵」，再在后续楼层使用「蚀心露」即可触发屈辱→默许的转换。注意：隔音灵阵必须先单独使用，不能与蚀心露在同一楼层同时使用。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="entries">
+      <h2>选择入口</h2>
+      <div class="entry-grid">
+        <div class="entry-card" onclick="selectEntry(1)">
+          <div class="entry-num">1</div>
+          <div class="entry-content">
+            <div class="entry-title">寒毒发作 <span class="entry-tag tag-start">起点</span></div>
+            <div class="entry-desc">月前冲击地仙境时被地劫寒毒侵入神魂，寒霜门掌门云霜凝沉睡于凝心居。苗广寻得圣阳之体的{{user}}，将他带至榻前。一切的开始。</div>
+            <div class="entry-meta">
+              <span>📅 玄霜历九百七十三年·霜降月</span>
+              <span>📍 寒霜门 · 凝心居</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="entry-card" onclick="selectEntry(2)">
+          <div class="entry-num">2</div>
+          <div class="entry-content">
+            <div class="entry-title">现实初涉 <span class="entry-tag tag-mid">阶段三</span></div>
+            <div class="entry-desc">数月治疗已见微效，云霜凝信任渐生，地仙境的封禁有了一丝松动。她在凝心居中第一次能短暂坐起，与{{user}}的现实接触刚刚开始——但神魂深处那扇门，尚未推开。</div>
+            <div class="entry-meta">
+              <span>📅 玄霜历九百七十三年·小雪月</span>
+              <span>📍 寒霜门 · 凝心居</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="entry-card" onclick="selectEntry(3)">
+          <div class="entry-num">3</div>
+          <div class="entry-content">
+            <div class="entry-title">神魂初度 <span class="entry-tag tag-mid">阶段三</span></div>
+            <div class="entry-desc">神魂空间的新婚之夜已成往事，云霜凝的身心皆有动摇。她第一次发现，那道清澈疏离的神识里，藏着不只属于她一人的回响——再次踏入神魂时，命运将就此分岔。</div>
+            <div class="entry-meta">
+              <span>📅 玄霜历九百七十三年·大雪月</span>
+              <span>📍 寒霜门 · 凝心居</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="entry-card" onclick="selectEntry(4)">
+          <div class="entry-num">4</div>
+          <div class="entry-content">
+            <div class="entry-title">千晶授艺 <span class="entry-tag tag-deep">阶段七</span></div>
+            <div class="entry-desc">寝取宣告已落，蚀心露翻覆苗广心防，洛书晴亦已被{{user}}牵入这条路。阶段七的云霜凝深陷其中，千晶幻术的禁术已被默许传授，只待{{user}}首次施展。</div>
+            <div class="entry-meta">
+              <span>📅 玄霜历九百七十四年·初春月</span>
+              <span>📍 寒霜门 · 主殿外院</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="entry-card" onclick="selectEntry(5)">
+          <div class="entry-num">5</div>
+          <div class="entry-content">
+            <div class="entry-title">改嫁前夕 <span class="entry-tag tag-end">终局</span></div>
+            <div class="entry-desc">一切都将走向尽头。云霜凝信任近满、心防几近瓦解，洛书晴与她并肩站在同一阶。苗广在认知改写中沉溺如奴，掌门改嫁的盛大典礼已在筹备——{{user}}站在所有可能的最后一刻。</div>
+            <div class="entry-meta">
+              <span>📅 玄霜历九百七十四年·暖阳月</span>
+              <span>📍 寒霜门 · 主殿</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      选择入口后将进入对应剧情，无法返回主页
+    </footer>
+  </div>
+
+  <script>
+    async function selectEntry(swipeId) {
+      try {
+        const messages = await getChatMessages('0', { include_swipe: true });
+        if (!messages || !messages[0] || !messages[0].swipes) {
+          alert('未能获取开场白列表，请确认聊天处于初始状态。');
+          return;
+        }
+        const target = messages[0].swipes[swipeId];
+        if (target === undefined) {
+          alert('入口 ' + swipeId + ' 未找到。请确认所有 ' + (messages[0].swipes.length) + ' 个开场白都已添加。');
+          return;
+        }
+        await setChatMessage(target, 0, {
+          swipe_id: swipeId,
+          refresh: 'display_and_render_current',
+        });
+      } catch (e) {
+        console.error('[云霜凝主页] 切换入口失败:', e);
+        alert('切换失败：' + (e && e.message ? e.message : String(e)));
+      }
+    }
+  </script>
+</body>
+</html>
