@@ -1,37 +1,29 @@
 <template>
   <div class="luo-panel">
-    <!-- 核心数值 -->
+    <!-- 心理状态 -->
     <div class="card">
-      <div class="section-title">
+      <div class="section-title sec-mental">
         <span class="decor-line"></span><span>洛书晴 · 第{{ store.data.洛书晴.调教阶段 }}阶</span
         ><span class="decor-line"></span>
       </div>
-
-      <div class="stat-row">
-        <span class="stat-label">心理防线</span>
-        <div class="stat-track">
-          <div class="stat-fill def" :style="{ width: store.data.洛书晴.心理防线 + '%' }"></div>
+      <div class="stat-list">
+        <div class="stat-row">
+          <span class="stat-lbl lbl-defense">心理防线</span>
+          <div class="track"><div class="fill defense" :style="{ width: store.data.洛书晴.心理防线 + '%' }"></div></div>
+          <span class="stat-num num-defense">{{ store.data.洛书晴.心理防线 }}</span>
         </div>
-        <span class="stat-val">{{ store.data.洛书晴.心理防线 }}</span>
-      </div>
-
-      <div class="stat-row">
-        <span class="stat-label">顺从度</span>
-        <div class="stat-track">
-          <div class="stat-fill obey" :style="{ width: store.data.洛书晴.顺从度 + '%' }"></div>
+        <div class="stat-row">
+          <span class="stat-lbl lbl-obey">顺从度</span>
+          <div class="track"><div class="fill obey" :style="{ width: store.data.洛书晴.顺从度 + '%' }"></div></div>
+          <span class="stat-num num-obey">{{ store.data.洛书晴.顺从度 }}</span>
         </div>
-        <span class="stat-val">{{ store.data.洛书晴.顺从度 }}</span>
       </div>
-
-      <!-- 卡关提示 -->
-      <div v-if="stuckHint" class="stuck-hint">
-        {{ stuckHint }}
-      </div>
+      <div v-if="stuckHint" class="stuck-hint">{{ stuckHint }}</div>
     </div>
 
     <!-- 身体开发 -->
     <div class="card">
-      <div class="section-title">
+      <div class="section-title sec-body">
         <span class="decor-line"></span><span>身体开发</span><span class="decor-line"></span>
       </div>
       <div class="body-grid">
@@ -50,61 +42,90 @@
 
     <!-- 服装（阶段3+解锁） -->
     <div v-if="store.data.洛书晴.调教阶段 >= 3" class="card">
-      <div class="section-title"><span class="decor-line"></span><span>服装</span><span class="decor-line"></span></div>
+      <div class="section-title sec-attire">
+        <span class="decor-line"></span><span>外观</span><span class="decor-line"></span>
+      </div>
       <div class="attire-grid">
         <div class="attire-item">
-          <span class="a-slot">上装</span><span class="a-val">{{ store.data.洛书晴.服装.上装 }}</span>
+          <span class="a-slot">上装</span>
+          <span class="a-val">{{ store.data.洛书晴.服装.上装 }}</span>
         </div>
         <div class="attire-item">
-          <span class="a-slot">下装</span><span class="a-val">{{ store.data.洛书晴.服装.下装 }}</span>
+          <span class="a-slot">下装</span>
+          <span class="a-val">{{ store.data.洛书晴.服装.下装 }}</span>
         </div>
         <div class="attire-item">
-          <span class="a-slot">内衣</span><span class="a-val">{{ store.data.洛书晴.服装.内衣 }}</span>
+          <span class="a-slot">内衣</span>
+          <span class="a-val">{{ store.data.洛书晴.服装.内衣 }}</span>
         </div>
         <div class="attire-item">
-          <span class="a-slot">内裤</span><span class="a-val">{{ store.data.洛书晴.服装.内裤 }}</span>
+          <span class="a-slot">内裤</span>
+          <span class="a-val">{{ store.data.洛书晴.服装.内裤 }}</span>
         </div>
-        <div class="attire-item">
-          <span class="a-slot">特殊配饰</span><span class="a-val">{{ accessoryDisplay || '无' }}</span>
+        <div class="attire-item attire-accessory">
+          <span class="a-slot">特殊配饰</span>
+          <span class="a-val">{{ accessoryDisplay || '无' }}</span>
         </div>
       </div>
     </div>
 
     <!-- 肉体改造（有才显示） -->
-    <div v-if="hasBodyMods" class="card">
-      <div class="section-title">
-        <span class="decor-line"></span><span>肉体改造</span><span class="decor-line"></span>
+    <template v-if="hasBodyMods">
+      <div class="card">
+        <div class="section-title sec-mod">
+          <span class="decor-line"></span><span>肉体改造</span><span class="decor-line"></span>
+        </div>
+        <div class="tag-grid">
+          <div v-if="store.data.洛书晴.肉体改造.胸部 !== '默认'" class="mod-tag">
+            <span class="mod-label">胸部</span>
+            <span class="mod-value">{{ store.data.洛书晴.肉体改造.胸部 }}</span>
+          </div>
+          <div v-if="store.data.洛书晴.肉体改造.臀部 !== '默认'" class="mod-tag">
+            <span class="mod-label">臀部</span>
+            <span class="mod-value">丰满</span>
+          </div>
+          <div v-if="store.data.洛书晴.肉体改造.乳环" class="mod-tag">
+            <span class="mod-label">乳环</span>
+            <span class="mod-value">已穿环</span>
+          </div>
+          <div v-if="store.data.洛书晴.肉体改造.阴环" class="mod-tag">
+            <span class="mod-label">阴环</span>
+            <span class="mod-value">已穿环</span>
+          </div>
+          <div v-if="yinwenDisplay" class="mod-tag">
+            <span class="mod-label">淫纹</span>
+            <span class="mod-value">{{ yinwenDisplay }}</span>
+          </div>
+        </div>
       </div>
-      <div class="tag-grid">
-        <div v-if="store.data.洛书晴.肉体改造.胸部 !== '默认'" class="mod-tag">
-          <span class="mod-label">胸部</span><span class="mod-value">{{ store.data.洛书晴.肉体改造.胸部 }}</span>
+    </template>
+
+    <!-- 性癖（有才显示） -->
+    <template v-if="!_.isEmpty(store.data.洛书晴.性癖列表)">
+      <div class="card">
+        <div class="section-title sec-kink">
+          <span class="decor-line"></span><span>性癖档案</span><span class="decor-line"></span>
         </div>
-        <div v-if="store.data.洛书晴.肉体改造.臀部 !== '默认'" class="mod-tag">
-          <span class="mod-label">臀部</span><span class="mod-value">丰满</span>
-        </div>
-        <div v-if="store.data.洛书晴.肉体改造.乳环" class="mod-tag">
-          <span class="mod-label">乳环</span><span class="mod-value">已穿环</span>
-        </div>
-        <div v-if="store.data.洛书晴.肉体改造.阴环" class="mod-tag">
-          <span class="mod-label">阴环</span><span class="mod-value">已穿环</span>
-        </div>
-        <div v-if="yinwenDisplay" class="mod-tag">
-          <span class="mod-label">淫纹</span><span class="mod-value">{{ yinwenDisplay }}</span>
+        <div class="kink-wrap">
+          <span v-for="(_tag, name) in store.data.洛书晴.性癖列表" :key="name" class="kink-chip">{{ name }}</span>
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- 心理活动 -->
-    <div v-if="store.data.洛书晴.心理活动" class="card">
-      <div class="section-title">
-        <span class="decor-line"></span><span>心理活动</span><span class="decor-line"></span>
+    <template v-if="store.data.洛书晴.心理活动">
+      <div class="card">
+        <div class="section-title sec-thought">
+          <span class="decor-line"></span><span>心理活动</span><span class="decor-line"></span>
+        </div>
+        <div class="thought-box">{{ store.data.洛书晴.心理活动 }}</div>
       </div>
-      <div class="thought">{{ store.data.洛书晴.心理活动 }}</div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import _ from 'lodash';
 import { computed } from 'vue';
 import { useDataStore } from '../store';
 
@@ -148,7 +169,6 @@ const hasBodyMods = computed(() => {
   );
 });
 
-/** 阶段边界表（与 stateValidation.getLuoStageBound 保持同步） */
 const STAGE_BOUNDS: Record<number, { 防线下限: number; 顺从上限: number }> = {
   1: { 防线下限: 90, 顺从上限: 10 },
   2: { 防线下限: 80, 顺从上限: 20 },
@@ -176,14 +196,18 @@ const stuckHint = computed(() => {
 </script>
 
 <style lang="scss" scoped>
-// ── 色彩系统（洛书晴·粉紫主题，对齐云霜凝面板结构但保持色调区分）──
+// ── 色彩系统（粉紫主题，结构参数与云霜凝面板保持完全一致） ──
 $c-bg: #0c0406;
 $c-pri: #d36c86;
 $c-pri-d: #8a3c50;
 $c-acc: #ff8fa8;
-$c-frost: #ffd0d8;
+$c-frost: #ffe0e8;
 $c-text: #ffe8ec;
 $c-sub: #a07080;
+$c-good: #40c880;
+$c-gold: #e8be58;
+$c-warn: #d4b030;
+$c-danger: #e05050;
 
 .luo-panel {
   display: flex;
@@ -191,7 +215,7 @@ $c-sub: #a07080;
   gap: 10px;
 }
 
-// ── 卡片容器（对齐云霜凝面板风格）──
+// ── 卡片容器 ──
 .card {
   background: linear-gradient(135deg, rgba($c-pri, 0.07) 0%, rgba($c-bg, 0.5) 100%);
   border: 1px solid rgba($c-pri, 0.15);
@@ -224,7 +248,7 @@ $c-sub: #a07080;
   align-items: center;
   gap: 10px;
   font-size: 0.82rem;
-  color: rgba($c-pri, 0.85);
+  color: $c-sub;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -236,75 +260,83 @@ $c-sub: #a07080;
   background: linear-gradient(90deg, transparent, rgba($c-pri, 0.3), transparent);
 }
 
-// ── 核心数值进度条 ──
+.sec-mental {
+  color: rgba($c-acc, 0.85);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba($c-acc, 0.3), transparent);
+  }
+}
+.sec-body {
+  color: rgba(#d09060, 0.9);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba(#d09060, 0.3), transparent);
+  }
+}
+.sec-attire {
+  color: rgba(#80b0d8, 0.9);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba(#80b0d8, 0.3), transparent);
+  }
+}
+.sec-mod {
+  color: rgba($c-danger, 0.8);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba($c-danger, 0.3), transparent);
+  }
+}
+.sec-kink {
+  color: rgba(#d060a0, 0.85);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba(#d060a0, 0.3), transparent);
+  }
+}
+.sec-thought {
+  color: rgba($c-frost, 0.75);
+  .decor-line {
+    background: linear-gradient(90deg, transparent, rgba($c-frost, 0.25), transparent);
+  }
+}
+
+// ── 进度条通用 ──
+.stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .stat-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 6px 0;
-  font-size: 0.75rem;
 }
-.stat-label {
+.stat-lbl {
   width: 60px;
-  color: $c-sub;
-  letter-spacing: 0.05em;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
-.stat-track {
-  flex: 1;
-  height: 8px;
-  background: rgba($c-pri-d, 0.2);
-  border-radius: 4px;
-  overflow: hidden;
+.lbl-defense {
+  color: rgba($c-acc, 0.75);
 }
-.stat-fill {
-  height: 100%;
-  transition: width 0.5s;
-  border-radius: 4px;
-  &.def {
-    background: linear-gradient(to right, $c-pri-d, $c-pri);
-  }
-  &.obey {
-    background: linear-gradient(to right, #e8be58, $c-acc);
-  }
+.lbl-obey {
+  color: rgba($c-gold, 0.8);
 }
-.stat-val {
+.stat-num {
   width: 32px;
   text-align: right;
-  color: $c-text;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.num-defense {
+  color: $c-frost;
+  text-shadow: 0 0 8px rgba($c-acc, 0.2);
+}
+.num-obey {
+  color: lighten($c-gold, 10%);
+  text-shadow: 0 0 8px rgba($c-gold, 0.25);
 }
 
-.stuck-hint {
-  margin-top: 8px;
-  padding: 6px 8px;
-  background: rgba(232, 190, 88, 0.1);
-  border-left: 2px solid #e8be58;
-  color: #e8be58;
-  font-size: 0.7rem;
-  border-radius: 3px;
-}
-
-// ── 身体开发（横向进度条 + Lv 徽章，对齐云霜凝面板）──
-.body-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.body-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: rgba($c-pri, 0.04);
-  border-radius: 6px;
-}
-.body-lbl {
-  width: 28px;
-  font-size: 0.75rem;
-  color: rgba($c-pri, 0.9);
-  flex-shrink: 0;
-  font-weight: 600;
-}
 .track {
   flex: 1;
   height: 8px;
@@ -315,70 +347,159 @@ $c-sub: #a07080;
   position: relative;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.fill.body {
+.fill {
   height: 100%;
-  background: linear-gradient(to right, $c-pri-d, $c-pri, $c-acc);
-  transition: width 0.5s;
+  border-radius: 5px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(#fff, 0.2) 0%, rgba(#fff, 0.05) 40%, transparent 60%);
+    border-radius: 5px;
+  }
+
+  &.defense {
+    background: linear-gradient(90deg, $c-pri-d, $c-pri, $c-acc);
+    box-shadow: 0 0 10px rgba($c-pri, 0.35);
+  }
+  &.obey {
+    background: linear-gradient(90deg, darken($c-gold, 10%), $c-gold, $c-acc);
+    box-shadow: 0 0 10px rgba($c-gold, 0.3);
+  }
+  &.body {
+    background: linear-gradient(90deg, darken(#d09060, 10%), #d09060);
+    box-shadow: 0 0 8px rgba(#d09060, 0.25);
+  }
+}
+
+.stuck-hint {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba($c-gold, 0.08);
+  border-left: 2px solid rgba($c-gold, 0.5);
+  color: rgba($c-gold, 0.85);
+  font-size: 0.76rem;
   border-radius: 4px;
+  line-height: 1.6;
+}
+
+// ── 身体开发 ──
+.body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.body-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(#d09060, 0.03);
+  border-radius: 6px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(#d09060, 0.06);
+  }
+}
+.body-lbl {
+  width: 28px;
+  font-size: 0.84rem;
+  color: rgba(#d09060, 0.9);
+  flex-shrink: 0;
+  font-weight: 600;
 }
 .body-num {
   width: 24px;
   text-align: right;
-  font-size: 0.72rem;
-  color: rgba($c-frost, 0.7);
+  font-size: 0.8rem;
+  color: rgba(#d09060, 0.7);
   font-variant-numeric: tabular-nums;
 }
 .lv-badge {
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 900;
   padding: 1px 5px;
   border-radius: 4px;
   letter-spacing: 0.5px;
   white-space: nowrap;
+
   &.lv0 {
-    color: rgba($c-sub, 0.5);
+    color: rgba($c-sub, 0.45);
   }
   &.lv1 {
-    color: #c0a0b0;
-    background: rgba(#c0a0b0, 0.1);
-    border: 1px solid rgba(#c0a0b0, 0.2);
+    color: $c-warn;
+    background: rgba($c-warn, 0.1);
+    border: 1px solid rgba($c-warn, 0.15);
   }
   &.lv2 {
-    color: $c-pri;
-    background: rgba($c-pri, 0.1);
-    border: 1px solid rgba($c-pri, 0.2);
+    color: #d08030;
+    background: rgba(#d08030, 0.1);
+    border: 1px solid rgba(#d08030, 0.15);
   }
   &.lv3 {
-    color: $c-acc;
-    background: rgba($c-acc, 0.12);
-    border: 1px solid rgba($c-acc, 0.25);
-    box-shadow: 0 0 4px rgba($c-acc, 0.12);
+    color: #d05040;
+    background: rgba(#d05040, 0.1);
+    border: 1px solid rgba(#d05040, 0.15);
+    box-shadow: 0 0 4px rgba(#d05040, 0.1);
   }
   &.lv4 {
-    color: $c-frost;
-    background: rgba($c-frost, 0.14);
-    border: 1px solid rgba($c-frost, 0.3);
-    box-shadow: 0 0 6px rgba($c-frost, 0.2);
+    color: $c-danger;
+    background: rgba($c-danger, 0.12);
+    border: 1px solid rgba($c-danger, 0.2);
+    box-shadow: 0 0 6px rgba($c-danger, 0.15);
+    animation: lvPulse 2s ease-in-out infinite;
+  }
+}
+@keyframes lvPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba($c-danger, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba($c-danger, 0.25);
   }
 }
 
-// ── 服装槽 ──
+// ── 服装/外观 ──
 .attire-grid {
   display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
 .attire-item {
-  display: flex;
-  font-size: 0.75rem;
-  .a-slot {
-    width: 64px;
-    color: $c-sub;
-    letter-spacing: 0.05em;
+  background: linear-gradient(135deg, rgba(#80b0d8, 0.08) 0%, rgba($c-bg, 0.35) 100%);
+  border: 1px solid rgba(#80b0d8, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(#80b0d8, 0.25);
+    background: linear-gradient(135deg, rgba(#80b0d8, 0.09) 0%, rgba($c-bg, 0.3) 100%);
   }
-  .a-val {
-    flex: 1;
-    color: $c-text;
-  }
+}
+.attire-accessory {
+  grid-column: 1 / -1;
+}
+.a-slot {
+  display: block;
+  font-size: 0.68rem;
+  color: rgba(#80b0d8, 0.65);
+  margin-bottom: 4px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.a-val {
+  color: #c8e0f8;
+  font-weight: bold;
+  font-size: 0.9rem;
 }
 
 // ── 肉体改造标签 ──
@@ -388,30 +509,94 @@ $c-sub: #a07080;
   gap: 6px;
 }
 .mod-tag {
-  background: rgba($c-pri, 0.15);
-  border: 1px solid rgba($c-pri, 0.3);
-  border-radius: 6px;
-  padding: 5px 10px;
-  font-size: 0.7rem;
-  .mod-label {
-    color: $c-sub;
-    margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, rgba($c-danger, 0.1) 0%, rgba($c-danger, 0.03) 100%);
+  border: 1px solid rgba($c-danger, 0.2);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba($c-danger, 0.3);
+    background: linear-gradient(135deg, rgba($c-danger, 0.12) 0%, rgba($c-danger, 0.04) 100%);
   }
-  .mod-value {
-    color: $c-pri;
-    font-weight: 600;
+}
+.mod-label {
+  color: rgba($c-danger, 0.7);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.3px;
+}
+.mod-value {
+  color: rgba(#e0a0c0, 0.9);
+  font-weight: bold;
+}
+
+// ── 性癖标签 ──
+.kink-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kink-chip {
+  display: inline-block;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, rgba(#d060a0, 0.12) 0%, rgba(#d060a0, 0.04) 100%);
+  border: 1px solid rgba(#d060a0, 0.22);
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: #e8b0d0;
+  text-shadow: 0 0 6px rgba(#d060a0, 0.1);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(#d060a0, 0.35);
+    background: linear-gradient(135deg, rgba(#d060a0, 0.15) 0%, rgba(#d060a0, 0.05) 100%);
+    box-shadow: 0 0 8px rgba(#d060a0, 0.1);
   }
 }
 
 // ── 心理活动 ──
-.thought {
-  padding: 10px 12px;
-  background: rgba($c-pri-d, 0.15);
-  border-radius: 6px;
-  color: $c-text;
-  font-size: 0.78rem;
+.thought-box {
+  background: linear-gradient(135deg, rgba($c-pri, 0.08) 0%, rgba($c-bg, 0.4) 100%);
+  border: 1px solid rgba($c-acc, 0.15);
+  border-left: 3px solid rgba($c-acc, 0.4);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.88rem;
   line-height: 1.7;
+  color: rgba($c-frost, 0.9);
   font-style: italic;
-  border-left: 2px solid rgba($c-pri, 0.35);
+  white-space: pre-wrap;
+  backdrop-filter: blur(4px);
+  position: relative;
+
+  &::before {
+    content: '"';
+    position: absolute;
+    top: 4px;
+    left: 10px;
+    font-size: 1.8rem;
+    color: rgba($c-acc, 0.12);
+    font-family: Georgia, serif;
+    line-height: 1;
+  }
+}
+
+// ── 响应式 ──
+@media (max-width: 480px) {
+  .body-grid {
+    grid-template-columns: 1fr;
+  }
+  .attire-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .attire-accessory {
+    grid-column: 1 / -1;
+  }
 }
 </style>
