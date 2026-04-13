@@ -161,7 +161,7 @@
       </button>
     </Transition>
 
-    <!-- 共用道具目标选择浮层 -->
+    <!-- 共用道具目标选择浮层（批量模式用：消耗品/特殊场景） -->
     <Transition name="fade">
       <div v-if="showTargetDialog" class="target-dialog-mask" @click.self="showTargetDialog = false">
         <div class="target-dialog">
@@ -175,6 +175,28 @@
             <button class="target-btn tb-luo" @click="pickTarget('洛书晴')">洛书晴</button>
           </div>
           <button class="target-dialog-cancel" @click="showTargetDialog = false">取消</button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 装备/体改/性癖 即时操作浮层（Phase 2 新流程） -->
+    <Transition name="fade">
+      <div v-if="showEquipDialog" class="target-dialog-mask" @click.self="showEquipDialog = false">
+        <div class="target-dialog">
+          <div class="target-dialog-title">{{ equipDialogItem?.name }}</div>
+          <div class="target-dialog-desc">{{ equipDialogDesc }}</div>
+          <div class="target-dialog-btns equip-dialog-btns">
+            <button
+              v-for="(opt, i) in equipDialogActions"
+              :key="i"
+              class="target-btn"
+              :class="equipOptClass(opt)"
+              @click="pickEquipAction(opt)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <button class="target-dialog-cancel" @click="showEquipDialog = false">取消</button>
         </div>
       </div>
     </Transition>
@@ -1474,8 +1496,6 @@ function handleClick(item: ItemDef) {
     return;
   }
 
-  const state = store.data.系统.道具状态[item.name];
-
   if (!isUnlocked(item)) {
     showToast(`未解锁（${item.unlockDesc}）`, 'err');
     return;
@@ -1494,24 +1514,26 @@ function handleClick(item: ItemDef) {
     return;
   }
 
-  if (item.type === '性癖' && isAlreadyOwned(item.name)) {
-    if (state === '使用中') {
-      const kink = KINK_EFFECTS[item.name];
-      if (kink) {
-        delete store.data.云霜凝.性癖列表[kink.name];
+  // ── Phase 2 新流程：装备/体改/性癖 走即时 dialog ──
+  // （消耗品/特殊场景/淫纹刻印 保留批量 checkedItems 流程）
+  if (isImmediateFlowItem(item)) {
+    const purchased = !!store.data.系统.道具状态[item.name];
+    // 未购买：先买（扣灵石），购买成功后自动弹 dialog
+    if (!purchased) {
+      if (store.data.系统.灵石 < item.price) {
+        showToast(`灵石不足（需 ${item.price}，现有 ${store.data.系统.灵石}）`, 'err');
+        return;
       }
+      store.data.系统.灵石 -= item.price;
       store.data.系统.道具状态[item.name] = '已购买';
-      showToast(`已卸下「${item.name}」`, 'info');
-    } else {
-      showToast(`「${item.name}」已拥有`, 'info');
+      showToast(`已购买「${item.name}」`, 'ok');
     }
+    // 已购买 / 刚买完 → 弹装备 dialog 让玩家选 target
+    openEquipDialog(item);
     return;
   }
 
-  if (item.type === '体改' && isAlreadyOwned(item.name)) {
-    showToast(`「${item.name}」已拥有`, 'info');
-    return;
-  }
+  const state = store.data.系统.道具状态[item.name];
 
   // 消耗品冷却检查（阻止购买+使用）
   if (CONSUMABLE_NAMES.has(item.name)) {
@@ -1872,6 +1894,309 @@ function isAlreadyOwned(name: string): boolean {
 /** 任一角色已装备（服装/身体器具） */
 function isEitherUsing(name: string): boolean {
   return isYunUsing(name) || isLuoUsing(name);
+}
+
+// ════════════════════════════════════════════
+// Phase 2: 即时装备/卸下 dialog 系统
+// ════════════════════════════════════════════
+
+interface EquipDialogAction {
+  label: string;
+  target: '云霜凝' | '洛书晴';
+  action: 'equip' | 'unequip';
+}
+
+const showEquipDialog = ref(false);
+const equipDialogItem = ref<ItemDef | null>(null);
+const equipDialogActions = ref<EquipDialogAction[]>([]);
+const equipDialogDesc = ref('');
+
+function equipOptClass(opt: EquipDialogAction): Record<string, boolean> {
+  return {
+    'tb-yun': opt.target === '云霜凝' && opt.action === 'equip',
+    'tb-luo': opt.target === '洛书晴' && opt.action === 'equip',
+    'tb-danger': opt.action === 'unequip',
+  };
+}
+
+/**
+ * 判断道具是否走即时 dialog 流程（Phase 2 新流程）
+ * 即时流程覆盖：装备类（服装/身体器具/环境）/ 体改（包括单向） / 性癖
+ * 不走即时流程：消耗品 / 特殊场景 / 淫纹刻印（走 yinwenPicker + batch）
+ */
+function isImmediateFlowItem(item: ItemDef): boolean {
+  if (item.name === '淫纹刻印') return false;
+  return item.type === '装备' || item.type === '体改' || item.type === '性癖';
+}
+
+/**
+ * 根据当前 item state + per-character ownership 构建 equip dialog 选项
+ */
+function buildEquipDialogActions(item: ItemDef): EquipDialogAction[] {
+  const name = item.name;
+  const luoActive = !!store.data._洛书晴线已激活;
+  const isShared = isSharedItem(name);
+  const actions: EquipDialogAction[] = [];
+  const irreversible = item.type === '体改' && IRREVERSIBLE_BODY_MODS.has(name);
+
+  if (item.type === '装备') {
+    // 服装/身体器具/环境：用 using 状态
+    const yunU = isYunUsing(name);
+    const luoU = isLuoUsing(name);
+    // 云霜凝：装备/卸下
+    if (yunU) {
+      actions.push({ label: '卸下云霜凝', target: '云霜凝', action: 'unequip' });
+    } else {
+      actions.push({ label: '装备给云霜凝', target: '云霜凝', action: 'equip' });
+    }
+    // 洛书晴：仅共用道具 + 线已激活 才显示
+    if (isShared && luoActive) {
+      if (luoU) {
+        actions.push({ label: '卸下洛书晴', target: '洛书晴', action: 'unequip' });
+      } else {
+        actions.push({ label: '装备给洛书晴', target: '洛书晴', action: 'equip' });
+      }
+    }
+  } else if (item.type === '体改' || item.type === '性癖') {
+    // 用 owned 状态
+    const yunO = isYunOwned(name);
+    const luoO = isLuoOwned(name);
+    // 云霜凝
+    if (yunO) {
+      if (!irreversible) actions.push({ label: '卸下云霜凝', target: '云霜凝', action: 'unequip' });
+    } else {
+      actions.push({ label: '应用到云霜凝', target: '云霜凝', action: 'equip' });
+    }
+    // 洛书晴
+    if (isShared && luoActive) {
+      if (luoO) {
+        if (!irreversible) actions.push({ label: '卸下洛书晴', target: '洛书晴', action: 'unequip' });
+      } else {
+        actions.push({ label: '应用到洛书晴', target: '洛书晴', action: 'equip' });
+      }
+    }
+  }
+
+  return actions;
+}
+
+function openEquipDialog(item: ItemDef) {
+  const actions = buildEquipDialogActions(item);
+  if (actions.length === 0) {
+    showToast(`「${item.name}」两者都已拥有`, 'info');
+    return;
+  }
+  equipDialogItem.value = item;
+  equipDialogActions.value = actions;
+  equipDialogDesc.value = stateLabel(item);
+  showEquipDialog.value = true;
+}
+
+function pickEquipAction(opt: EquipDialogAction) {
+  const item = equipDialogItem.value;
+  showEquipDialog.value = false;
+  if (!item) return;
+  if (opt.action === 'equip') {
+    executeImmediateEquip(item, opt.target);
+  } else {
+    executeImmediateUnequip(item, opt.target);
+  }
+  equipDialogItem.value = null;
+  equipDialogActions.value = [];
+}
+
+/**
+ * 即时装备：给 item 装备/应用到指定 target
+ * 服装/身体器具：设状态；体改：调用 effect；性癖：写入列表
+ * 完成后 push AI 事件 + triggerSlash
+ */
+function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴') {
+  const name = item.name;
+  store.pull();
+
+  // 检查神魂空间/冷却
+  const activation = checkActivate(name);
+  if (!activation.allowed) {
+    showToast(`「${name}」${activation.reason}`, 'err');
+    return;
+  }
+
+  const eventNames: string[] = [];
+
+  if (item.type === '装备') {
+    if (CLOTHING_SLOT[name]) {
+      // 服装
+      if (target === '云霜凝') {
+        equipClothing(name);
+        if (GIFTABLE_CLOTHING.has(name)) eventNames.push(name);
+      } else {
+        store.data._洛书晴道具状态[name] = '使用中';
+        // 洛书晴服装写入（后端 processNewlyActivatedLuoItems 处理）
+        eventNames.push(`洛书晴·${name}`);
+      }
+    } else {
+      // 身体器具/环境
+      if (target === '云霜凝') {
+        store.data.系统.道具状态[name] = '使用中';
+        enforceExclusiveGroup(name, store.data as any);
+        if (name !== '锚神钉') eventNames.push(name);
+      } else {
+        store.data._洛书晴道具状态[name] = '使用中';
+        if (name !== '锚神钉') eventNames.push(`洛书晴·${name}`);
+      }
+    }
+  } else if (item.type === '体改') {
+    if (target === '云霜凝') {
+      const fn = BODY_MOD_EFFECTS[name];
+      if (fn) fn();
+      store.data.系统.道具状态[name] = '已购买'; // 标记已应用
+      eventNames.push(name);
+    } else {
+      store.data._洛书晴道具状态[name] = '使用中';
+      eventNames.push(`洛书晴·${name}`);
+    }
+  } else if (item.type === '性癖') {
+    const kink = KINK_EFFECTS[name];
+    if (!kink) return;
+    if (target === '云霜凝') {
+      if (activeKinkCount() >= MAX_KINKS) {
+        showToast(`云霜凝性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}）`, 'err');
+        return;
+      }
+      store.data.云霜凝.性癖列表[kink.name] = kink.tag;
+      store.data.系统.道具状态[name] = '使用中';
+      eventNames.push(name);
+    } else {
+      // 洛书晴槽位：独立3个
+      const luoActiveCount = Object.keys(store.data.洛书晴.性癖列表).length;
+      if (luoActiveCount >= MAX_KINKS) {
+        showToast(`洛书晴性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}）`, 'err');
+        return;
+      }
+      store.data._洛书晴道具状态[name] = '使用中';
+      eventNames.push(`洛书晴·${name}`);
+    }
+  }
+
+  if (eventNames.length > 0) {
+    const pending = store.data._待发送道具事件;
+    store.data._待发送道具事件 = pending ? pending + '|||' + eventNames.join('|||') : eventNames.join('|||');
+  }
+  store.data._系统操作中 = true;
+  store.flush();
+  triggerSlash(`/send （对${target}使用了${name}）|/trigger`);
+  showToast(`已对${target}应用「${name}」`, 'ok');
+}
+
+/**
+ * 即时卸下：从指定 target 卸下/抹除 item
+ */
+function executeImmediateUnequip(item: ItemDef, target: '云霜凝' | '洛书晴') {
+  const name = item.name;
+  store.pull();
+
+  const eventNames: string[] = [];
+
+  if (item.type === '装备') {
+    if (CLOTHING_SLOT[name]) {
+      // 服装卸下
+      if (target === '云霜凝') {
+        unequipClothing(name);
+        const slot = CLOTHING_SLOT[name] as ClothingSlot;
+        const defaultName = slot === '特殊配饰' ? '无' : SLOT_DEFAULTS[slot];
+        eventNames.push(`卸下服装:${name}→${defaultName}`);
+      } else {
+        // 洛书晴服装卸下：重置 洛书晴.服装[slot] 为默认 + 清除道具状态
+        delete store.data._洛书晴道具状态[name];
+        const slot = CLOTHING_SLOT[name] as ClothingSlot;
+        if (slot === '特殊配饰') {
+          const sub = ACCESSORY_SUB_SLOT[name];
+          if (sub) store.data.洛书晴.服装.特殊配饰[sub] = '';
+        } else {
+          // 洛书晴 默认服装（对照 schema.ts 的 prefault）
+          const LUO_SLOT_DEFAULTS: Record<MainClothingSlot, string> = {
+            上装: '寒霜门弟子服',
+            下装: '寒霜门白裙',
+            内衣: '素白抹胸',
+            内裤: '素白亵裤',
+          };
+          store.data.洛书晴.服装[slot as MainClothingSlot] = LUO_SLOT_DEFAULTS[slot as MainClothingSlot] ?? '';
+        }
+        eventNames.push(`洛书晴·卸下服装:${name}`);
+      }
+    } else {
+      // 身体器具/环境
+      if (target === '云霜凝') {
+        store.data.系统.道具状态[name] = '已购买';
+        eventNames.push(`卸下:${name}`);
+      } else {
+        delete store.data._洛书晴道具状态[name];
+        eventNames.push(`洛书晴·卸下:${name}`);
+      }
+    }
+  } else if (item.type === '体改') {
+    // 不可卸类在 dialog builder 已过滤，这里只处理可卸
+    if (target === '云霜凝') {
+      unapplyBodyModYun(name);
+      eventNames.push(`卸下:${name}`);
+    } else {
+      unapplyBodyModLuo(name);
+      eventNames.push(`洛书晴·卸下:${name}`);
+    }
+  } else if (item.type === '性癖') {
+    const kink = KINK_EFFECTS[name];
+    if (!kink) return;
+    if (target === '云霜凝') {
+      delete store.data.云霜凝.性癖列表[kink.name];
+      store.data.系统.道具状态[name] = '已购买';
+      eventNames.push(`卸下:${name}`);
+    } else {
+      delete store.data.洛书晴.性癖列表[kink.name];
+      delete store.data._洛书晴道具状态[name];
+      eventNames.push(`洛书晴·卸下:${name}`);
+    }
+  }
+
+  if (eventNames.length > 0) {
+    const pending = store.data._待发送道具事件;
+    store.data._待发送道具事件 = pending ? pending + '|||' + eventNames.join('|||') : eventNames.join('|||');
+  }
+  store.data._系统操作中 = true;
+  store.flush();
+  triggerSlash(`/send （从${target}卸下了${name}）|/trigger`);
+  showToast(`已从${target}卸下「${name}」`, 'info');
+}
+
+/** 云霜凝 体改卸下（乳环/阴环等可卸；不可卸的丰胸/丰臀此函数不会被调用） */
+function unapplyBodyModYun(name: string) {
+  const d = store.data;
+  switch (name) {
+    case '乳环':
+      d.云霜凝.肉体改造.乳环 = false;
+      break;
+    case '阴环':
+      d.云霜凝.肉体改造.阴环 = false;
+      break;
+    case '肉棒口罩':
+      d.系统.道具状态[name] = '已购买';
+      break;
+  }
+}
+
+/** 洛书晴 体改卸下 */
+function unapplyBodyModLuo(name: string) {
+  const d = store.data;
+  switch (name) {
+    case '乳环':
+      d.洛书晴.肉体改造.乳环 = false;
+      break;
+    case '阴环':
+      d.洛书晴.肉体改造.阴环 = false;
+      break;
+    case '肉棒口罩':
+      delete d._洛书晴道具状态[name];
+      break;
+  }
 }
 
 /**
@@ -2952,6 +3277,23 @@ $cat-场景: #d8a040;
       border-color: rgba(#a855f7, 0.6);
       box-shadow: 0 4px 12px rgba(#a855f7, 0.2);
     }
+  }
+  &.tb-danger {
+    background: linear-gradient(135deg, rgba(#a03030, 0.25) 0%, rgba(#8a1a1a, 0.15) 100%);
+    border-color: rgba(#d04848, 0.35);
+    color: #f8c8c8;
+    &:hover {
+      border-color: rgba(#d04848, 0.6);
+      box-shadow: 0 4px 12px rgba(#d04848, 0.2);
+    }
+  }
+}
+.equip-dialog-btns {
+  flex-direction: column;
+  gap: 8px;
+  .target-btn {
+    flex: none;
+    width: 100%;
   }
 }
 .target-dialog-cancel {
