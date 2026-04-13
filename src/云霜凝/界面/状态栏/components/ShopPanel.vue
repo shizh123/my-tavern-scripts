@@ -1514,10 +1514,18 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
   const names = [...checkedItems];
   const eventNames: string[] = [];
   let needTriggerAI = false;
+  const skippedExclusive: string[] = []; // target=洛书晴 时被跳过的云霜凝专属道具
 
   for (const name of names) {
     const item = findItem(name);
     if (!item) continue;
+
+    // target=洛书晴 但道具是云霜凝专属（非共用）：跳过，不应用到任何人
+    // 典型情况：玩家勾选 [蚀心露, 服装X]，选洛书晴 → 服装X 应用到洛书晴，蚀心露被跳过
+    if (target === '洛书晴' && !isSharedItem(name)) {
+      skippedExclusive.push(name);
+      continue;
+    }
 
     // 二次检查：冷却 + 神魂空间
     const activation = checkActivate(name);
@@ -1654,15 +1662,24 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
 
   checkedItems.clear();
 
+  // target=洛书晴 时跳过的云霜凝专属道具 → 弹 toast 提示（让玩家知道这些没生效）
+  if (skippedExclusive.length > 0) {
+    showToast(`已跳过 ${skippedExclusive.length} 件云霜凝专属道具：${skippedExclusive.join('、')}`, 'info');
+  }
+
+  const appliedCount = names.length - skippedExclusive.length;
+
   // 始终 flush 确保变量写入 SillyTavern，触发 VARIABLE_UPDATE_ENDED 处理消耗品效果
   if (needTriggerAI) {
     store.data._系统操作中 = true;
     store.flush();
     triggerSlash(`/send （使用了${eventNames.join('、')}）|/trigger`);
-    showToast(`已使用 ${names.length} 件道具，AI生成中…`, 'ok');
+    showToast(`已使用 ${appliedCount} 件道具，AI生成中…`, 'ok');
   } else {
     store.flush();
-    showToast(`已使用 ${names.length} 件道具`, 'ok');
+    if (appliedCount > 0) {
+      showToast(`已使用 ${appliedCount} 件道具`, 'ok');
+    }
   }
 }
 
