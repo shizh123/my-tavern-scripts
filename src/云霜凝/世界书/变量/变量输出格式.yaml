@@ -21,14 +21,14 @@
       - 云霜凝.心理防线: decrease when 云霜凝 accepts intimate/taboo behavior (script delta cap ±8/turn)
       - 云霜凝.身体开发.*: increase based on body-part related intimate acts (script delta cap +10/-5 per turn)
       - 治疗.完成度: increase after effective dual-cultivation acts (script delta cap +5/-3 per turn)
-      - 云霜凝.心理活动: generate 100-150 char first-person inner thoughts each turn
-      - 苗广.心理活动: generate thoughts each turn; 前半程(正常/疑惑/察觉) 100-150 chars; 后半程(屈辱/默许/沉溺) 300-350 chars; 千晶幻术 active 300-500 chars
+      - 云霜凝.心理活动: only generate when /_当前场景角色/云霜凝 === true (in scene); otherwise skip this patch (keep last value). When in scene, 100-150 char first-person inner thoughts
+      - 苗广.心理活动: generate every turn regardless of scene presence; 前半程(正常/疑惑/察觉) 60-100 chars; 后半程(屈辱/默许/沉溺) 120-180 chars; 千晶幻术 active 200-300 chars
     - AI should ONLY update 洛书晴/苗喧 fields if the 洛书晴 line is already activated (state snapshot shows a 洛书晴 psychology guide); if no 洛书晴 section is present, do NOT emit any 洛书晴/苗喧 update commands. When activated:
       - 洛书晴.心理防线 decrease when 洛书晴 accepts intimate behavior; script limits ±15/turn and stage bounds
       - 洛书晴.顺从度 increase when player shows sincerity/warmth; script limits ±10/turn and stage bounds
       - 洛书晴.身体开发.* increase on body-specific stimulation; script limits +8/turn per part
-      - 洛书晴.心理活动 generate 100-150 char first-person inner thoughts each turn
-      - 苗喧.心理活动 generate 100-150 char first-person inner thoughts each turn; tone matches current 心态 from state snapshot
+      - 洛书晴.心理活动 only generate when /_当前场景角色/洛书晴 === true (in scene); otherwise skip this patch (keep last value). When in scene, 100-150 char first-person inner thoughts
+      - 苗喧.心理活动 generate every turn regardless of scene presence; 60-100 char first-person inner thoughts; tone matches current 心态 from state snapshot
   format: |
     <UpdateVariable>
     <Analysis>(IN ENGLISH, no more than 100 words)

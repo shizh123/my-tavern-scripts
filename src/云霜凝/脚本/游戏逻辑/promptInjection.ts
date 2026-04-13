@@ -807,7 +807,7 @@ function buildMiaoxuanGuide(data: SchemaType): string {
     失去: '家庭结构彻底重塑，被边缘化，已不再试图挽回',
   };
   guide += `- 当前基调：${情绪[心态]}\n`;
-  guide += `- 每轮必须生成苗喧心理活动（100-150字），反映当前基调\n`;
+  guide += `- 每轮必须生成苗喧心理活动（60-100字），反映当前基调\n`;
   guide += `- 苗喧无法感知神魂空间内发生的一切，他对洛书晴和{{user}}之间的事情一无所知\n`;
   return guide;
 }
