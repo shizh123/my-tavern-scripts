@@ -176,6 +176,31 @@ function getMilestoneReward(stage: number): number {
 }
 
 /**
+ * 特殊场景的在场女角色映射表
+ * 只追踪云霜凝和洛书晴，用于驱动 buildStatusSnapshot 的注入过滤
+ * 特殊场景进行中时脚本强制锁定该字段，AI 修改会被回滚
+ */
+export const SCENE_ACTORS: Record<string, { 云霜凝: boolean; 洛书晴: boolean }> = {
+  // 云霜凝独占场景
+  镜前调教: { 云霜凝: true, 洛书晴: false },
+  夫前凌辱: { 云霜凝: true, 洛书晴: false },
+  寝取宣告: { 云霜凝: true, 洛书晴: false },
+  绿帽奴调教: { 云霜凝: true, 洛书晴: false },
+  掌门改嫁: { 云霜凝: true, 洛书晴: false },
+  // 洛书晴联动场景（双人在场）
+  婆媳教导: { 云霜凝: true, 洛书晴: true },
+  两人同侍: { 云霜凝: true, 洛书晴: true },
+  寝取宣告增强: { 云霜凝: true, 洛书晴: true },
+  门缝春光: { 云霜凝: true, 洛书晴: true },
+  双重目击: { 云霜凝: true, 洛书晴: true },
+  儿媳调教公公: { 云霜凝: true, 洛书晴: true },
+  双重改嫁: { 云霜凝: true, 洛书晴: true },
+  千晶告知洛书晴: { 云霜凝: true, 洛书晴: true },
+  // 脚本内部触发的自动场景
+  洛书晴现实初遇: { 云霜凝: true, 洛书晴: true },
+};
+
+/**
  * 执行一轮全量状态验证与自动计算
  * 在 VARIABLE_UPDATE_ENDED 中调用
  */
@@ -884,6 +909,61 @@ export function validateAndRecalcState(
   if (finalStage !== 新变量.治疗.阶段) {
     console.info(`[状态验证] 阶段校正: ${新变量.治疗.阶段} → ${finalStage}（完成度=${新变量.治疗.完成度}）`);
     新变量.治疗.阶段 = finalStage;
+  }
+
+  // ── 13. 当前场景角色管理 ────────────────────────────
+  // 特殊场景进行中 / 单人神魂空间：脚本强制锁定，回滚 AI 修改
+  // 日常 / 现实互动自由模式 / 双人神魂空间：放行 AI 的 JSONPatch 修改
+  {
+    const 旧场景 = 旧变量._特殊场景.进行中;
+    const 新场景 = 新变量._特殊场景.进行中;
+    const 旧神魂 = 旧变量._神魂空间激活中;
+    const 新神魂 = 新变量._神魂空间激活中;
+
+    if (新场景 && SCENE_ACTORS[新场景]) {
+      // 特殊场景进行中：强制锁定为 SCENE_ACTORS 映射值
+      const locked = SCENE_ACTORS[新场景];
+      if (
+        新变量._当前场景角色.云霜凝 !== locked.云霜凝 ||
+        新变量._当前场景角色.洛书晴 !== locked.洛书晴
+      ) {
+        新变量._当前场景角色 = { ...locked };
+        if (旧场景 !== 新场景) {
+          console.info(`[状态验证] 特殊场景「${新场景}」进入，场景角色锁定为`, locked);
+        }
+      }
+    } else if (旧场景 && !新场景) {
+      // 特殊场景结束：保留最后锁定值，交给 AI 下一轮调整
+      console.info(`[状态验证] 特殊场景「${旧场景}」结束，场景角色解锁（保留最后值）`);
+    } else if (!旧神魂 && 新神魂) {
+      // 神魂空间进入：根据 _当前神魂空间角色 单选写入
+      const target = 新变量._当前神魂空间角色;
+      新变量._当前场景角色 = {
+        云霜凝: target === '云霜凝',
+        洛书晴: target === '洛书晴',
+      };
+      console.info(`[状态验证] 神魂空间进入，场景角色锁定为`, 新变量._当前场景角色);
+    } else if (旧神魂 && !新神魂) {
+      // 神魂空间退出：重置为主场景默认（云霜凝）
+      新变量._当前场景角色 = { 云霜凝: true, 洛书晴: false };
+      console.info('[状态验证] 神魂空间退出，场景角色重置为云霜凝');
+    } else if (新神魂 && !新场景) {
+      // 单人神魂空间进行中：强制保持与 _当前神魂空间角色 一致
+      // （双人神魂空间无 flag，靠 AI 显式通过 JSONPatch 声明，脚本不干预）
+      const target = 新变量._当前神魂空间角色;
+      const expected = {
+        云霜凝: target === '云霜凝',
+        洛书晴: target === '洛书晴',
+      };
+      // 只在 AI 没有把另一位设置为 true 时才锁定（允许 AI 进入双人模式）
+      const aiAddedCompanion =
+        (target === '云霜凝' && 新变量._当前场景角色.洛书晴) ||
+        (target === '洛书晴' && 新变量._当前场景角色.云霜凝);
+      if (!aiAddedCompanion) {
+        新变量._当前场景角色 = expected;
+      }
+    }
+    // 日常 / 现实互动自由模式（!新神魂 && !新场景）：完全放行 AI 的 JSONPatch 修改
   }
 
   // 返回 freezeBaseline（新创建或透传），由 index.ts 管理生命周期

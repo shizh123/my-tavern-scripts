@@ -7,8 +7,14 @@
       - delta: update the value of existing number paths by a delta value
       - insert: insert new items into an object or array
       - remove
-    - don't update field names starts with underscore (_) as they are readonly — managed by script
+    - don't update field names starts with underscore (_) as they are readonly — managed by script — EXCEPT /_当前场景角色 which you MUST maintain in free mode (see below)
     - don't update script-managed fields: /治疗/阶段, /苗广/疑心值, /苗广/心态, /苗广/千晶幻术/*(幻境摘要除外), /苗广/孝敬师父/*, /系统/*, /云霜凝/服装/*, /云霜凝/肉体改造/*, /云霜凝/性癖列表/*, /洛书晴/调教阶段, /洛书晴/服装/*, /洛书晴/肉体改造/*, /洛书晴/性癖列表/*, /苗喧/绝望值, /苗喧/压抑值, /苗喧/心态
+    - /_当前场景角色: 只追踪云霜凝、洛书晴两位女角色的在场状态
+      - 脚本锁定（不要修改）: 特殊场景进行中 或 单人神魂空间进行中 → 脚本强制管理
+      - AI 维护（每轮复核）: 日常 / 现实互动自由模式 / 双人神魂空间 → 你必须根据当前叙事确认 /_当前场景角色/云霜凝 和 /_当前场景角色/洛书晴 的布尔值与实际在场匹配
+      - 进场: 当叙事中 X 走入场景时 → replace /_当前场景角色/X 为 true
+      - 离场: 当叙事中 X 离开场景时 → replace /_当前场景角色/X 为 false
+      - 该字段驱动状态快照注入：不在场的角色其大块数据（身体开发/肉体改造/服装）会被整块跳过，不要让错误的在场状态导致 AI 看不到你需要的背景信息
     - 时间.玄霜历 should be updated by AI via SET command when days/months pass in narrative (e.g. "几日后", season change). Use month names from 月份词库: 霜降月/小雪月/大雪月/凛冬月/冰封月/玄霜月/霜解月/初春月/暖阳月/长夏月/金秋月/白霜月. Advance one month every 5-10 floors of daily interaction; special scenes may skip ahead. Year rarely changes.
     - AI should update character states based on interactions:
       - 云霜凝.信任度: increase when 云霜凝 experiences warmth or meaningful interaction (script delta cap ±8/turn)

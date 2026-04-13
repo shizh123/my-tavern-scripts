@@ -103,6 +103,8 @@
   { "op": "replace", "path": "/_当前互动模式", "value": "现实互动" },
   { "op": "replace", "path": "/_洛书晴线已激活", "value": true },
   { "op": "replace", "path": "/_洛书晴激活轮次进度", "value": 5 },
+  { "op": "replace", "path": "/_当前场景角色/云霜凝", "value": true },
+  { "op": "replace", "path": "/_当前场景角色/洛书晴", "value": true },
   { "op": "replace", "path": "/时间/玄霜历", "value": "玄霜历九百七十四年·暖阳月" }
 ]
 </JSONPatch>

@@ -551,6 +551,17 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
+
+  // 当前场景在场角色（只追踪两位女角色）
+  // - 特殊场景进行中 / 单人神魂空间：脚本锁定，AI 修改会被回滚
+  // - 日常 / 现实互动自由模式 / 双人神魂空间：AI 通过 JSONPatch 每轮维护
+  // 该字段驱动 buildStatusSnapshot 的注入过滤：不在场的角色其身体开发/肉体改造/服装等大块数据整体跳过
+  _当前场景角色: z
+    .object({
+      云霜凝: z.boolean().prefault(true),
+      洛书晴: z.boolean().prefault(false),
+    })
+    .prefault({ 云霜凝: true, 洛书晴: false }),
 });
 
 export type Schema = z.output<typeof Schema>;

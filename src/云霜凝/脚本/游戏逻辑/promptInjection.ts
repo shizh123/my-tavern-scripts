@@ -1,5 +1,5 @@
 import type { Schema as SchemaType } from '../../schema';
-import { getHealingPhaseName } from './stateValidation';
+import { getHealingPhaseName, SCENE_ACTORS } from './stateValidation';
 import { KINK_ITEM_MAP } from './shopSystem';
 
 /**
@@ -2762,6 +2762,30 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
 // 状态快照构建
 // ────────────────────────────────────────────
 
+/**
+ * 当前场景在场角色派生函数
+ * 优先级：
+ * 1. 千晶幻术激活中 → 走 buildStatusSnapshot 里的千晶专属分支，此函数不生效
+ * 2. 特殊场景进行中 → 按 SCENE_ACTORS 表派生（脚本已强制锁定 _当前场景角色）
+ * 3. 神魂空间 / 现实互动 / 日常 → 读 _当前场景角色 字段
+ *
+ * 未激活洛书晴线时，洛书晴永远视为不在场（无视 _当前场景角色 里的值）
+ */
+export function getActiveCharacters(data: SchemaType): { 云霜凝: boolean; 洛书晴: boolean } {
+  const 特殊场景名 = data._特殊场景.进行中;
+  if (特殊场景名 && SCENE_ACTORS[特殊场景名]) {
+    const locked = SCENE_ACTORS[特殊场景名];
+    return {
+      云霜凝: locked.云霜凝,
+      洛书晴: locked.洛书晴 && !!data._洛书晴线已激活,
+    };
+  }
+  return {
+    云霜凝: !!data._当前场景角色.云霜凝,
+    洛书晴: !!data._当前场景角色.洛书晴 && !!data._洛书晴线已激活,
+  };
+}
+
 export function buildStatusSnapshot(data: SchemaType): string {
   const phase = getHealingPhaseName(data.治疗.阶段);
   const timeLabel = data.时间.玄霜历;
@@ -2848,7 +2872,13 @@ export function buildStatusSnapshot(data: SchemaType): string {
     }
   }
 
+  // 当前场景在场角色（驱动云霜凝/洛书晴状态块是否注入）
+  const actors = getActiveCharacters(data);
+  const actorLabels = [actors.云霜凝 ? '云霜凝' : null, actors.洛书晴 ? '洛书晴' : null].filter(Boolean);
+  const actorLine = actorLabels.length > 0 ? actorLabels.join('、') : '（无女角色在场）';
+
   let snapshot = `\n[当前游戏状态快照]\n`;
+  snapshot += `当前在场角色: 【${actorLine}】 ← 叙事焦点严格限定在此列表内的角色，不在场的角色本轮不参与任何描写\n`;
   if (data._神魂空间已解锁 || data._神魂空间已进入过) {
     snapshot += `当前互动模式: 【${data._当前互动模式}】 ← 模式由玩家按钮控制，AI绝对不要自行描写进入或退出任何空间的过程。所有场景描写必须在当前模式内进行。\n`;
   } else {
@@ -2876,7 +2906,8 @@ export function buildStatusSnapshot(data: SchemaType): string {
   if (!治疗冻结中) {
     // 冻结期间这些数值被脚本回滚、道具被清除，不需要展示
     // 叙事型场景（掌门改嫁）无肉体互动，跳过云霜凝数值/性癖/肉体改造
-    if (!叙事型场景) {
+    // 场景角色过滤：不在场的角色本块完全跳过
+    if (!叙事型场景 && actors.云霜凝) {
       {
         const pei = data.云霜凝.服装.特殊配饰;
         const peiList = [pei.脚踝, pei.颈部, pei.耳部, pei.腰部, pei.大腿, pei.胸部, pei.阴蒂, pei.前后穴]
@@ -2895,8 +2926,8 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += buildKinkDirectives(data);
     }
 
-    // ── 洛书晴状态行（仅激活后） ──
-    if (data._洛书晴线已激活) {
+    // ── 洛书晴状态行（仅激活后 + 在场） ──
+    if (data._洛书晴线已激活 && actors.洛书晴) {
       snapshot += `洛书晴: 阶段${data.洛书晴.调教阶段} 心理防线${data.洛书晴.心理防线} 顺从度${data.洛书晴.顺从度}`;
       if (data.洛书晴.调教阶段 >= 3) {
         const pei = data.洛书晴.服装.特殊配饰;
@@ -2912,12 +2943,16 @@ export function buildStatusSnapshot(data: SchemaType): string {
 
     // 特殊场景中跳过心理指引和锁反差——场景自带每阶段心理引导，这两块容易和场景引导矛盾
     if (!特殊场景中) {
-      // 云霜凝心理阶段指引（防止AI过早描写堕落心态）
+      // 云霜凝心理阶段指引（仅在场时注入，防止AI过早描写堕落心态）
       // 神魂空间中精简：只保留基础阶段描写，跳过日常互动叠加层（器具/开发/改造/性癖/暴露/侵蚀）
-      snapshot += buildPsychologyGuide(data, 神魂空间中);
+      if (actors.云霜凝) {
+        snapshot += buildPsychologyGuide(data, 神魂空间中);
+      }
 
-      // 洛书晴心理阶段指引（仅激活后）
-      snapshot += buildLuoShuqingPsychologyGuide(data);
+      // 洛书晴心理阶段指引（仅激活后 + 在场）
+      if (actors.洛书晴) {
+        snapshot += buildLuoShuqingPsychologyGuide(data);
+      }
 
       // 苗喧叙事指引（仅激活后）
       snapshot += buildMiaoxuanGuide(data);

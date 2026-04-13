@@ -58,6 +58,8 @@
   { "op": "replace", "path": "/_神魂空间已进入过", "value": false },
   { "op": "replace", "path": "/_新婚夜已触发", "value": false },
   { "op": "replace", "path": "/_当前互动模式", "value": "现实互动" },
+  { "op": "replace", "path": "/_当前场景角色/云霜凝", "value": true },
+  { "op": "replace", "path": "/_当前场景角色/洛书晴", "value": false },
   { "op": "replace", "path": "/时间/玄霜历", "value": "玄霜历九百七十三年·小雪月" }
 ]
 </JSONPatch>
