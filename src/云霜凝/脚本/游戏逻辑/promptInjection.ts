@@ -5,7 +5,9 @@ import { KINK_ITEM_MAP, CLOTHING_SLOT } from './shopSystem';
 // 洛书晴道具事件分派用的身体器具名单（与 ShopPanel.EQUIPMENT_NAMES 保持同步）
 const LUO_EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
 
-// 洛书晴道具事件分派用的体改名单（与 ShopPanel 的体改按钮保持同步）
+// 洛书晴道具事件分派用的体改名单（与 ShopPanel.BODY_MOD_EFFECTS 保持同步）
+// 注：淫纹刻印不在此列——它走带参数格式 "淫纹刻印·<位置>·<文字>"，由 buildLuoItemEvent
+// 类别1 的 startsWith 专门捕获，不应经过此 Set
 const LUO_BODY_MOD_NAMES = new Set([
   '丰胸灵乳丹·中',
   '丰胸灵乳丹·大',
@@ -13,7 +15,6 @@ const LUO_BODY_MOD_NAMES = new Set([
   '丰臀圆玉丹',
   '乳环',
   '阴环',
-  '淫纹刻印',
 ]);
 
 /**
