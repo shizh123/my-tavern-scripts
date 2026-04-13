@@ -4222,24 +4222,8 @@ ${baseConstraint}
 ${ending}`;
   }
 
-  // ── 类别 6: 即时数值型消耗品（安神香/神魂共鸣石）──
-  // 注意：安抚符/真心符是方式2注入型，由 buildLuoPsychologyGuide 每轮快照追加
-  // tone modifier 生效，不应额外触发 narrative（ShopPanel 已静默处理这两个）
-  if (rest === '安神香' || rest === '神魂共鸣石') {
-    const actionDesc =
-      rest === '安神香'
-        ? '焚起一缕安神香，淡淡药香弥漫开来'
-        : '拿出神魂共鸣石，灵力在两人之间泛起微光';
-    return `【焚香/共鸣·洛书晴】{{user}}${actionDesc}。
-
-${baseConstraint}
-
-[AI指令] 200-300字。简短描写——这是即时效果道具，不是重型仪式场景：
-- {{user}}取出道具的动作
-- 洛书晴感受到效果时的细微反应（防线松懈/心绪微动）
-- 场景自然过渡回主线互动
-${ending}`;
-  }
+  // 注：洛书晴消耗品（安抚符/真心符/安神香/神魂共鸣石）一律静默激活，
+  // ShopPanel 不 push narrative 事件，因此不会走到下方类别判断。
 
   // ── Fallback: 未识别的道具 ──
   return `【道具使用·洛书晴】{{user}}对洛书晴使用了${rest}。

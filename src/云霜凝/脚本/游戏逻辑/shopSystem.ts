@@ -768,9 +768,35 @@ export function processNewlyActivatedLuoItems(newData: SchemaType, oldData: Sche
         }
         newData._消耗品上次使用楼层[lastUsedKey] = floor;
       }
-      // 安抚符/真心符 已在 INSTANT_EFFECTS 中处理，对云霜凝的消耗品对洛书晴不启用
-      if (itemName === '安抚符' || itemName === '真心符' || itemName === '神魂共鸣石' || itemName === '安神香') {
-        INSTANT_EFFECTS[itemName](newData);
+      // 洛书晴消耗品效果（每个道具对洛书晴的作用独立实现，不复用 INSTANT_EFFECTS，
+      // 因为后者写入云霜凝数值）
+      if (itemName === '安抚符') {
+        // 方式2注入：仅设置生效楼层，tone modifier 由 promptInjection 每轮快照追加
+        const floor = currentFloor ?? 0;
+        if (newData.洛书晴.调教阶段 >= 3) {
+          console.warn('[商店] 安抚符在洛书晴阶段3+不再生效，已静默消耗');
+        } else {
+          newData._洛书晴_安抚符生效至 = floor + 3;
+          console.info(`[商店] 安抚符·洛书晴：敌意软化生效至楼层 ${newData._洛书晴_安抚符生效至}`);
+        }
+      } else if (itemName === '真心符') {
+        const floor = currentFloor ?? 0;
+        if (newData.洛书晴.调教阶段 >= 3) {
+          console.warn('[商店] 真心符在洛书晴阶段3+不再生效，已静默消耗');
+        } else {
+          newData._洛书晴_真心符生效至 = floor + 3;
+          console.info(`[商店] 真心符·洛书晴：直接表达生效至楼层 ${newData._洛书晴_真心符生效至}`);
+        }
+      } else if (itemName === '安神香') {
+        // 即时数值：洛书晴防线-3（设计文档 line 1082）
+        const oldDef = newData.洛书晴.心理防线;
+        newData.洛书晴.心理防线 = Math.max(0, newData.洛书晴.心理防线 - 3);
+        console.info(`[商店] 安神香·洛书晴：心理防线 ${oldDef} → ${newData.洛书晴.心理防线}`);
+      } else if (itemName === '神魂共鸣石') {
+        // 即时数值：洛书晴顺从+5（设计文档 line 1084）
+        const oldObey = newData.洛书晴.顺从度;
+        newData.洛书晴.顺从度 = Math.min(100, newData.洛书晴.顺从度 + 5);
+        console.info(`[商店] 神魂共鸣石·洛书晴：顺从度 ${oldObey} → ${newData.洛书晴.顺从度}`);
       }
       delete newData._洛书晴道具状态[itemName];
       continue;

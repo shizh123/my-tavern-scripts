@@ -1550,12 +1550,13 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
         // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
         store.data._洛书晴道具状态[name] = '使用中';
         delete store.data.系统.道具状态[name];
-        // 方式2注入型消耗品（安抚符/真心符）：效果通过快照每轮追加 tone modifier，
-        // 不额外触发 narrative，以免和方式2注入重复 + 打断对话节奏
-        if (name === '安抚符' || name === '真心符') {
-          // 静默激活（由 promptInjection 每轮快照注入 tone modifier）
+        // 洛书晴消耗品一律静默激活，不触发 narrative：
+        // - 安抚符/真心符：方式2注入型，由快照每轮 tone modifier 生效
+        // - 安神香/神魂共鸣石：即时数值型，效果直接走快照和状态栏显示
+        if (LUO_CONSUMABLES.has(name)) {
+          // 静默激活
         } else {
-          // 性癖/身体器具/体改/服装/其他共用消耗品 → 触发 narrative
+          // 性癖/身体器具/体改/服装 → 触发 narrative（送衣/仪式/觉醒/施加）
           eventNames.push(`洛书晴·${name}`);
           needTriggerAI = true;
         }
