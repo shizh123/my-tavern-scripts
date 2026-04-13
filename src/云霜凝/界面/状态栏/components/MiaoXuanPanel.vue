@@ -78,9 +78,7 @@ const isBusyInScenario = computed(() => {
   return false;
 });
 
-const canVent = computed(
-  () => ventCooldown.value <= 0 && store.data.苗喧.压抑值 >= 40 && !isBusyInScenario.value,
-);
+const canVent = computed(() => ventCooldown.value <= 0 && store.data.苗喧.压抑值 >= 40 && !isBusyInScenario.value);
 
 function onVent() {
   if (!canVent.value) return;
