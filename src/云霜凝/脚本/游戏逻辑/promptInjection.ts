@@ -116,28 +116,66 @@ function buildActiveItemTags(data: SchemaType): string {
 // 肉体改造覆盖描述
 // ────────────────────────────────────────────
 
-function buildBodyModTags(data: SchemaType): string {
+function buildBodyModTags(data: SchemaType, currentFloor = 0): string {
   const mod = data.云霜凝.肉体改造;
-  const parts: string[] = [];
+  const fullParts: string[] = [];
+  const compactTags: string[] = [];
 
-  if (mod.胸部 !== '默认') parts.push(`胸部已改造为${mod.胸部}，丰满挺拔远超原来`);
-  if (mod.臀部 !== '默认') parts.push(`臀部已丰满化，圆润饱满`);
-  if (mod.乳环) parts.push(`乳尖穿有乳环，敏感度永久提升，轻触即有剧烈反应`);
-  if (mod.阴环) parts.push(`阴蒂穿有阴环，小屄敏感度永久提升，轻微刺激即颤抖`);
+  if (mod.胸部 !== '默认') {
+    fullParts.push(`胸部已改造为${mod.胸部}，丰满挺拔远超原来`);
+    compactTags.push(mod.胸部);
+  }
+  if (mod.臀部 !== '默认') {
+    fullParts.push(`臀部已丰满化，圆润饱满`);
+    compactTags.push('臀部丰满');
+  }
+  if (mod.乳环) {
+    fullParts.push(`乳尖穿有乳环，敏感度永久提升，轻触即有剧烈反应`);
+    compactTags.push('乳环');
+  }
+  if (mod.阴环) {
+    fullParts.push(`阴蒂穿有阴环，小屄敏感度永久提升，轻微刺激即颤抖`);
+    compactTags.push('阴环');
+  }
   {
     const yw = mod.淫纹;
     const ywEntries: string[] = [];
-    if (yw.腰腹) ywEntries.push(`腰腹处刻有"${yw.腰腹}"淫纹`);
-    if (yw.胸前) ywEntries.push(`胸前处刻有"${yw.胸前}"淫纹`);
-    if (yw.大腿内侧) ywEntries.push(`大腿内侧刻有"${yw.大腿内侧}"淫纹`);
-    if (yw.臀部) ywEntries.push(`臀部刻有"${yw.臀部}"淫纹`);
-    if (ywEntries.length > 0) parts.push(`${ywEntries.join('；')}，灵纹在亢奋时隐隐发光`);
+    const ywCompact: string[] = [];
+    if (yw.腰腹) {
+      ywEntries.push(`腰腹处刻有"${yw.腰腹}"淫纹`);
+      ywCompact.push('腰腹淫纹');
+    }
+    if (yw.胸前) {
+      ywEntries.push(`胸前处刻有"${yw.胸前}"淫纹`);
+      ywCompact.push('胸前淫纹');
+    }
+    if (yw.大腿内侧) {
+      ywEntries.push(`大腿内侧刻有"${yw.大腿内侧}"淫纹`);
+      ywCompact.push('大腿淫纹');
+    }
+    if (yw.臀部) {
+      ywEntries.push(`臀部刻有"${yw.臀部}"淫纹`);
+      ywCompact.push('臀部淫纹');
+    }
+    if (ywEntries.length > 0) {
+      fullParts.push(`${ywEntries.join('；')}，灵纹在亢奋时隐隐发光`);
+      compactTags.push(...ywCompact);
+    }
   }
-  if (data.系统.道具状态['肉棒口罩'] === '使用中')
-    parts.push(`佩戴肉棒口罩，外观如普通面纱，内侧肉棒持续填充口腔，说话含糊需极力控制`);
+  if (data.系统.道具状态['肉棒口罩'] === '使用中') {
+    fullParts.push(`佩戴肉棒口罩，外观如普通面纱，内侧肉棒持续填充口腔，说话含糊需极力控制`);
+    compactTags.push('肉棒口罩');
+  }
 
-  if (parts.length === 0) return '';
-  return `\n【身体改造·覆盖角色卡原始描述】${parts.join('；')}。AI须在描写中体现这些永久改变，不可忽略。\n`;
+  if (fullParts.length === 0) return '';
+
+  // 3 楼节流：详细描述每 3 楼完整注入，其他楼只输出压缩标签列表
+  const 详细应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
+  if (!详细应注入) {
+    return `\n【身体改造】${compactTags.join(' · ')}\n`;
+  }
+
+  return `\n【身体改造·覆盖角色卡原始描述】${fullParts.join('；')}。AI须在描写中体现这些永久改变，不可忽略。\n`;
 }
 
 // ────────────────────────────────────────────
@@ -311,8 +349,9 @@ function buildOhHohoStyleBlock(): string {
 `;
 }
 
-function buildKinkDirectives(data: SchemaType): string {
-  const lines: string[] = [];
+function buildKinkDirectives(data: SchemaType, currentFloor = 0): string {
+  const names: string[] = [];
+  const fullLines: string[] = [];
   const stage = data.治疗.阶段;
   const tier: 'early' | 'mid' | 'deep' = stage >= 8 ? 'deep' : stage >= 5 ? 'mid' : 'early';
   const 信任 = data.云霜凝.信任度;
@@ -324,7 +363,8 @@ function buildKinkDirectives(data: SchemaType): string {
       if (itemName === '哦齁齁体质') continue; // 文风块独立注入
       const directive = KINK_DIRECTIVES[itemName];
       if (directive) {
-        lines.push(`- ${itemName}：${directive[tier]}`);
+        names.push(itemName);
+        fullLines.push(`- ${itemName}：${directive[tier]}`);
       }
     }
   }
@@ -333,10 +373,18 @@ function buildKinkDirectives(data: SchemaType): string {
   //    跳过已在 Step 1 中通过道具状态输出详细指令的商店性癖
   for (const [name, tag] of Object.entries(data.云霜凝.性癖列表)) {
     if (KINK_DIRECTIVES[name] && data.系统.道具状态[name] === '使用中') continue;
-    lines.push(`- ${name}：${tag}`);
+    names.push(name);
+    fullLines.push(`- ${name}：${tag}`);
   }
 
-  if (lines.length === 0) return '';
+  if (names.length === 0) return '';
+
+  // 3 楼节流：详细 tier 指令每 3 楼完整注入，其他楼只输出性癖名列表
+  const 详细应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
+  if (!详细应注入) {
+    return `\n【云霜凝·已觉醒性癖】${names.join(' / ')}\n`;
+  }
+
   const trustColor =
     信任 < 30
       ? '信任极低——她带着敌意和屈辱承受这些反应，恨{{user}}也恨自己的身体'
@@ -352,7 +400,7 @@ function buildKinkDirectives(data: SchemaType): string {
   return `\n【云霜凝·已觉醒性癖】
 性癖是刻入身体深处的本能反应，不受理性控制。AI必须在相关场景中自然体现——通过身体反应、不自觉的动作、压不住的冲动来表现，而非角色主动宣告"我有这个性癖"。
 当前情绪着色：${trustColor}。${defColor}。
-${lines.join('\n')}\n`;
+${fullLines.join('\n')}\n`;
 }
 
 /**
@@ -360,8 +408,9 @@ ${lines.join('\n')}\n`;
  * 读 _洛书晴道具状态 和 洛书晴.性癖列表；tier 档由 洛书晴.调教阶段 派生
  * 文风块独立注入，此函数只返回性癖列表块
  */
-function buildLuoKinkDirectives(data: SchemaType): string {
-  const lines: string[] = [];
+function buildLuoKinkDirectives(data: SchemaType, currentFloor = 0): string {
+  const names: string[] = [];
+  const fullLines: string[] = [];
   const stage = data.洛书晴.调教阶段;
   const tier: 'early' | 'mid' | 'deep' = stage >= 8 ? 'deep' : stage >= 5 ? 'mid' : 'early';
   const 顺从 = data.洛书晴.顺从度;
@@ -373,7 +422,8 @@ function buildLuoKinkDirectives(data: SchemaType): string {
       if (itemName === '哦齁齁体质') continue; // 文风块独立注入
       const directive = KINK_DIRECTIVES[itemName];
       if (directive) {
-        lines.push(`- ${itemName}：${directive[tier]}`);
+        names.push(itemName);
+        fullLines.push(`- ${itemName}:${directive[tier]}`);
       }
     }
   }
@@ -381,10 +431,18 @@ function buildLuoKinkDirectives(data: SchemaType): string {
   // 2. 永久性癖：特殊场景奖励（如双重改嫁认知），不占槽位
   for (const [name, tag] of Object.entries(data.洛书晴.性癖列表)) {
     if (KINK_DIRECTIVES[name] && data._洛书晴道具状态[name] === '使用中') continue;
-    lines.push(`- ${name}：${tag}`);
+    names.push(name);
+    fullLines.push(`- ${name}:${tag}`);
   }
 
-  if (lines.length === 0) return '';
+  if (names.length === 0) return '';
+
+  // 3 楼节流：详细 tier 指令每 3 楼完整注入，其他楼只输出性癖名列表
+  const 详细应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
+  if (!详细应注入) {
+    return `\n【洛书晴·已觉醒性癖】${names.join(' / ')}\n`;
+  }
+
   const obeyColor =
     顺从 < 30
       ? '顺从极低——她仍在抗拒，身体反应令她深感背叛与羞耻，拼命掩饰'
@@ -400,14 +458,14 @@ function buildLuoKinkDirectives(data: SchemaType): string {
   return `\n【洛书晴·已觉醒性癖】
 性癖是刻入身体深处的本能反应，不受理性控制。AI必须在相关场景中自然体现——通过身体反应、不自觉的动作、压不住的冲动来表现，而非角色主动宣告"我有这个性癖"。
 当前情绪着色：${obeyColor}。${defColor}。
-${lines.join('\n')}\n`;
+${fullLines.join('\n')}\n`;
 }
 
 // ────────────────────────────────────────────
 // 云霜凝心理阶段指引
 // ────────────────────────────────────────────
 
-function buildPsychologyGuide(data: SchemaType, simplified = false): string {
+function buildPsychologyGuide(data: SchemaType, simplified = false, currentFloor = 0): string {
   const stage = data.治疗.阶段;
   const defense = data.云霜凝.心理防线;
   const trust = data.云霜凝.信任度;
@@ -537,6 +595,13 @@ function buildPsychologyGuide(data: SchemaType, simplified = false): string {
   // 精简模式（神魂空间）：只保留基础阶段描写和全局规则，跳过日常互动叠加层
   if (simplified) {
     guide += `- 【核心】变化必须渐进呈现，不可突然"觉醒"或"彻底堕落"。三百年修士意志的挣扎永远不会完全消失\n`;
+    return guide;
+  }
+
+  // 3 楼节流：侵蚀叠加层和综合侵蚀提示每 3 楼完整注入（首 2 楼强制 + 每 3 整楼刷新）
+  // 非刷新楼只保留基础阶段描写，节省 ~1200 字
+  const 叠加层应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
+  if (!叠加层应注入) {
     return guide;
   }
 
@@ -2951,10 +3016,10 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += `当前激活效果: ${activeItems}\n`;
 
       // 肉体改造覆盖描述
-      snapshot += buildBodyModTags(data);
+      snapshot += buildBodyModTags(data, currentFloor);
 
       // 性癖AI行为指令
-      snapshot += buildKinkDirectives(data);
+      snapshot += buildKinkDirectives(data, currentFloor);
     }
 
     // ── 洛书晴状态行（仅激活后 + 在场） ──
@@ -2971,7 +3036,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += `洛书晴身体开发: 小嘴${getDevLevel(data.洛书晴.身体开发.小嘴)} 胸部${getDevLevel(data.洛书晴.身体开发.胸部)} 小屄${getDevLevel(data.洛书晴.身体开发.小屄)} 屁穴${getDevLevel(data.洛书晴.身体开发.屁穴)}\n`;
       snapshot += `苗喧: 绝望值${data.苗喧.绝望值} 压抑值${data.苗喧.压抑值} 心态[${data.苗喧.心态}]\n`;
       // 洛书晴·性癖指令（补上之前缺失的注入）
-      snapshot += buildLuoKinkDirectives(data);
+      snapshot += buildLuoKinkDirectives(data, currentFloor);
     }
 
     // ── 文风块（哦齁齁体质激活时）──
@@ -2992,7 +3057,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
       // 云霜凝心理阶段指引（仅在场时注入，防止AI过早描写堕落心态）
       // 神魂空间中精简：只保留基础阶段描写，跳过日常互动叠加层（器具/开发/改造/性癖/暴露/侵蚀）
       if (actors.云霜凝) {
-        snapshot += buildPsychologyGuide(data, 神魂空间中);
+        snapshot += buildPsychologyGuide(data, 神魂空间中, currentFloor);
       }
 
       // 洛书晴心理阶段指引（仅激活后 + 在场）
