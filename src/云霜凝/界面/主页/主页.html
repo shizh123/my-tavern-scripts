@@ -546,7 +546,7 @@
           if (patches && Array.isArray(patches) && patches.length > 0) {
             try {
               const vars = getVariables({ type: 'message', message_id: 0 });
-              const statData = (vars && vars.stat_data) ? JSON.parse(JSON.stringify(vars.stat_data)) : {};
+              const statData = vars && vars.stat_data ? JSON.parse(JSON.stringify(vars.stat_data)) : {};
               let appliedCount = 0;
               for (const patch of patches) {
                 if (patch.op !== 'replace' && patch.op !== 'add') continue;
