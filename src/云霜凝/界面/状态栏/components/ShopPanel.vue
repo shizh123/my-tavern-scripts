@@ -2061,6 +2061,8 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       eventNames.push(`洛书晴·${name}`);
     }
   } else if (item.type === '性癖') {
+    // 性癖静默应用：不 push narrative event，不 triggerSlash
+    // 效果通过下一轮 buildKinkDirectives / buildLuoKinkDirectives 快照注入
     const kink = KINK_EFFECTS[name];
     if (!kink) return;
     if (target === '云霜凝') {
@@ -2070,19 +2072,17 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       }
       store.data.云霜凝.性癖列表[kink.name] = kink.tag;
       store.data.系统.道具状态[name] = '使用中';
-      eventNames.push(name);
     } else {
-      // 洛书晴槽位：独立3个
       if (activeLuoKinkCount() >= MAX_KINKS) {
         showToast(`洛书晴性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}）`, 'err');
         return;
       }
       store.data._洛书晴道具状态[name] = '使用中';
-      // 直接写入洛书晴性癖列表（backend processNewlyActivatedLuoItems 会再次处理，
-      // 前端先写一份让 isLuoOwned 立即看到变化）
       store.data.洛书晴.性癖列表[kink.name] = kink.tag;
-      eventNames.push(`洛书晴·${name}`);
     }
+    store.flush();
+    showToast(`已对${target}应用「${name}」`, 'ok');
+    return;
   }
 
   if (eventNames.length > 0) {
@@ -2151,17 +2151,19 @@ function executeImmediateUnequip(item: ItemDef, target: '云霜凝' | '洛书晴
       eventNames.push(`洛书晴·卸下:${name}`);
     }
   } else if (item.type === '性癖') {
+    // 性癖静默卸下：不 push narrative event，下一轮 buildKinkDirectives 自然不再注入
     const kink = KINK_EFFECTS[name];
     if (!kink) return;
     if (target === '云霜凝') {
       delete store.data.云霜凝.性癖列表[kink.name];
       store.data.系统.道具状态[name] = '已购买';
-      eventNames.push(`卸下:${name}`);
     } else {
       delete store.data.洛书晴.性癖列表[kink.name];
       delete store.data._洛书晴道具状态[name];
-      eventNames.push(`洛书晴·卸下:${name}`);
     }
+    store.flush();
+    showToast(`已从${target}卸下「${name}」`, 'info');
+    return;
   }
 
   if (eventNames.length > 0) {

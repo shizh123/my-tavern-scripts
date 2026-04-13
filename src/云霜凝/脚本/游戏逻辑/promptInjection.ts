@@ -424,6 +424,10 @@ function buildLuoKinkDirectives(data: SchemaType, currentFloor = 0): string {
   const 顺从 = data.洛书晴.顺从度;
   const 防线 = data.洛书晴.心理防线;
 
+  // dedupe：收集 云霜凝 已觉醒的性癖名（key 是性癖名而非道具名）
+  // 两者共有的性癖只输出性癖名 + 简短提示，详细描述已在 云霜凝 节注入
+  const yunKinkNames = new Set(Object.keys(data.云霜凝.性癖列表));
+
   // 1. 商店性癖：从 _洛书晴道具状态 读取激活中的
   for (const [itemName, state] of Object.entries(data._洛书晴道具状态)) {
     if (state === '使用中' && KINK_ITEM_MAP[itemName]) {
@@ -431,7 +435,14 @@ function buildLuoKinkDirectives(data: SchemaType, currentFloor = 0): string {
       const directive = KINK_DIRECTIVES[itemName];
       if (directive) {
         names.push(itemName);
-        fullLines.push(`- ${itemName}:${directive[tier]}`);
+        // KINK_ITEM_MAP[itemName].name 是性癖名（通常与道具名一致）
+        const kinkName = KINK_ITEM_MAP[itemName].name;
+        if (yunKinkNames.has(kinkName)) {
+          // 两角色共有：只输出名字，详细描述见上方云霜凝节
+          fullLines.push(`- ${itemName}（与云霜凝共有，详细描述见上）`);
+        } else {
+          fullLines.push(`- ${itemName}:${directive[tier]}`);
+        }
       }
     }
   }
@@ -440,7 +451,12 @@ function buildLuoKinkDirectives(data: SchemaType, currentFloor = 0): string {
   for (const [name, tag] of Object.entries(data.洛书晴.性癖列表)) {
     if (KINK_DIRECTIVES[name] && data._洛书晴道具状态[name] === '使用中') continue;
     names.push(name);
-    fullLines.push(`- ${name}:${tag}`);
+    if (yunKinkNames.has(name) && name !== '改嫁认知') {
+      // 两角色共有且非独有场景奖励：简化
+      fullLines.push(`- ${name}（与云霜凝共有）`);
+    } else {
+      fullLines.push(`- ${name}:${tag}`);
+    }
   }
 
   if (names.length === 0) return '';
