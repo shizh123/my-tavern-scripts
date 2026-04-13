@@ -256,6 +256,61 @@
         transform: translateY(0);
       }
 
+      /* ── 推荐开局：金色高亮边框 + 顶部徽章 + 呼吸动画 ── */
+      .entry-card.entry-recommended {
+        position: relative;
+        border-color: rgba(232, 190, 88, 0.55);
+        background: linear-gradient(180deg, rgba(232, 190, 88, 0.08) 0%, rgba(0, 0, 0, 0.3) 50%);
+        box-shadow:
+          0 4px 24px rgba(0, 0, 0, 0.4),
+          0 0 18px rgba(232, 190, 88, 0.18),
+          inset 0 1px 0 rgba(232, 190, 88, 0.18);
+        animation: recommendGlow 3s ease-in-out infinite;
+      }
+
+      .entry-card.entry-recommended:hover {
+        border-color: rgba(232, 190, 88, 0.85);
+        box-shadow:
+          0 4px 28px rgba(0, 0, 0, 0.5),
+          0 0 28px rgba(232, 190, 88, 0.32),
+          0 0 48px rgba(232, 190, 88, 0.12),
+          inset 0 1px 0 rgba(232, 190, 88, 0.25);
+      }
+
+      .entry-recommend-badge {
+        position: absolute;
+        top: -10px;
+        right: 16px;
+        padding: 2px 12px;
+        background: linear-gradient(135deg, #f5d36a 0%, #c8a040 100%);
+        color: #2a1a05;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        border-radius: 12px;
+        box-shadow:
+          0 2px 8px rgba(232, 190, 88, 0.4),
+          0 0 12px rgba(232, 190, 88, 0.25);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+      }
+
+      @keyframes recommendGlow {
+        0%,
+        100% {
+          box-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.4),
+            0 0 18px rgba(232, 190, 88, 0.18),
+            inset 0 1px 0 rgba(232, 190, 88, 0.18);
+        }
+        50% {
+          box-shadow:
+            0 4px 24px rgba(0, 0, 0, 0.4),
+            0 0 24px rgba(232, 190, 88, 0.32),
+            inset 0 1px 0 rgba(232, 190, 88, 0.25);
+        }
+      }
+
       .entry-num {
         flex: 0 0 38px;
         height: 38px;
@@ -437,7 +492,8 @@
       <section class="entries">
         <h2>选择入口</h2>
         <div class="entry-grid">
-          <div class="entry-card" onclick="selectEntry(1)">
+          <div class="entry-card entry-recommended" onclick="selectEntry(1)">
+            <div class="entry-recommend-badge">★ 推荐开局 ★</div>
             <div class="entry-num">1</div>
             <div class="entry-content">
               <div class="entry-title">寒毒发作 <span class="entry-tag tag-start">起点</span></div>
