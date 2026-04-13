@@ -1833,12 +1833,7 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
 // ════════════════════════════════════════════
 
 // 肉体改造单向不可卸清单（严格物理改造，只能升级/永久生效）
-const IRREVERSIBLE_BODY_MODS = new Set<string>([
-  '丰胸灵乳丹·中',
-  '丰胸灵乳丹·大',
-  '丰胸灵乳丹·极',
-  '丰臀圆玉丹',
-]);
+const IRREVERSIBLE_BODY_MODS = new Set<string>(['丰胸灵乳丹·中', '丰胸灵乳丹·大', '丰胸灵乳丹·极', '丰臀圆玉丹']);
 
 /** 云霜凝是否已拥有（体改/性癖/淫纹） */
 function isYunOwned(name: string): boolean {

@@ -4170,7 +4170,10 @@ const unequipEventMap: Record<string, (d: SchemaType) => string> = {
 };
 
 // ── 性癖卸下叙事事件（"【性癖消退】..."） ──
-const KINK_UNEQUIP_TEMPLATE = (kinkName: string, target: string) => `【性癖消退】{{user}}以灵力抚平${target}体内深处曾被刻下的"${kinkName}"印记——这道本能反应正在缓缓消退。
+const KINK_UNEQUIP_TEMPLATE = (
+  kinkName: string,
+  target: string,
+) => `【性癖消退】{{user}}以灵力抚平${target}体内深处曾被刻下的"${kinkName}"印记——这道本能反应正在缓缓消退。
 [AI指令] 200-300字。描写${target}身体层面的变化：
 - 觉醒时刻下的那层"本能"开始松动
 - 她能感受到这份改变（即将失去某种熟悉的反应/渴望）
@@ -4195,10 +4198,7 @@ function buildLuoUnequipEvent(eventName: string, data: SchemaType): string {
     itemName = rest.slice('卸下:'.length);
   }
 
-  const sceneHint =
-    luoStage < 3
-      ? '通常发生在【洛书晴神魂空间】'
-      : '通常发生在【现实】——AI 依据上下文决定位置';
+  const sceneHint = luoStage < 3 ? '通常发生在【洛书晴神魂空间】' : '通常发生在【现实】——AI 依据上下文决定位置';
 
   const baseConstraint = `[场景约束]
 - 主角：洛书晴 与 {{user}}
