@@ -35,7 +35,9 @@
       <div v-if="store.data._苗喧未读反抗事件" class="unread-event">
         <span class="unread-dot"></span>
         <span class="unread-label">有新情况</span>
-        <button class="unread-view-btn" @click="onViewRebellion">查看详情</button>
+        <button class="unread-view-btn" :disabled="isBusyInScenario" @click="onViewRebellion">
+          {{ isBusyInScenario ? '其他剧情中' : '查看详情' }}
+        </button>
       </div>
     </div>
 
@@ -63,7 +65,22 @@ const ventCooldown = computed(() => {
   return Math.max(0, store.data._倾诉冷却结束楼层 - floor);
 });
 
-const canVent = computed(() => ventCooldown.value <= 0 && store.data.苗喧.压抑值 >= 40);
+/**
+ * 多轮脚本剧情排他检测——任何脚本驱动的多轮副本进行中时为 true。
+ */
+const isBusyInScenario = computed(() => {
+  const d = store.data;
+  if (d._当前互动模式 === '神魂空间' || d._神魂空间激活中) return true;
+  if (d.苗广.千晶幻术.激活中) return true;
+  if (d.苗广.孝敬师父.激活中) return true;
+  if (d._特殊场景.进行中) return true;
+  if (d._洛书晴激活轮次进度 > 0) return true;
+  return false;
+});
+
+const canVent = computed(
+  () => ventCooldown.value <= 0 && store.data.苗喧.压抑值 >= 40 && !isBusyInScenario.value,
+);
 
 function onVent() {
   if (!canVent.value) return;
@@ -81,6 +98,8 @@ function onVent() {
 function onViewRebellion() {
   const type = store.data._苗喧未读反抗事件;
   if (!type) return;
+  // 其他多轮剧情进行中时不允许查看反抗事件
+  if (isBusyInScenario.value) return;
   store.pull();
   store.data._苗喧未读反抗事件 = null;
   const existing = store.data._待发送道具事件;

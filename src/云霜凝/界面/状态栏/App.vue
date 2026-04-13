@@ -185,6 +185,10 @@ function isLatestMessage(): boolean {
 
 function handleEnterSoulClick() {
   if (!isLatestMessage()) return;
+  // 多轮脚本剧情排他：任何脚本驱动的多轮副本进行中时，禁止进入神魂空间
+  if (store.data._特殊场景.进行中) return;
+  if (store.data.苗广.千晶幻术.激活中) return;
+  if (store.data.苗广.孝敬师父.激活中) return;
   // 洛书晴线已激活 → 弹角色选择浮层
   if (store.data._洛书晴线已激活) {
     showSoulPicker.value = true;

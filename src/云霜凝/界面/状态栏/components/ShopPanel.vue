@@ -244,6 +244,20 @@ function isLatestMessage(): boolean {
   return currentId === chat.length - 1;
 }
 
+/**
+ * 多轮脚本剧情排他检测——任何脚本驱动的多轮副本进行中时，
+ * 返回拦截原因字符串；否则返回空字符串。
+ */
+function busyScenarioReason(): string {
+  const d = store.data;
+  if (d._特殊场景.进行中) return `场景「${d._特殊场景.进行中}」进行中`;
+  if (d.苗广.千晶幻术.激活中) return '千晶幻术施术中';
+  if (d.苗广.孝敬师父.激活中) return '孝敬师父进行中';
+  if (d._当前互动模式 === '神魂空间' || d._神魂空间激活中) return '神魂空间中';
+  if (d._洛书晴激活轮次进度 > 0) return '洛书晴激活剧情中';
+  return '';
+}
+
 interface ItemDef {
   name: string;
   price: number;
@@ -1354,9 +1368,12 @@ function handleClick(item: ItemDef) {
     return;
   }
 
-  if (item.type === '特殊场景' && store.data._特殊场景.进行中) {
-    showToast(`场景「${store.data._特殊场景.进行中}」正在进行中`, 'err');
-    return;
+  if (item.type === '特殊场景') {
+    const busy = busyScenarioReason();
+    if (busy) {
+      showToast(busy, 'err');
+      return;
+    }
   }
 
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
@@ -1466,6 +1483,18 @@ function confirmUse() {
   if (!isLatestMessage()) {
     showToast('只能在最新楼层操作商店', 'err');
     return;
+  }
+  // 若勾选了特殊场景，必须确认无其他多轮剧情进行中
+  const hasScene = [...checkedItems].some(n => {
+    const it = findItem(n);
+    return it?.type === '特殊场景';
+  });
+  if (hasScene) {
+    const busy = busyScenarioReason();
+    if (busy) {
+      showToast(busy, 'err');
+      return;
+    }
   }
   // 洛书晴激活 + 有共用道具 → 弹目标选择
   if (store.data._洛书晴线已激活 && sharedItemsPending.value.length > 0) {

@@ -112,6 +112,22 @@ function isLatestMessage(): boolean {
 
 const qj = computed(() => store.data.苗广.千晶幻术);
 
+/**
+ * 多轮脚本剧情排他检测——任何脚本驱动的多轮副本进行中时，
+ * 其他副本/特殊场景/神魂空间入口都应被禁用，确保 AI 一次只处理一件事。
+ *
+ * 包含：神魂空间（含洛书晴激活剧情）、千晶幻术、孝敬师父、特殊场景。
+ */
+const isBusyInScenario = computed(() => {
+  const d = store.data;
+  if (d._当前互动模式 === '神魂空间' || d._神魂空间激活中) return true;
+  if (d.苗广.千晶幻术.激活中) return true;
+  if (d.苗广.孝敬师父.激活中) return true;
+  if (d._特殊场景.进行中) return true;
+  if (d._洛书晴激活轮次进度 > 0) return true;
+  return false;
+});
+
 // ── 净灵铃 ──
 const jllEquipped = computed(() => store.data.系统.道具状态['净灵铃'] === '使用中');
 const jllOnCooldown = computed(() => {
@@ -141,15 +157,10 @@ const xjVisible = computed(() => {
   return 是前半程 && store.data.治疗.阶段 >= 2 && !store.data._坏结局已触发;
 });
 
-// 启动条件：排除所有不兼容状态
+// 启动条件：排他检测——任何其他多轮脚本剧情进行中都不能启动
 const xjCanStart = computed(() => {
-  if (!xjVisible.value || xjData.value.激活中 || xjCooling.value) return false;
-  // 神魂空间中不能孝敬师父（苗广感知不到神魂空间内的行为）
-  if (store.data._当前互动模式 === '神魂空间') return false;
-  // 千晶幻术激活中不能同时进行
-  if (store.data.苗广.千晶幻术.激活中) return false;
-  // 特殊场景进行中不能同时进行
-  if (store.data._特殊场景.进行中) return false;
+  if (!xjVisible.value || xjCooling.value) return false;
+  if (isBusyInScenario.value) return false;
   return true;
 });
 
@@ -248,7 +259,9 @@ const qjCdRemain = computed(() => {
   return Math.max(0, qj.value.冷却结束楼层 - getCurrentFloor());
 });
 
-const qjCanCast = computed(() => qjUnlocked.value && !qj.value.激活中 && !qjCooling.value && qj.value.已使用次数 < 3);
+const qjCanCast = computed(
+  () => qjUnlocked.value && !isBusyInScenario.value && !qjCooling.value && qj.value.已使用次数 < 3,
+);
 
 // ── 千晶幻术轮次配置（与 promptInjection.ts QIANJING_SESSIONS 一致） ──
 const QJ_MAX_ROUNDS = [4, 4, 4]; // 第1~3次施术的最大轮数
@@ -288,7 +301,7 @@ const canTellLuo = computed(
     qj.value.认知改写完成 &&
     !!store.data._洛书晴线已激活 &&
     !store.data._已完成特殊场景['千晶告知洛书晴'] &&
-    !store.data._特殊场景.进行中,
+    !isBusyInScenario.value,
 );
 
 function tellLuo() {
