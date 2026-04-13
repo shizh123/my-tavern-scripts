@@ -707,6 +707,50 @@ $(() => {
     });
 
     // ────────────────────────────────────────────────────
+    // 事件2b：开场白 swipe 切换 → 解析 <JSONPatch> 并写入 MVU
+    // 场景：玩家在主页点击"寒毒发作/现实初涉/..."按钮时，主页通过 setChatMessage
+    // 切换消息 0 的 swipe。MVU 自身不解析开场白里嵌的 <UpdateVariable> 块，
+    // 脚本在此手动读取当前 swipe 的 JSONPatch 内容并应用到 stat_data，
+    // 使入口 2-5 的初始数值（阶段/信任/神魂解锁/场景角色 等）正确生效。
+    // ────────────────────────────────────────────────────
+    eventOn(tavern_events.MESSAGE_SWIPED, async (messageId: number) => {
+      try {
+        if (messageId !== 0) return; // 只处理开场白消息
+        const messages = await getChatMessages('0', { include_swipes: true });
+        const msg = messages?.[0] as any;
+        if (!msg) return;
+        const swipeId = msg.swipe_id ?? 0;
+        const content: string = msg.swipes?.[swipeId] ?? msg.message ?? '';
+        const match = content.match(/<JSONPatch>\s*(\[[\s\S]*?\])\s*<\/JSONPatch>/);
+        if (!match) return;
+        let patches: Array<{ op: string; path: string; value: unknown }>;
+        try {
+          patches = JSON.parse(match[1]);
+        } catch {
+          console.warn('[云霜凝] 开场白 JSONPatch 解析失败，已忽略');
+          return;
+        }
+        if (!Array.isArray(patches) || patches.length === 0) return;
+
+        const raw = Mvu.getMvuData({ type: 'message', message_id: -1 });
+        let appliedCount = 0;
+        for (const patch of patches) {
+          if (patch.op !== 'replace' && patch.op !== 'add') continue;
+          if (typeof patch.path !== 'string') continue;
+          const lodashPath = patch.path.replace(/^\//, '').replace(/\//g, '.');
+          _.set(raw, 'stat_data.' + lodashPath, patch.value);
+          appliedCount++;
+        }
+        if (appliedCount > 0) {
+          Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+          console.info(`[云霜凝] 已应用开场白 JSONPatch ${appliedCount} 条 (swipe ${swipeId})`);
+        }
+      } catch (e) {
+        console.error('[云霜凝] MESSAGE_SWIPED 处理失败:', e);
+      }
+    });
+
+    // ────────────────────────────────────────────────────
     // 事件3：AI回复到达 → 临时道具计数递减 + 特殊场景推进
     // 注意：时间推进已移至 VARIABLE_UPDATE_ENDED 统一处理，避免两个事件抢写导致天数回滚
     // ────────────────────────────────────────────────────

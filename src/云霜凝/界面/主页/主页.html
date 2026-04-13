@@ -71,9 +71,17 @@
 
       .page {
         position: relative;
-        max-width: 720px;
+        width: 100%;
+        max-width: 100%;
         margin: 0 auto;
-        padding: 32px 20px 48px;
+        padding: 32px 24px 48px;
+      }
+
+      /* 桌面端较宽屏幕：用较大的左右内边距收住，避免正文单行过长不易阅读 */
+      @media (min-width: 900px) {
+        .page {
+          padding: 40px 10% 60px;
+        }
       }
 
       /* ============ Header ============ */
@@ -399,7 +407,7 @@
         <div class="info-rows">
           <div class="info-row">
             <span class="info-label">主角</span>
-            <span class="info-value">{{user}}（苏斌）· 圣阳之体的现代少年，意外坠入修真界</span>
+            <span class="info-value">{{user}} · 圣阳之体的现代少年，意外坠入修真界</span>
           </div>
           <div class="info-row">
             <span class="info-label">背景</span>
@@ -507,7 +515,7 @@
     <script>
       async function selectEntry(swipeId) {
         try {
-          const messages = await getChatMessages('0', { include_swipe: true });
+          const messages = await getChatMessages('0', { include_swipes: true });
           if (!messages || !messages[0] || !messages[0].swipes) {
             alert('未能获取开场白列表，请确认聊天处于初始状态。');
             return;
