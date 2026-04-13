@@ -611,7 +611,7 @@
               // 用 updateVariablesWith 直接在原 variables 上做深层 mutation,
               // 避免 insertOrAssignVariables 整块替换 stat_data 时丢失 initvar 默认值
               await updateVariablesWith(
-                function(variables) {
+                function (variables) {
                   if (!variables.stat_data) variables.stat_data = {};
                   const statData = variables.stat_data;
                   let appliedCount = 0;
@@ -639,24 +639,22 @@
                       _洛书晴线已激活: statData._洛书晴线已激活,
                       治疗阶段: statData.治疗 && statData.治疗.阶段,
                       信任度: statData.云霜凝 && statData.云霜凝.信任度,
-                    }
+                    },
                   );
                   return variables;
                 },
-                { type: 'message', message_id: 0 }
+                { type: 'message', message_id: 0 },
               );
 
               // 写入后再次读取验证（检查是否被其他脚本覆盖）
               await new Promise(resolve => setTimeout(resolve, 100));
               const verifyVars = getVariables({ type: 'message', message_id: 0 });
-              console.info(
-                '[云霜凝主页] 100ms 后 getVariables 验证读取:',
-                {
-                  _神魂空间已解锁: verifyVars && verifyVars.stat_data && verifyVars.stat_data._神魂空间已解锁,
-                  _洛书晴线已激活: verifyVars && verifyVars.stat_data && verifyVars.stat_data._洛书晴线已激活,
-                  治疗阶段: verifyVars && verifyVars.stat_data && verifyVars.stat_data.治疗 && verifyVars.stat_data.治疗.阶段,
-                }
-              );
+              console.info('[云霜凝主页] 100ms 后 getVariables 验证读取:', {
+                _神魂空间已解锁: verifyVars && verifyVars.stat_data && verifyVars.stat_data._神魂空间已解锁,
+                _洛书晴线已激活: verifyVars && verifyVars.stat_data && verifyVars.stat_data._洛书晴线已激活,
+                治疗阶段:
+                  verifyVars && verifyVars.stat_data && verifyVars.stat_data.治疗 && verifyVars.stat_data.治疗.阶段,
+              });
             } catch (err) {
               console.error('[云霜凝主页] 应用 JSONPatch 失败:', err);
             }
