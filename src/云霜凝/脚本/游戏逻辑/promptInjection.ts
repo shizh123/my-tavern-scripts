@@ -4160,7 +4160,69 @@ const unequipEventMap: Record<string, (d: SchemaType) => string> = {
 
   肉棒口罩: () => `【道具变更】{{user}}摘下了云霜凝的口罩，内侧的肉棒从口腔中滑出。
 [AI指令] 口罩摘下——持续填充口腔的肉棒被抽离，她终于可以自由呼吸和说话。结合当前剧情表现这个瞬间。`,
+
+  // ── 体改类（乳环/阴环可卸；丰胸丹/丰臀丹是不可卸的物理改造） ──
+  乳环: () => `【体改卸除】{{user}}为云霜凝取下乳尖上的灵纹乳环。
+[AI指令] 乳环穿孔处的金属移开——曾经的束缚感消失，但穿孔留下的敏感印记仍在。结合当前剧情表现她的反应。`,
+
+  阴环: () => `【体改卸除】{{user}}为云霜凝取下阴蒂上的灵纹阴环。
+[AI指令] 阴环被取下——持续的轻微刺激消失，但穿孔的记忆留在身体深处。结合当前剧情表现她的反应。`,
 };
+
+// ── 性癖卸下叙事事件（"【性癖消退】..."） ──
+const KINK_UNEQUIP_TEMPLATE = (kinkName: string, target: string) => `【性癖消退】{{user}}以灵力抚平${target}体内深处曾被刻下的"${kinkName}"印记——这道本能反应正在缓缓消退。
+[AI指令] 200-300字。描写${target}身体层面的变化：
+- 觉醒时刻下的那层"本能"开始松动
+- 她能感受到这份改变（即将失去某种熟悉的反应/渴望）
+- 情绪反应可能是释然、失落、空虚，或混合
+- 结束后 ${kinkName} 将不再影响她的后续行为
+⚠️ 本段只讲述一次性的"消退"瞬间，不描写恢复过程的 RP 细节。`;
+
+/**
+ * 洛书晴卸下事件（前缀 "洛书晴·卸下:" 或 "洛书晴·卸下服装:"）
+ * 统一模板，明确告诉 AI：场景主角是洛书晴+{{user}}，云霜凝/苗喧/苗广不出场。
+ */
+function buildLuoUnequipEvent(eventName: string, data: SchemaType): string {
+  const luoStage = data.洛书晴.调教阶段;
+  // 解析：洛书晴·卸下服装:X → 卸下服装 X / 洛书晴·卸下:X → 卸下 X
+  const rest = eventName.slice('洛书晴·'.length); // '卸下:X' or '卸下服装:X'
+  let itemName = rest;
+  let kind: 'clothing' | 'generic' = 'generic';
+  if (rest.startsWith('卸下服装:')) {
+    itemName = rest.slice('卸下服装:'.length);
+    kind = 'clothing';
+  } else if (rest.startsWith('卸下:')) {
+    itemName = rest.slice('卸下:'.length);
+  }
+
+  const sceneHint =
+    luoStage < 3
+      ? '通常发生在【洛书晴神魂空间】'
+      : '通常发生在【现实】——AI 依据上下文决定位置';
+
+  const baseConstraint = `[场景约束]
+- 主角：洛书晴 与 {{user}}
+- ⚠️ 云霜凝/苗喧/苗广 不出场
+- 场景位置：${sceneHint}
+- 洛书晴 当前阶段${luoStage}`;
+
+  if (kind === 'clothing') {
+    return `【换装·洛书晴】{{user}}让洛书晴脱下${itemName}，换回原本的服装。
+
+${baseConstraint}
+
+[AI指令] 200-300字。描写换装的自然过程和洛书晴的反应。根据阶段决定基调——阶段低则局促/羞耻，阶段高则从容/主动。
+【禁止】AI禁止扮演{{user}}，禁止让云霜凝/苗喧/苗广出场。`;
+  }
+
+  // generic 卸下（身体器具/体改/性癖）
+  return `【道具卸除·洛书晴】{{user}}为洛书晴取下/移除${itemName}。
+
+${baseConstraint}
+
+[AI指令] 200-400字。描写卸除的过程与洛书晴的身体/心理反应。按当前阶段与数值调整基调。
+【禁止】AI禁止扮演{{user}}，禁止让云霜凝/苗喧/苗广出场。`;
+}
 
 /**
  * 洛书晴道具事件（ShopPanel 给洛书晴使用道具时 push 的 "洛书晴·<道具>" 前缀事件）
@@ -4344,6 +4406,9 @@ export function buildBatchUseEvent(itemNames: string[], data: SchemaType): strin
     const unequipFn = unequipEventMap[item];
     if (unequipFn) {
       parts.push(unequipFn(data));
+    } else if (KINK_ITEM_MAP[item]) {
+      // 性癖卸下：动态生成（云霜凝 side）
+      parts.push(KINK_UNEQUIP_TEMPLATE(KINK_ITEM_MAP[item].name, '云霜凝'));
     } else {
       parts.push(`【道具变更】{{user}}将${item}移除。
 [AI指令] ${item}已被移除。结合当前剧情的进展和张力来描写这个变化带来的影响。`);
@@ -4378,6 +4443,11 @@ ${list}
     if (name === '__苗喧前期反抗_1__' || name === '__苗喧前期反抗_2__') {
       const round = name === '__苗喧前期反抗_1__' ? '1' : '2';
       parts.push(buildMiaoxuanEarlyRebellionGuide(round as '1' | '2', data));
+      continue;
+    }
+    // 洛书晴卸下事件（"洛书晴·卸下:" / "洛书晴·卸下服装:" 前缀）
+    if (name.startsWith('洛书晴·卸下:') || name.startsWith('洛书晴·卸下服装:')) {
+      parts.push(buildLuoUnequipEvent(name, data));
       continue;
     }
     // 洛书晴专属道具事件（"洛书晴·<道具名>" 前缀）

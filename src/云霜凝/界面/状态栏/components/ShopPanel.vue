@@ -1516,19 +1516,21 @@ function handleClick(item: ItemDef) {
 
   // ── Phase 2 新流程：装备/体改/性癖 走即时 dialog ──
   // （消耗品/特殊场景/淫纹刻印 保留批量 checkedItems 流程）
+  // 按用户设计：点击分三步（第一次买，第二次选装备对象，第三次选卸下对象）
   if (isImmediateFlowItem(item)) {
     const purchased = !!store.data.系统.道具状态[item.name];
-    // 未购买：先买（扣灵石），购买成功后自动弹 dialog
     if (!purchased) {
+      // 第一次点：扣灵石购买，不自动弹 dialog（给用户看到"已购买"状态）
       if (store.data.系统.灵石 < item.price) {
         showToast(`灵石不足（需 ${item.price}，现有 ${store.data.系统.灵石}）`, 'err');
         return;
       }
       store.data.系统.灵石 -= item.price;
       store.data.系统.道具状态[item.name] = '已购买';
-      showToast(`已购买「${item.name}」`, 'ok');
+      showToast(`已购买「${item.name}」，再次点击选择装备对象`, 'ok');
+      return;
     }
-    // 已购买 / 刚买完 → 弹装备 dialog 让玩家选 target
+    // 已购买/已装备 → 弹 dialog 让玩家选 装备/卸下 的 target
     openEquipDialog(item);
     return;
   }
