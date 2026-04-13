@@ -76,6 +76,19 @@
               <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" /></svg>
             </span>
             <span class="card-name">{{ entry.item.name }}</span>
+            <!-- per-target 胶囊徽章：一眼看出谁装备了/拥有该道具 -->
+            <span v-if="showOwnerBadges(entry.item)" class="card-owners">
+              <span
+                v-if="isYunOwned(entry.item.name) || isYunUsing(entry.item.name)"
+                class="owner-badge owner-yun"
+                >云</span
+              >
+              <span
+                v-if="isLuoOwned(entry.item.name) || isLuoUsing(entry.item.name)"
+                class="owner-badge owner-luo"
+                >洛</span
+              >
+            </span>
           </div>
           <div class="card-bottom">
             <span class="card-price"><span class="p-icon">◈</span>{{ entry.item.price }}</span>
@@ -1901,6 +1914,16 @@ function isEitherUsing(name: string): boolean {
   return isYunUsing(name) || isLuoUsing(name);
 }
 
+/** 是否应在 card 上显示 per-target 徽章（云/洛） */
+function showOwnerBadges(item: ItemDef): boolean {
+  // 只对共用道具显示（云霜凝专属如蚀心露/定心符 等不显示）
+  if (!isSharedItem(item.name)) return false;
+  // 只在任一角色拥有/装备时显示
+  return (
+    isYunOwned(item.name) || isLuoOwned(item.name) || isYunUsing(item.name) || isLuoUsing(item.name)
+  );
+}
+
 // ════════════════════════════════════════════
 // Phase 2: 即时装备/卸下 dialog 系统
 // ════════════════════════════════════════════
@@ -2335,9 +2358,12 @@ function handleSellLiuyingshi(name: string) {
 function rowClass(item: ItemDef) {
   if (!isUnlocked(item)) return 'row-locked';
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return 'row-done';
-  // 体改/性癖：任一角色拥有 = 已应用（对该道具整体完成）
-  if ((item.type === '性癖' || item.type === '体改') && isAlreadyOwned(item.name)) {
-    return 'row-done';
+  // 体改/性癖：区分单方 vs 双方 —— 双方都拥有才算"完成"变灰
+  if (item.type === '性癖' || item.type === '体改') {
+    const yunO = isYunOwned(item.name);
+    const luoO = isLuoOwned(item.name);
+    if (yunO && luoO) return 'row-done'; // 两者都拥有 → 真正完成
+    if (yunO || luoO) return 'row-active'; // 单方拥有 → 正常亮度 + 绿色 accent
   }
   // 装备：任一角色装备 = 激活
   if (item.type === '装备' && isEitherUsing(item.name)) {
@@ -2895,6 +2921,8 @@ $cat-场景: #d8a040;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+  flex: 1;
+  min-width: 0;
 
   .row-active & {
     color: lighten($c-good, 12%);
@@ -2922,6 +2950,40 @@ $cat-场景: #d8a040;
   letter-spacing: 0.3px;
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+// ── per-target 胶囊徽章（card-top 右侧显示谁装备了/拥有） ──
+.card-owners {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+  pointer-events: none; // 纯显示，不拦截 card 点击
+}
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 5px;
+  border-radius: 7px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  // 即使 row 在低 opacity 状态下（row-done/row-locked）也保持高对比
+  // 通过自身 filter 部分抵消 row 的 opacity
+  filter: brightness(1.1);
+}
+.owner-yun {
+  background: linear-gradient(135deg, #c03050 0%, #8a2038 100%);
+  box-shadow: 0 0 4px rgba(#c03050, 0.4);
+}
+.owner-luo {
+  background: linear-gradient(135deg, #d36c86 0%, #8a3c50 100%);
+  box-shadow: 0 0 4px rgba(#d36c86, 0.4);
 }
 .st-none {
   color: rgba($c-sub, 0.4);
@@ -3546,6 +3608,16 @@ $cat-场景: #d8a040;
   .item-list {
     grid-template-columns: repeat(2, 1fr);
   }
+  // 超小屏：徽章更紧凑
+  .owner-badge {
+    min-width: 14px;
+    height: 12px;
+    padding: 0 3px;
+    font-size: 0.52rem;
+  }
+  .card-owners {
+    gap: 2px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -3561,6 +3633,13 @@ $cat-场景: #d8a040;
   .yinwen-options {
     flex-direction: column;
     gap: 4px;
+  }
+  // 手机端：徽章略缩小保持可读
+  .owner-badge {
+    min-width: 15px;
+    height: 13px;
+    padding: 0 4px;
+    font-size: 0.54rem;
   }
 }
 </style>
