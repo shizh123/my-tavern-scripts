@@ -1084,7 +1084,15 @@ const KINK_EFFECTS: Record<string, { name: string; tag: string }> = {
 const MAX_KINKS = 3;
 function activeKinkCount(): number {
   // 只统计商店性癖，特殊场景奖励（镜前记忆、改嫁认知等）不占槽位
-  return Object.keys(store.data.云霜凝.性癖列表).filter(k => k in KINK_EFFECTS).length;
+  // 注：KINK_EFFECTS 的 key 是道具名（如"阿黑颜体质"），value.name 是性癖名；
+  // 这里判断 性癖列表 的 key（性癖名）是否是某个 KINK_EFFECTS 条目的 name
+  const shopKinkNames = new Set(Object.values(KINK_EFFECTS).map(k => k.name));
+  return Object.keys(store.data.云霜凝.性癖列表).filter(k => shopKinkNames.has(k)).length;
+}
+function activeLuoKinkCount(): number {
+  if (!store.data._洛书晴线已激活) return 0;
+  const shopKinkNames = new Set(Object.values(KINK_EFFECTS).map(k => k.name));
+  return Object.keys(store.data.洛书晴.性癖列表).filter(k => shopKinkNames.has(k)).length;
 }
 
 // 体改道具
@@ -2070,12 +2078,14 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       eventNames.push(name);
     } else {
       // 洛书晴槽位：独立3个
-      const luoActiveCount = Object.keys(store.data.洛书晴.性癖列表).length;
-      if (luoActiveCount >= MAX_KINKS) {
+      if (activeLuoKinkCount() >= MAX_KINKS) {
         showToast(`洛书晴性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}）`, 'err');
         return;
       }
       store.data._洛书晴道具状态[name] = '使用中';
+      // 直接写入洛书晴性癖列表（backend processNewlyActivatedLuoItems 会再次处理，
+      // 前端先写一份让 isLuoOwned 立即看到变化）
+      store.data.洛书晴.性癖列表[kink.name] = kink.tag;
       eventNames.push(`洛书晴·${name}`);
     }
   }
