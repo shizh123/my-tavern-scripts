@@ -617,8 +617,7 @@ $(() => {
         // _已触发蚀心露屈辱=true 但不会 push 事件。若用 data flag 会误把入口预设的
         // 高绿帽值（如入口 5 的 80）拍成 0/屈辱。事件只在 shopSystem 蚀心露按钮真正触发
         // 转变时才 push，正好用来区分"yaml 预设"和"运行时按钮触发"。
-        const 蚀心露刚触发 =
-          !_protSnapshot?.已触发蚀心露屈辱 && items.includes('__蚀心露屈辱转变__');
+        const 蚀心露刚触发 = !_protSnapshot?.已触发蚀心露屈辱 && items.includes('__蚀心露屈辱转变__');
         _protSnapshot = {
           灵石: data.系统.灵石,
           神魂空间已解锁: data._神魂空间已解锁,
