@@ -175,8 +175,12 @@ const stuckHint = computed(() => {
 </script>
 
 <style lang="scss" scoped>
-$c-pink: #d36c86;
-$c-pink-dim: #8a3c50;
+// ── 色彩系统（洛书晴·粉紫主题，对齐云霜凝面板结构但保持色调区分）──
+$c-bg: #0c0406;
+$c-pri: #d36c86;
+$c-pri-d: #8a3c50;
+$c-acc: #ff8fa8;
+$c-frost: #ffd0d8;
 $c-text: #ffe8ec;
 $c-sub: #a07080;
 
@@ -184,63 +188,89 @@ $c-sub: #a07080;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 8px;
 }
 
+// ── 卡片容器（对齐云霜凝面板风格）──
 .card {
-  background: rgba(40, 10, 20, 0.35);
-  border: 1px solid rgba($c-pink, 0.2);
-  border-radius: 6px;
-  padding: 10px;
-}
+  background: linear-gradient(135deg, rgba($c-pri, 0.07) 0%, rgba($c-bg, 0.5) 100%);
+  border: 1px solid rgba($c-pri, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: border-color 0.3s;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(8px);
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: $c-pink;
-  font-size: 13px;
-  margin-bottom: 8px;
-  font-weight: 600;
-  .decor-line {
-    flex: 1;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 1px;
-    background: linear-gradient(to right, transparent, rgba($c-pink, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba($c-frost, 0.12), transparent);
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: rgba($c-pri, 0.25);
   }
 }
 
+// ── 区域标题 ──
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: rgba($c-pri, 0.85);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.decor-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba($c-pri, 0.3), transparent);
+}
+
+// ── 核心数值进度条 ──
 .stat-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 4px 0;
-  font-size: 12px;
+  gap: 10px;
+  margin: 6px 0;
+  font-size: 0.75rem;
 }
 .stat-label {
   width: 60px;
   color: $c-sub;
+  letter-spacing: 0.05em;
 }
 .stat-track {
   flex: 1;
   height: 8px;
-  background: rgba($c-pink-dim, 0.2);
+  background: rgba($c-pri-d, 0.2);
   border-radius: 4px;
   overflow: hidden;
 }
 .stat-fill {
   height: 100%;
   transition: width 0.5s;
+  border-radius: 4px;
   &.def {
-    background: linear-gradient(to right, $c-pink-dim, $c-pink);
+    background: linear-gradient(to right, $c-pri-d, $c-pri);
   }
   &.obey {
-    background: linear-gradient(to right, #e8be58, $c-pink);
+    background: linear-gradient(to right, #e8be58, $c-acc);
   }
 }
 .stat-val {
-  width: 30px;
+  width: 32px;
   text-align: right;
   color: $c-text;
+  font-weight: 600;
 }
 
 .stuck-hint {
@@ -249,21 +279,22 @@ $c-sub: #a07080;
   background: rgba(232, 190, 88, 0.1);
   border-left: 2px solid #e8be58;
   color: #e8be58;
-  font-size: 11px;
+  font-size: 0.7rem;
   border-radius: 3px;
 }
 
+// ── 身体开发网格 ──
 .body-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
 }
 .body-item {
-  background: rgba($c-pink-dim, 0.15);
-  border-radius: 4px;
-  padding: 6px 4px;
+  background: rgba($c-pri-d, 0.15);
+  border-radius: 6px;
+  padding: 8px 4px;
   text-align: center;
-  font-size: 11px;
+  font-size: 0.7rem;
   &.lv0 {
     color: $c-sub;
   }
@@ -271,14 +302,14 @@ $c-sub: #a07080;
     color: #a0a0c0;
   }
   &.lv2 {
-    color: $c-pink;
+    color: $c-pri;
   }
   &.lv3 {
-    color: #ff8fa8;
+    color: $c-acc;
   }
   &.lv4 {
-    color: #ffb0c0;
-    background: rgba($c-pink, 0.25);
+    color: $c-frost;
+    background: rgba($c-pri, 0.25);
   }
 }
 .body-label {
@@ -286,19 +317,21 @@ $c-sub: #a07080;
 }
 .body-val {
   font-weight: 600;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
+// ── 服装槽 ──
 .attire-grid {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 .attire-item {
   display: flex;
-  font-size: 12px;
+  font-size: 0.75rem;
   .a-slot {
-    width: 60px;
+    width: 64px;
     color: $c-sub;
+    letter-spacing: 0.05em;
   }
   .a-val {
     flex: 1;
@@ -306,33 +339,37 @@ $c-sub: #a07080;
   }
 }
 
+// ── 肉体改造标签 ──
 .tag-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 .mod-tag {
-  background: rgba($c-pink, 0.15);
-  border: 1px solid rgba($c-pink, 0.3);
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
+  background: rgba($c-pri, 0.15);
+  border: 1px solid rgba($c-pri, 0.3);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.7rem;
   .mod-label {
     color: $c-sub;
-    margin-right: 4px;
+    margin-right: 6px;
   }
   .mod-value {
-    color: $c-pink;
+    color: $c-pri;
+    font-weight: 600;
   }
 }
 
+// ── 心理活动 ──
 .thought {
-  padding: 8px;
-  background: rgba($c-pink-dim, 0.15);
-  border-radius: 4px;
+  padding: 10px 12px;
+  background: rgba($c-pri-d, 0.15);
+  border-radius: 6px;
   color: $c-text;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 0.78rem;
+  line-height: 1.7;
   font-style: italic;
+  border-left: 2px solid rgba($c-pri, 0.35);
 }
 </style>

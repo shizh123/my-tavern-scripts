@@ -634,8 +634,12 @@
                     obj[segments[segments.length - 1]] = patch.value;
                     appliedCount++;
                   }
+                  // 记录 sync 前的 系统.道具状态 和 肉体改造
+                  const preSyncShop = JSON.parse(JSON.stringify((statData.系统 && statData.系统.道具状态) || {}));
+                  const preSyncYunMods = JSON.parse(JSON.stringify((statData.云霜凝 && statData.云霜凝.肉体改造) || {}));
                   // auto-sync 商店道具状态
                   syncItemStateFromBodyMods(statData);
+                  const postSyncShop = JSON.parse(JSON.stringify((statData.系统 && statData.系统.道具状态) || {}));
                   console.info(
                     '[云霜凝主页] 切到 swipe ' + swipeId + ' 后写入 ' + appliedCount + ' 条 patch',
                     '关键字段:',
@@ -646,6 +650,9 @@
                       信任度: statData.云霜凝 && statData.云霜凝.信任度,
                     },
                   );
+                  console.info('[云霜凝主页] 肉体改造（sync前后一致）:', preSyncYunMods);
+                  console.info('[云霜凝主页] 系统.道具状态 sync 前:', preSyncShop);
+                  console.info('[云霜凝主页] 系统.道具状态 sync 后:', postSyncShop);
                   return variables;
                 },
                 { type: 'message', message_id: 0 },
@@ -654,11 +661,13 @@
               // 写入后再次读取验证
               await new Promise(resolve => setTimeout(resolve, 100));
               const verifyVars = getVariables({ type: 'message', message_id: 0 });
+              const vsd = verifyVars && verifyVars.stat_data;
               console.info('[云霜凝主页] 100ms 后验证读取:', {
-                _神魂空间已解锁: verifyVars && verifyVars.stat_data && verifyVars.stat_data._神魂空间已解锁,
-                _洛书晴线已激活: verifyVars && verifyVars.stat_data && verifyVars.stat_data._洛书晴线已激活,
-                治疗阶段:
-                  verifyVars && verifyVars.stat_data && verifyVars.stat_data.治疗 && verifyVars.stat_data.治疗.阶段,
+                _神魂空间已解锁: vsd && vsd._神魂空间已解锁,
+                _洛书晴线已激活: vsd && vsd._洛书晴线已激活,
+                治疗阶段: vsd && vsd.治疗 && vsd.治疗.阶段,
+                云霜凝肉体改造: vsd && vsd.云霜凝 && vsd.云霜凝.肉体改造,
+                系统道具状态: vsd && vsd.系统 && vsd.系统.道具状态,
               });
             } catch (err) {
               console.error('[云霜凝主页] 应用 JSONPatch 失败:', err);

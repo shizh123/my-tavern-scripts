@@ -143,10 +143,12 @@
 
     <!-- 心理活动 -->
     <template v-if="store.data.云霜凝.心理活动">
-      <div class="section-title sec-thought">
-        <span class="decor-line"></span><span>心理活动</span><span class="decor-line"></span>
+      <div class="card">
+        <div class="section-title sec-thought">
+          <span class="decor-line"></span><span>心理活动</span><span class="decor-line"></span>
+        </div>
+        <div class="thought-box">{{ store.data.云霜凝.心理活动 }}</div>
       </div>
-      <div class="thought-box">{{ store.data.云霜凝.心理活动 }}</div>
     </template>
   </div>
 </template>
