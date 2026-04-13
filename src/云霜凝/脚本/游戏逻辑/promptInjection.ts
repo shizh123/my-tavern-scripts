@@ -1,6 +1,6 @@
 import type { Schema as SchemaType } from '../../schema';
 import { getHealingPhaseName, SCENE_ACTORS } from './stateValidation';
-import { KINK_ITEM_MAP, CLOTHING_SLOT, CONSUMABLE_NAMES } from './shopSystem';
+import { KINK_ITEM_MAP, CLOTHING_SLOT } from './shopSystem';
 
 // 洛书晴道具事件分派用的身体器具名单（与 ShopPanel.EQUIPMENT_NAMES 保持同步）
 const LUO_EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
@@ -4222,16 +4222,22 @@ ${baseConstraint}
 ${ending}`;
   }
 
-  // ── 类别 6: 消耗品（安抚符/真心符/神魂共鸣石/安神香）──
-  if (CONSUMABLE_NAMES.has(rest)) {
-    return `【送符/焚香·洛书晴】{{user}}取出${rest}准备对洛书晴使用。
+  // ── 类别 6: 即时数值型消耗品（安神香/神魂共鸣石）──
+  // 注意：安抚符/真心符是方式2注入型，由 buildLuoPsychologyGuide 每轮快照追加
+  // tone modifier 生效，不应额外触发 narrative（ShopPanel 已静默处理这两个）
+  if (rest === '安神香' || rest === '神魂共鸣石') {
+    const actionDesc =
+      rest === '安神香'
+        ? '焚起一缕安神香，淡淡药香弥漫开来'
+        : '拿出神魂共鸣石，灵力在两人之间泛起微光';
+    return `【焚香/共鸣·洛书晴】{{user}}${actionDesc}。
 
 ${baseConstraint}
 
-[AI指令] 300-500字。描写：
-- {{user}}靠近她并取出${rest}
-- 施用的过程（符箓放在眉心/焚香散出/符水让她服下 等——按道具特性发挥）
-- 效果展开的瞬间（她的感受与神情变化）
+[AI指令] 200-300字。简短描写——这是即时效果道具，不是重型仪式场景：
+- {{user}}取出道具的动作
+- 洛书晴感受到效果时的细微反应（防线松懈/心绪微动）
+- 场景自然过渡回主线互动
 ${ending}`;
   }
 
