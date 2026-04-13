@@ -513,6 +513,69 @@
     </div>
 
     <script>
+      // 根据开场白设置的肉体改造 stat 字段，反推对应的商店体改品为"已购买"
+      // 修复：入口 2-5 进入后商店道具状态与状态栏违和（状态栏 G 罩杯但商店显示丰胸丹未购买）
+      function syncItemStateFromBodyMods(statData) {
+        if (!statData) return;
+        // 云霜凝 → 系统.道具状态
+        const yunMods = statData.云霜凝 && statData.云霜凝.肉体改造;
+        if (yunMods) {
+          if (!statData.系统) statData.系统 = {};
+          if (!statData.系统.道具状态) statData.系统.道具状态 = {};
+          const yunShop = statData.系统.道具状态;
+          // 胸部改造（累积式：走到 G 必然用过 中+大，走到 H 必然用过 中+大+极）
+          if (yunMods.胸部 === 'E罩杯' || yunMods.胸部 === 'G罩杯' || yunMods.胸部 === 'H罩杯') {
+            yunShop['丰胸灵乳丹·中'] = '已购买';
+          }
+          if (yunMods.胸部 === 'G罩杯' || yunMods.胸部 === 'H罩杯') {
+            yunShop['丰胸灵乳丹·大'] = '已购买';
+          }
+          if (yunMods.胸部 === 'H罩杯') {
+            yunShop['丰胸灵乳丹·极'] = '已购买';
+          }
+          if (yunMods.臀部 === '丰满') {
+            yunShop['丰臀圆玉丹'] = '已购买';
+          }
+          if (yunMods.乳环) {
+            yunShop['乳环'] = '已购买';
+          }
+          if (yunMods.阴环) {
+            yunShop['阴环'] = '已购买';
+          }
+          // 淫纹任一位置非空 → 淫纹刻印已购买
+          if (yunMods.淫纹 && (yunMods.淫纹.腰腹 || yunMods.淫纹.胸前 || yunMods.淫纹.大腿内侧 || yunMods.淫纹.臀部)) {
+            yunShop['淫纹刻印'] = '已购买';
+          }
+        }
+        // 洛书晴 → _洛书晴道具状态（独立字典）
+        const luoMods = statData.洛书晴 && statData.洛书晴.肉体改造;
+        if (luoMods && statData._洛书晴线已激活) {
+          if (!statData._洛书晴道具状态) statData._洛书晴道具状态 = {};
+          const luoShop = statData._洛书晴道具状态;
+          if (luoMods.胸部 === 'E罩杯' || luoMods.胸部 === 'G罩杯' || luoMods.胸部 === 'H罩杯') {
+            luoShop['丰胸灵乳丹·中'] = '已购买';
+          }
+          if (luoMods.胸部 === 'G罩杯' || luoMods.胸部 === 'H罩杯') {
+            luoShop['丰胸灵乳丹·大'] = '已购买';
+          }
+          if (luoMods.胸部 === 'H罩杯') {
+            luoShop['丰胸灵乳丹·极'] = '已购买';
+          }
+          if (luoMods.臀部 === '丰满') {
+            luoShop['丰臀圆玉丹'] = '已购买';
+          }
+          if (luoMods.乳环) {
+            luoShop['乳环'] = '已购买';
+          }
+          if (luoMods.阴环) {
+            luoShop['阴环'] = '已购买';
+          }
+          if (luoMods.淫纹 && (luoMods.淫纹.腰腹 || luoMods.淫纹.胸前 || luoMods.淫纹.大腿内侧 || luoMods.淫纹.臀部)) {
+            luoShop['淫纹刻印'] = '已购买';
+          }
+        }
+      }
+
       // 主页 → 入口 切换逻辑
       // 问题背景：MVU 不解析开场白里嵌的 <UpdateVariable><JSONPatch> 块，只处理 AI 响应的。
       // 而 setChatMessage 的 swipe 切换又不触发 MESSAGE_SWIPED 事件（那是 UI swipe 按钮触发的）。
@@ -563,6 +626,12 @@
                 obj[segments[segments.length - 1]] = patch.value;
                 appliedCount++;
               }
+
+              // 3. auto-sync 商店道具状态：根据开场白设置的肉体改造 stat 字段
+              //    反推对应的体改品为"已购买"，这样商店不会和状态栏违和
+              //    （云霜凝体改品写入 系统.道具状态；洛书晴写入 _洛书晴道具状态）
+              syncItemStateFromBodyMods(statData);
+
               if (appliedCount > 0) {
                 await insertOrAssignVariables({ stat_data: statData }, { type: 'message', message_id: 0 });
                 console.info('[云霜凝主页] 已应用开场白 JSONPatch ' + appliedCount + ' 条 (swipe ' + swipeId + ')');
