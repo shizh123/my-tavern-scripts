@@ -2,7 +2,8 @@
   <div class="miaoxuan-panel">
     <div class="card">
       <div class="section-title">
-        <span class="decor-line"></span><span>苗喧 · {{ store.data.苗喧.心态 }}</span><span class="decor-line"></span>
+        <span class="decor-line"></span><span>苗喧 · {{ store.data.苗喧.心态 }}</span
+        ><span class="decor-line"></span>
       </div>
 
       <div class="stat-row">
@@ -200,8 +201,13 @@ $c-sub: #a07080;
   animation: blink 1.5s infinite;
 }
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 .unread-label {
   color: $c-gold;

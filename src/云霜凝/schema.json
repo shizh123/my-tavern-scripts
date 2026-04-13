@@ -841,6 +841,22 @@
     },
     "_洛书晴_真心符生效至": {
       "type": "number"
+    },
+    "_当前场景角色": {
+      "default": {
+        "云霜凝": true,
+        "洛书晴": false
+      },
+      "type": "object",
+      "properties": {
+        "云霜凝": {
+          "default": true,
+          "type": "boolean"
+        },
+        "洛书晴": {
+          "type": "boolean"
+        }
+      }
     }
   }
 }

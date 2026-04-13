@@ -143,13 +143,7 @@
         </div>
         <div v-if="yinwenPos" class="yinwen-text-row">
           <label class="yinwen-text-label">刻印文字（2-8字，留空默认"淫"）</label>
-          <input
-            v-model="yinwenText"
-            class="yinwen-text-input"
-            type="text"
-            maxlength="8"
-            placeholder="淫"
-          />
+          <input v-model="yinwenText" class="yinwen-text-input" type="text" maxlength="8" placeholder="淫" />
         </div>
       </div>
     </Transition>
@@ -877,10 +871,7 @@ function isUnlocked(item: ItemDef): boolean {
     // ── 联动场景（洛书晴线已激活后） ──
     婆媳教导: () => !!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= 3 && d.治疗.阶段 >= 4,
     两人同侍: () =>
-      !!d._洛书晴线已激活 &&
-      d.洛书晴.调教阶段 >= 5 &&
-      d.治疗.阶段 >= 6 &&
-      !!d._已完成特殊场景['婆媳教导'],
+      !!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= 5 && d.治疗.阶段 >= 6 && !!d._已完成特殊场景['婆媳教导'],
     寝取宣告增强: () =>
       !!d._洛书晴线已激活 &&
       d.洛书晴.调教阶段 >= 6 &&
@@ -913,10 +904,7 @@ function isUnlocked(item: ItemDef): boolean {
       d.苗广.心态 === '沉溺' &&
       d.苗广.千晶幻术.认知改写完成 &&
       !!d._已完成特殊场景['儿媳调教公公'],
-    千晶告知洛书晴: () =>
-      !!d._洛书晴线已激活 &&
-      d.苗广.千晶幻术.认知改写完成 &&
-      !d._已完成特殊场景['千晶告知洛书晴'],
+    千晶告知洛书晴: () => !!d._洛书晴线已激活 && d.苗广.千晶幻术.认知改写完成 && !d._已完成特殊场景['千晶告知洛书晴'],
   };
 
   return conds[name] ? conds[name]() : true;

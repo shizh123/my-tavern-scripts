@@ -99,9 +99,7 @@ export function calcHealingStage(完成度: number): number {
  *
  * 0-15=蔑视, 16-30=困惑, 31-50=不安, 51-70=恐惧, 71-90=崩溃, 91-100=失去
  */
-export function calcMiaoxuanMind(
-  绝望值: number,
-): '蔑视' | '困惑' | '不安' | '恐惧' | '崩溃' | '失去' {
+export function calcMiaoxuanMind(绝望值: number): '蔑视' | '困惑' | '不安' | '恐惧' | '崩溃' | '失去' {
   if (绝望值 >= 91) return '失去';
   if (绝望值 >= 71) return '崩溃';
   if (绝望值 >= 51) return '恐惧';
@@ -853,7 +851,11 @@ export function validateAndRecalcState(
     }
 
     // 压抑值被动慢涨：每楼 +2（神魂空间内不涨，苗喧观察不到）
-    if (新变量._当前互动模式 !== '神魂空间' && currentFloor !== undefined && currentFloor !== _lastMiaoXuanPressureFloor) {
+    if (
+      新变量._当前互动模式 !== '神魂空间' &&
+      currentFloor !== undefined &&
+      currentFloor !== _lastMiaoXuanPressureFloor
+    ) {
       _lastMiaoXuanPressureFloor = currentFloor;
       新变量.苗喧.压抑值 = Math.min(100, 新变量.苗喧.压抑值 + 2);
     }
@@ -866,10 +868,7 @@ export function validateAndRecalcState(
     // 玩家点击"查看"后清空。去重通过 _已完成特殊场景['_反抗_X'] flag。
     if (!新变量._苗喧未读反抗事件) {
       // #3 千晶后求父：千晶幻术认知改写完成后
-      if (
-        新变量.苗广.千晶幻术.认知改写完成 &&
-        !新变量._已完成特殊场景['_反抗_千晶后求父']
-      ) {
+      if (新变量.苗广.千晶幻术.认知改写完成 && !新变量._已完成特殊场景['_反抗_千晶后求父']) {
         新变量._苗喧未读反抗事件 = '千晶后求父';
         新变量._已完成特殊场景['_反抗_千晶后求父'] = true;
         console.info('[状态验证] 苗喧反抗事件触发：千晶后求父');
@@ -886,10 +885,7 @@ export function validateAndRecalcState(
         console.info('[状态验证] 苗喧反抗事件触发：掌门改嫁前');
       }
       // #5 找未婚妻求助：洛书晴阶段9 时
-      else if (
-        新变量.洛书晴.调教阶段 >= 9 &&
-        !新变量._已完成特殊场景['_反抗_找未婚妻求助']
-      ) {
+      else if (新变量.洛书晴.调教阶段 >= 9 && !新变量._已完成特殊场景['_反抗_找未婚妻求助']) {
         新变量._苗喧未读反抗事件 = '找未婚妻求助';
         新变量._已完成特殊场景['_反抗_找未婚妻求助'] = true;
         console.info('[状态验证] 苗喧反抗事件触发：找未婚妻求助');
@@ -922,10 +918,7 @@ export function validateAndRecalcState(
     if (新场景 && SCENE_ACTORS[新场景]) {
       // 特殊场景进行中：强制锁定为 SCENE_ACTORS 映射值
       const locked = SCENE_ACTORS[新场景];
-      if (
-        新变量._当前场景角色.云霜凝 !== locked.云霜凝 ||
-        新变量._当前场景角色.洛书晴 !== locked.洛书晴
-      ) {
+      if (新变量._当前场景角色.云霜凝 !== locked.云霜凝 || 新变量._当前场景角色.洛书晴 !== locked.洛书晴) {
         新变量._当前场景角色 = { ...locked };
         if (旧场景 !== 新场景) {
           console.info(`[状态验证] 特殊场景「${新场景}」进入，场景角色锁定为`, locked);
@@ -956,8 +949,7 @@ export function validateAndRecalcState(
       };
       // 只在 AI 没有把另一位设置为 true 时才锁定（允许 AI 进入双人模式）
       const aiAddedCompanion =
-        (target === '云霜凝' && 新变量._当前场景角色.洛书晴) ||
-        (target === '洛书晴' && 新变量._当前场景角色.云霜凝);
+        (target === '云霜凝' && 新变量._当前场景角色.洛书晴) || (target === '洛书晴' && 新变量._当前场景角色.云霜凝);
       if (!aiAddedCompanion) {
         新变量._当前场景角色 = expected;
       }

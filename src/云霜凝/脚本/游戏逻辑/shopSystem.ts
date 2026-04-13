@@ -735,11 +735,7 @@ export function processNewlyActivatedItems(newData: SchemaType, oldData: SchemaT
  * 逻辑对标 processNewlyActivatedItems，但写入洛书晴而非云霜凝
  * 只处理共用道具（服装/体改/性癖/身体器具/部分消耗品）
  */
-export function processNewlyActivatedLuoItems(
-  newData: SchemaType,
-  oldData: SchemaType,
-  currentFloor?: number,
-): void {
+export function processNewlyActivatedLuoItems(newData: SchemaType, oldData: SchemaType, currentFloor?: number): void {
   const newItems = newData._洛书晴道具状态;
   const oldItems = oldData._洛书晴道具状态;
 

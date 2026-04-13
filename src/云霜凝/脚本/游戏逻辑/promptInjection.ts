@@ -1136,9 +1136,7 @@ export function buildMiaoxuanRebellionGuide(type: string, data: SchemaType): str
 [AI指令] 700-900字。重点描写"全家阻止"的孤立感——苗喧每去找一个人，都是一次失败。最后母亲的温柔是压垮他的最后一根稻草。
 苗喧心理活动（300-350字）——核心独白：他在这个家里彻底没有同盟。
 [注意] 本场景是被动通知事件，玩家是"查看"剧情，{{user}}和云霜凝不出场（除最后母亲场景）。${
-        luoStage >= 7
-          ? '洛书晴此时已经倒向云霜凝阵营，苗喧若试图找未婚妻，她也只是淡淡地说"师兄，您该听师父的"。'
-          : ''
+        luoStage >= 7 ? '洛书晴此时已经倒向云霜凝阵营，苗喧若试图找未婚妻，她也只是淡淡地说"师兄，您该听师父的"。' : ''
       }
 AI禁止扮演{{user}}。`;
 
@@ -1228,10 +1226,14 @@ export function buildMiaoxuanTalkPrompt(data: SchemaType): string {
   // ── Layer 4：条件追加 ──
   const conditions: string[] = [];
   if (luoStage >= 6) {
-    conditions.push(`可能发生信息泄露：洛书晴可能脱口说出不该知道的细节（比如那位新来的师弟的某个习惯、某次对话内容），然后立刻意识到并改口/掩饰`);
+    conditions.push(
+      `可能发生信息泄露：洛书晴可能脱口说出不该知道的细节（比如那位新来的师弟的某个习惯、某次对话内容），然后立刻意识到并改口/掩饰`,
+    );
   }
   if (luoStage >= 8) {
-    conditions.push(`身体语言明显疏离：可能抱臂、看别处、整理衣袖、看时间，可能在某句话里不自然地为"那个新来的师弟"辩护`);
+    conditions.push(
+      `身体语言明显疏离：可能抱臂、看别处、整理衣袖、看时间，可能在某句话里不自然地为"那个新来的师弟"辩护`,
+    );
   }
   // 最近反抗事件检测：用 _已完成特殊场景 中的反抗 flag 数量近似（粗略指标）
   const 反抗flag = ['_反抗_千晶后求父', '_反抗_掌门改嫁前', '_反抗_找未婚妻求助'];
@@ -3044,8 +3046,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
     // 节流：首 2 楼强制 + 此后每整 10 楼复习一次（prompt cache 窗口内 AI 不会失忆）
     {
       const 云霜凝哦齁齁 = actors.云霜凝 && data.系统.道具状态['哦齁齁体质'] === '使用中';
-      const 洛书晴哦齁齁 =
-        actors.洛书晴 && data._洛书晴线已激活 && data._洛书晴道具状态['哦齁齁体质'] === '使用中';
+      const 洛书晴哦齁齁 = actors.洛书晴 && data._洛书晴线已激活 && data._洛书晴道具状态['哦齁齁体质'] === '使用中';
       const 文风应注入 = currentFloor <= 2 || currentFloor % 10 === 0;
       if ((云霜凝哦齁齁 || 洛书晴哦齁齁) && 文风应注入) {
         snapshot += buildOhHohoStyleBlock();

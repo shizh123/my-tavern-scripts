@@ -3,7 +3,8 @@
     <!-- 核心数值 -->
     <div class="card">
       <div class="section-title">
-        <span class="decor-line"></span><span>洛书晴 · 第{{ store.data.洛书晴.调教阶段 }}阶</span><span class="decor-line"></span>
+        <span class="decor-line"></span><span>洛书晴 · 第{{ store.data.洛书晴.调教阶段 }}阶</span
+        ><span class="decor-line"></span>
       </div>
 
       <div class="stat-row">
@@ -34,7 +35,12 @@
         <span class="decor-line"></span><span>身体开发</span><span class="decor-line"></span>
       </div>
       <div class="body-grid">
-        <div v-for="part in bodyParts" :key="part" class="body-item" :class="'lv' + lv(store.data.洛书晴.身体开发[part])">
+        <div
+          v-for="part in bodyParts"
+          :key="part"
+          class="body-item"
+          :class="'lv' + lv(store.data.洛书晴.身体开发[part])"
+        >
           <div class="body-label">{{ part }}</div>
           <div class="body-val">{{ store.data.洛书晴.身体开发[part] }}</div>
         </div>
@@ -43,15 +49,23 @@
 
     <!-- 服装（阶段3+解锁） -->
     <div v-if="store.data.洛书晴.调教阶段 >= 3" class="card">
-      <div class="section-title">
-        <span class="decor-line"></span><span>服装</span><span class="decor-line"></span>
-      </div>
+      <div class="section-title"><span class="decor-line"></span><span>服装</span><span class="decor-line"></span></div>
       <div class="attire-grid">
-        <div class="attire-item"><span class="a-slot">上装</span><span class="a-val">{{ store.data.洛书晴.服装.上装 }}</span></div>
-        <div class="attire-item"><span class="a-slot">下装</span><span class="a-val">{{ store.data.洛书晴.服装.下装 }}</span></div>
-        <div class="attire-item"><span class="a-slot">内衣</span><span class="a-val">{{ store.data.洛书晴.服装.内衣 }}</span></div>
-        <div class="attire-item"><span class="a-slot">内裤</span><span class="a-val">{{ store.data.洛书晴.服装.内裤 }}</span></div>
-        <div class="attire-item"><span class="a-slot">特殊配饰</span><span class="a-val">{{ accessoryDisplay || '无' }}</span></div>
+        <div class="attire-item">
+          <span class="a-slot">上装</span><span class="a-val">{{ store.data.洛书晴.服装.上装 }}</span>
+        </div>
+        <div class="attire-item">
+          <span class="a-slot">下装</span><span class="a-val">{{ store.data.洛书晴.服装.下装 }}</span>
+        </div>
+        <div class="attire-item">
+          <span class="a-slot">内衣</span><span class="a-val">{{ store.data.洛书晴.服装.内衣 }}</span>
+        </div>
+        <div class="attire-item">
+          <span class="a-slot">内裤</span><span class="a-val">{{ store.data.洛书晴.服装.内裤 }}</span>
+        </div>
+        <div class="attire-item">
+          <span class="a-slot">特殊配饰</span><span class="a-val">{{ accessoryDisplay || '无' }}</span>
+        </div>
       </div>
     </div>
 
