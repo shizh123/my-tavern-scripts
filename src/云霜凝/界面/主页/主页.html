@@ -605,11 +605,16 @@
             }
           }
 
-          // 2. 把 JSONPatch 的所有 replace/add op 应用到 message 0 的 stat_data
+          // 2. 先切换 swipe 展示 —— 关键：消息变量是 per-swipe 的（ChatMessageSwiped.swipes_data），
+          //    写入必须落在目标 swipe 的 data 上，否则 setChatMessage 切换后 state 读的是空数据
+          await setChatMessage(target, 0, {
+            swipe_id: swipeId,
+            refresh: 'display_and_render_current',
+          });
+
+          // 3. 现在 current swipe 是目标 swipe, 把 JSONPatch 应用到它的 stat_data
           if (patches && Array.isArray(patches) && patches.length > 0) {
             try {
-              // 用 updateVariablesWith 直接在原 variables 上做深层 mutation,
-              // 避免 insertOrAssignVariables 整块替换 stat_data 时丢失 initvar 默认值
               await updateVariablesWith(
                 function (variables) {
                   if (!variables.stat_data) variables.stat_data = {};
@@ -632,8 +637,8 @@
                   // auto-sync 商店道具状态
                   syncItemStateFromBodyMods(statData);
                   console.info(
-                    '[云霜凝主页] updateVariablesWith 写入 ' + appliedCount + ' 条 patch (swipe ' + swipeId + ')',
-                    '关键字段验证:',
+                    '[云霜凝主页] 切到 swipe ' + swipeId + ' 后写入 ' + appliedCount + ' 条 patch',
+                    '关键字段:',
                     {
                       _神魂空间已解锁: statData._神魂空间已解锁,
                       _洛书晴线已激活: statData._洛书晴线已激活,
@@ -646,10 +651,10 @@
                 { type: 'message', message_id: 0 },
               );
 
-              // 写入后再次读取验证（检查是否被其他脚本覆盖）
+              // 写入后再次读取验证
               await new Promise(resolve => setTimeout(resolve, 100));
               const verifyVars = getVariables({ type: 'message', message_id: 0 });
-              console.info('[云霜凝主页] 100ms 后 getVariables 验证读取:', {
+              console.info('[云霜凝主页] 100ms 后验证读取:', {
                 _神魂空间已解锁: verifyVars && verifyVars.stat_data && verifyVars.stat_data._神魂空间已解锁,
                 _洛书晴线已激活: verifyVars && verifyVars.stat_data && verifyVars.stat_data._洛书晴线已激活,
                 治疗阶段:
@@ -659,12 +664,6 @@
               console.error('[云霜凝主页] 应用 JSONPatch 失败:', err);
             }
           }
-
-          // 3. 切换 swipe 展示（此时 stat_data 已经写好了，swipe 切换后状态栏立即读到正确值）
-          await setChatMessage(target, 0, {
-            swipe_id: swipeId,
-            refresh: 'display_and_render_current',
-          });
         } catch (e) {
           console.error('[云霜凝主页] 切换入口失败:', e);
           alert('切换失败：' + (e && e.message ? e.message : String(e)));
