@@ -970,6 +970,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
     case '掌门改嫁':
       // 叙事：改嫁认知永久写入
       data.云霜凝.性癖列表['改嫁认知'] = '自认{{user}}之妻，苗广是过去的丈夫';
+      // 苗喧绝望冲击：母亲改嫁是他家庭崩塌的最终事实（设计文档 line 76：+40）
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 40);
       break;
 
     // ── 联动场景（洛书晴线已激活后的场景） ──
@@ -996,7 +998,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       // 联动追加
       data.洛书晴.心理防线 = Math.max(0, data.洛书晴.心理防线 - 3);
       data.洛书晴.顺从度 = Math.min(100, data.洛书晴.顺从度 + 3);
-      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 5);
+      // 目击型场景（苗喧远端察觉+苗广在场+洛书晴被动目击）：设计文档 +15~25
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 10);
       data.苗喧.压抑值 = Math.min(100, data.苗喧.压抑值 + 10);
       // 同时标记原版完成（用于后续场景前置）
       data._已完成特殊场景['寝取宣告'] = true;
@@ -1007,7 +1010,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.洛书晴.顺从度 = Math.min(100, data.洛书晴.顺从度 + 3);
       data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + 3);
       data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 8);
-      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 5);
+      // 苗广偷窥 → 苗喧由此察觉家中气氛（设计文档 +15~25 低端）
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 10);
       data.苗喧.压抑值 = Math.min(100, data.苗喧.压抑值 + 10);
       break;
 
@@ -1016,7 +1020,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.洛书晴.顺从度 = Math.min(100, data.洛书晴.顺从度 + 2);
       data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + 2);
       data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 5);
-      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 15);
+      // 双重目击是最直接的目击型场景——苗喧亲眼看到（设计文档 +15~25 高端）
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 25);
       // 压抑值不变（设计：第1-2轮苗喧找洛书晴未果只是叙事铺垫）
       break;
 
@@ -1029,7 +1034,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.洛书晴.顺从度 = Math.min(100, data.洛书晴.顺从度 + 2);
       data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + 2);
       data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 10);
-      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 5);
+      // 未婚妻调教父亲——苗喧的终极羞辱与崩溃（+15）
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 15);
       // 同时标记原版完成（用于后续场景前置）
       data._已完成特殊场景['绿帽奴调教'] = true;
       break;
@@ -1038,6 +1044,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       // 终局，数值已不重要，但写入新称呼系统标志
       data.云霜凝.性癖列表['改嫁认知'] = '自认{{user}}之妻，苗广是过去的丈夫';
       data.洛书晴.性癖列表['双重改嫁认知'] = '自认{{user}}的姨娘，苗喧是过去的未婚夫，苗广改口称姨娘';
+      // 母亲改嫁+未婚妻同时离去的终极冲击（设计文档 line 76：+40）
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 40);
       // 同时标记原版掌门改嫁完成
       data._已完成特殊场景['掌门改嫁'] = true;
       break;

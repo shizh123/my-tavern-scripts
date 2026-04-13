@@ -313,6 +313,45 @@ export function validateAndRecalcState(
     }
   }
 
+  // ── 2b. 苗喧前期反抗事件触发（设计文档 line 104-111） ──
+  // 阶段3完成（oldStage<4 && newStage>=4）→ 反抗#1
+  // 阶段5完成（oldStage<6 && newStage>=6）→ 反抗#2
+  // 触发时写入 _待发送道具事件，下一回合 AI 演绎苗喧告状剧情；
+  // 同时设置 _苗喧反抗限制中 = true，玩家灵石/治疗推进被 ×0.4 削减，
+  // 解除方式：(1) 玩家点击孝敬师父按钮进入副本（MiaoPanel.startXiaojing）
+  //           (2) 触发 10 楼后自动软兜底清除（避免玩家卡死）
+  if (oldStage < 4 && newStage >= 4 && 新变量._苗喧前期反抗已触发 < 1) {
+    新变量._苗喧前期反抗已触发 = 1;
+    新变量._苗喧反抗限制中 = true;
+    新变量._苗喧反抗限制触发楼层 = currentFloor ?? 0;
+    const existing = 新变量._待发送道具事件;
+    const event = '__苗喧前期反抗_1__';
+    新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
+    console.info('[状态验证] 苗喧前期反抗#1 触发（阶段3完成）→ _苗喧反抗限制中 = true');
+  }
+  if (oldStage < 6 && newStage >= 6 && 新变量._苗喧前期反抗已触发 < 2) {
+    新变量._苗喧前期反抗已触发 = 2;
+    新变量._苗喧反抗限制中 = true;
+    新变量._苗喧反抗限制触发楼层 = currentFloor ?? 0;
+    const existing = 新变量._待发送道具事件;
+    const event = '__苗喧前期反抗_2__';
+    新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
+    console.info('[状态验证] 苗喧前期反抗#2 触发（阶段5完成）→ _苗喧反抗限制中 = true');
+  }
+
+  // ── 2c. 苗喧反抗限制 10 楼软兜底：玩家不点孝敬师父也自动解除 ──
+  if (
+    新变量._苗喧反抗限制中 &&
+    新变量._苗喧反抗限制触发楼层 > 0 &&
+    (currentFloor ?? 0) >= 新变量._苗喧反抗限制触发楼层 + 10
+  ) {
+    新变量._苗喧反抗限制中 = false;
+    新变量._苗喧反抗限制触发楼层 = 0;
+    console.info(
+      `[状态验证] 苗喧反抗限制 10 楼兜底自动解除（触发楼层 ${旧变量._苗喧反抗限制触发楼层} + 10 <= 当前 ${currentFloor}）`,
+    );
+  }
+
   // ── 3. 苗广心态自动推算 ──────────────────────────
   // 阶段1保护：疑心值上限5，阶段1几乎冻结疑心增长
   if (新变量.治疗.阶段 <= 1 && 新变量.苗广.疑心值 > 5) {
@@ -508,6 +547,13 @@ export function validateAndRecalcState(
       新变量.治疗.完成度 = 旧变量.治疗.完成度 - 3;
       console.warn(`[delta cap] 完成度降幅 ${compDelta} → -3`);
     }
+    // 苗喧反抗限制中：治疗推进 ×0.4（设计文档 line 108）
+    const afterCapDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
+    if (新变量._苗喧反抗限制中 && afterCapDelta > 0) {
+      const reduced = Math.floor(afterCapDelta * 0.4);
+      新变量.治疗.完成度 = 旧变量.治疗.完成度 + reduced;
+      console.info(`[状态验证] 苗喧反抗限制中：完成度推进 +${afterCapDelta} → +${reduced}（×0.4）`);
+    }
   }
   {
     // 身体开发每部位 +10/-5
@@ -660,6 +706,12 @@ export function validateAndRecalcState(
     }
 
     if (totalReward > 0) {
+      // 苗喧反抗限制中：灵石奖励 ×0.4（设计文档 line 108）
+      if (新变量._苗喧反抗限制中) {
+        const orig = totalReward;
+        totalReward = Math.max(1, Math.floor(totalReward * 0.4));
+        console.info(`[状态验证] 苗喧反抗限制中：灵石奖励 +${orig} → +${totalReward}（×0.4）`);
+      }
       新变量.系统.灵石 += totalReward;
       console.info(
         `[状态验证] 数值变化灵石奖励 +${totalReward}（${details.join(', ')}），当前灵石: ${新变量.系统.灵石}`,
@@ -669,7 +721,13 @@ export function validateAndRecalcState(
 
   // ── 8b. 每轮被动灵石收入（基础5 + 完成度加成） ──────────
   {
-    const passiveIncome = 5 + Math.floor(新变量.治疗.完成度 / 10);
+    let passiveIncome = 5 + Math.floor(新变量.治疗.完成度 / 10);
+    // 苗喧反抗限制中：被动灵石 ×0.4
+    if (新变量._苗喧反抗限制中) {
+      const orig = passiveIncome;
+      passiveIncome = Math.max(1, Math.floor(passiveIncome * 0.4));
+      console.info(`[状态验证] 苗喧反抗限制中：被动灵石 +${orig} → +${passiveIncome}（×0.4）`);
+    }
     新变量.系统.灵石 += passiveIncome;
     console.info(
       `[状态验证] 被动灵石 +${passiveIncome}（基础5 + 完成度加成${Math.floor(新变量.治疗.完成度 / 10)}），当前灵石: ${新变量.系统.灵石}`,
@@ -847,6 +905,13 @@ export function validateAndRecalcState(
           新变量.苗喧.绝望值 = Math.min(100, 新变量.苗喧.绝望值 + bonus);
           console.info(`[状态验证] 苗喧绝望值+${bonus}（苗广心态→${newMiaoGMind}）`);
         }
+      }
+
+      // 千晶幻术认知改写完成瞬间：苗喧绝望+30（设计文档 line 75）
+      // 父亲的灵魂被改写成"儿子"——苗喧全家唯一清醒者的崩溃点
+      if (!旧变量.苗广.千晶幻术.认知改写完成 && 新变量.苗广.千晶幻术.认知改写完成) {
+        新变量.苗喧.绝望值 = Math.min(100, 新变量.苗喧.绝望值 + 30);
+        console.info('[状态验证] 苗喧绝望值+30（千晶幻术认知改写完成）');
       }
     }
 

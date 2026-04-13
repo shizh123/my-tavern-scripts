@@ -1550,12 +1550,12 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
         // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
         store.data._洛书晴道具状态[name] = '使用中';
         delete store.data.系统.道具状态[name];
-        if (KINK_EFFECTS[name] || EQUIPMENT_NAMES.has(name)) {
-          // 性癖/身体器具：不触发 AI（效果通过快照注入）
-        } else {
-          eventNames.push(`洛书晴·${name}`);
-          needTriggerAI = true;
-        }
+        // 洛书晴所有共用道具激活时都触发 narrative（由 buildLuoItemEvent 动态生成）
+        // 性癖：与云霜凝的"性癖觉醒"一致
+        // 身体器具：需要"找到她+施加"的叙事门面
+        // 体改/服装/消耗品：送衣/仪式/送符剧情
+        eventNames.push(`洛书晴·${name}`);
+        needTriggerAI = true;
       }
       continue;
     }

@@ -530,6 +530,11 @@ export const Schema = z.object({
     .prefault(0),
   // 当前是否有未解除的苗喧反抗限制（孝敬师父按钮激活条件之一）
   _苗喧反抗限制中: z.boolean().prefault(false),
+  // 苗喧反抗限制触发楼层（10 楼后若玩家不点孝敬师父会自动清除）
+  _苗喧反抗限制触发楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
   // 后期反抗事件未读：null=无，否则为事件名（如 "千晶后苗喧求父"）
   _苗喧未读反抗事件: z.string().nullable().prefault(null),
   // 倾诉按钮冷却结束楼层

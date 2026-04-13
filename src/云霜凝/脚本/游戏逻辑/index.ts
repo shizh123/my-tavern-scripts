@@ -33,6 +33,7 @@ import {
   getXiaojingEntryTrigger,
   getXiaojingRoundGuidance,
   getXiaojingExitText,
+  isXiaojingRebellionScene,
 } from './promptInjection';
 import {
   processNewlyActivatedItems,
@@ -375,6 +376,15 @@ $(() => {
                 const oldSus = data.苗广.疑心值;
                 data.苗广.疑心值 = Math.max(0, data.苗广.疑心值 - reduction);
                 console.info(`[云霜凝] 孝敬师父完成，疑心值 -${reduction}（${oldSus} → ${data.苗广.疑心值}）`);
+              }
+
+              // 反抗类场景（斥责苗喧 / 复合）完成后解除苗喧反抗限制
+              if (isXiaojingRebellionScene(scenarioIdx)) {
+                data._苗喧反抗限制中 = false;
+                data._苗喧反抗限制触发楼层 = 0;
+                _.set(raw, 'stat_data._苗喧反抗限制中', false);
+                _.set(raw, 'stat_data._苗喧反抗限制触发楼层', 0);
+                console.info('[云霜凝] 孝敬师父反抗类场景完成，_苗喧反抗限制中 → false');
               }
 
               // 持久化变量

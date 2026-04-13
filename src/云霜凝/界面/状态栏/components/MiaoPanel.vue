@@ -33,6 +33,10 @@
         <template v-else>
           <button class="qj-btn qj-btn-xj" :disabled="!xjCanStart" @click="startXiaojing">⟨ 孝敬师父 ⟩</button>
           <span v-if="xjCooling" class="xj-cd">冷却 {{ xjCdRemain }} 楼</span>
+          <span v-else-if="!xjHasReason" class="qj-locked">无需孝敬</span>
+          <span v-else-if="xjIsRebelling && xjIsInterrupted" class="xj-reason">苗喧反抗+苗广打断</span>
+          <span v-else-if="xjIsRebelling" class="xj-reason">苗喧反抗中</span>
+          <span v-else-if="xjIsInterrupted" class="xj-reason">苗广打断中</span>
         </template>
       </div>
 
@@ -99,7 +103,7 @@
 <script setup lang="ts">
 import { useDataStore } from '../store';
 import { useJingLingLing } from '../../../脚本/游戏逻辑/shopSystem';
-import { pickXiaojingScenarioIndex } from '../../../脚本/游戏逻辑/promptInjection';
+import { pickXiaojingByContext } from '../../../脚本/游戏逻辑/promptInjection';
 const store = useDataStore();
 
 /** 检查当前状态栏是否属于最新消息，旧楼层不允许操作 */
@@ -157,10 +161,19 @@ const xjVisible = computed(() => {
   return 是前半程 && store.data.治疗.阶段 >= 2 && !store.data._坏结局已触发;
 });
 
-// 启动条件：排他检测——任何其他多轮脚本剧情进行中都不能启动
+// 孝敬师父是纯粹的「解除工具」，只有以下两种情况下按钮才可用：
+// 1. 苗广打断中（_打断冻结至楼层 > currentFloor）
+// 2. 苗喧前期反抗限制中（_苗喧反抗限制中 === true）
+// 设计文档 line 158-175：平时按钮灰色不可点。
+const xjIsInterrupted = computed(() => store.data._打断冻结至楼层 > getCurrentFloor());
+const xjIsRebelling = computed(() => !!store.data._苗喧反抗限制中);
+const xjHasReason = computed(() => xjIsInterrupted.value || xjIsRebelling.value);
+
+// 启动条件：排他检测 + 必须有打断或反抗中
 const xjCanStart = computed(() => {
   if (!xjVisible.value || xjCooling.value) return false;
   if (isBusyInScenario.value) return false;
+  if (!xjHasReason.value) return false;
   return true;
 });
 
@@ -182,8 +195,12 @@ function startXiaojing() {
   if (!xjCanStart.value || !isLatestMessage()) return;
   store.pull();
 
-  // 随机选场景（避免与上次重复）
-  const scenarioIdx = pickXiaojingScenarioIndex(store.data.苗广.孝敬师父.上次场景索引);
+  // 根据上下文选场景：仅反抗→斥责苗喧（5）/ 反抗+打断→复合（6）/ 仅打断→通用池（0-4）
+  const scenarioIdx = pickXiaojingByContext(
+    xjIsInterrupted.value,
+    xjIsRebelling.value,
+    store.data.苗广.孝敬师父.上次场景索引,
+  );
   store.data.苗广.孝敬师父.激活中 = true;
   store.data.苗广.孝敬师父.上次场景索引 = scenarioIdx;
   store.data._孝敬师父开始楼层 = getCurrentFloor();
