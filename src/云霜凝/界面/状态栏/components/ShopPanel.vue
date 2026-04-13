@@ -451,9 +451,6 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
     },
     // 辅助灵物
     { name: '暖玉佩', price: 10, type: '装备', desc: '信任度每轮+1', unlockDesc: '' },
-    { name: '寒心锁', price: 60, type: '装备', desc: '信任度每轮-2回退，制造认知失调反差', unlockDesc: '阶段≥3' },
-    { name: '破心锁', price: 60, type: '装备', desc: '心理防线每轮+3回退，制造认知失调反差', unlockDesc: '阶段≥3' },
-    { name: '断情锁', price: 80, type: '装备', desc: '完成度每轮-0.5回退，阶段不倒退', unlockDesc: '阶段≥4' },
   ],
   体改: [
     { name: '丰胸灵乳丹·中', price: 150, type: '体改', desc: '胸部改造→E罩杯', unlockDesc: '阶段≥3，胸部开发≥30' },
@@ -709,7 +706,7 @@ const EQUIP_GROUPS: { label: string; names: Set<string> }[] = [
     ]),
   },
   { label: '身体器具', names: new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩']) },
-  { label: '辅助灵物', names: new Set(['暖玉佩', '寒心锁', '破心锁', '断情锁']) },
+  { label: '辅助灵物', names: new Set(['暖玉佩']) },
 ];
 // 配对场景：点击原版时弹 dialog 让玩家选"单独进行 / 洛书晴参与"
 const SCENE_PAIRS: Record<string, string> = {
@@ -831,9 +828,6 @@ function isUnlocked(item: ItemDef): boolean {
     项圈: () => d.云霜凝.心理防线 <= 20 && d.云霜凝.信任度 >= 60,
     // 装备：辅助灵物
     暖玉佩: () => true,
-    寒心锁: () => d.治疗.阶段 >= 3,
-    破心锁: () => d.治疗.阶段 >= 3,
-    断情锁: () => d.治疗.阶段 >= 4,
     // 永久体改
     '丰胸灵乳丹·中': () => d.治疗.阶段 >= 3 && d.云霜凝.身体开发.胸部 >= 30,
     '丰胸灵乳丹·大': () => d.治疗.阶段 >= 4 && d.云霜凝.身体开发.胸部 >= 50,
@@ -1616,8 +1610,8 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       store.data.系统.道具状态[name] = '使用中';
       // 前端处理互斥（store.flush不触发VARIABLE_UPDATE_ENDED，后端会跳过）
       enforceExclusiveGroup(name, store.data as any);
-      // 三把锁是纯脚本数值效果，锚神钉是被动装备（状态快照已提示AI），无需触发AI事件
-      if (name !== '寒心锁' && name !== '破心锁' && name !== '断情锁' && name !== '锚神钉') {
+      // 锚神钉是被动装备（状态快照已提示AI），无需触发AI事件
+      if (name !== '锚神钉') {
         eventNames.push(name);
       }
     }

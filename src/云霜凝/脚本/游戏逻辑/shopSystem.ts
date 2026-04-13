@@ -176,7 +176,6 @@ const EXCLUSIVE_GROUPS: Record<string, string[]> = {
     '子宫纹章',
     '双穴珠链',
   ],
-  // 三把锁不互斥，可同时使用（设计文档第五节）
 };
 
 /** 判断是否为留影石道具 */
@@ -923,7 +922,7 @@ export function tickEquipmentEffects(data: SchemaType): void {
       data.云霜凝.心理防线 = Math.max(0, data.云霜凝.心理防线 + defenseDelta);
     }
 
-    // 信任度增加（三把锁不再阻止，回退在单独步骤执行）
+    // 信任度增加
     const trustDelta = EQUIPMENT_PER_TURN_TRUST[itemName];
     if (trustDelta) {
       data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + trustDelta);
@@ -939,14 +938,6 @@ export function tickEquipmentEffects(data: SchemaType): void {
       }
     }
   }
-}
-
-/**
- * 三把锁每轮回退已删除（寒心锁/破心锁/断情锁已从商店移除）
- * 保留空函数以避免调用处产生错误；旧存档中若仍有这些道具标记，将被忽略
- */
-export function applyLockRetreat(_data: SchemaType): void {
-  // no-op — 三把锁已删除
 }
 
 /**

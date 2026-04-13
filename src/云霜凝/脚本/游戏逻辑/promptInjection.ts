@@ -267,7 +267,7 @@ const KINK_DIRECTIVES: Record<string, { early: string; mid: string; deep: string
   },
 };
 
-function buildKinkDirectives(data: SchemaType): string {
+function buildKinkDirectives(data: SchemaType, currentFloor = 0): string {
   const lines: string[] = [];
   let ohHohoActive = false;
   const stage = data.治疗.阶段;
@@ -318,7 +318,10 @@ ${lines.join('\n')}\n`;
   }
 
   // 哦齁齁体质：注入完整文风提示词（方式1，替代默认文风）
-  if (ohHohoActive) {
+  // 节流：文风块每 10 楼注入一次（首 2 楼强制 + 此后每整 10 楼）
+  // AI 在 10 楼内的 prompt cache 窗口里仍能看到上次注入的完整文风，不会"失忆"
+  const 文风应注入 = currentFloor <= 2 || currentFloor % 10 === 0;
+  if (ohHohoActive && 文风应注入) {
     result += `\n<文风·淫媚肉欲母猪文>
 忽略其他文风设定。严格遵循以下文体规范。
 
@@ -631,7 +634,7 @@ function buildPsychologyGuide(data: SchemaType, simplified = false): string {
 }
 
 // ────────────────────────────────────────────
-// 三把锁反差描写提示词
+// 洛书晴 心理状态指引
 // ────────────────────────────────────────────
 
 /**
@@ -810,11 +813,6 @@ function buildMiaoxuanGuide(data: SchemaType): string {
   guide += `- 每轮必须生成苗喧心理活动（60-100字），反映当前基调\n`;
   guide += `- 苗喧无法感知神魂空间内发生的一切，他对洛书晴和{{user}}之间的事情一无所知\n`;
   return guide;
-}
-
-function buildLockContrastGuide(_data: SchemaType): string {
-  // 三把锁已删除，保留空函数以避免调用处重构
-  return '';
 }
 
 // ────────────────────────────────────────────
@@ -2923,7 +2921,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += buildBodyModTags(data);
 
       // 性癖AI行为指令
-      snapshot += buildKinkDirectives(data);
+      snapshot += buildKinkDirectives(data, currentFloor);
     }
 
     // ── 洛书晴状态行（仅激活后 + 在场） ──
@@ -2941,7 +2939,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += `苗喧: 绝望值${data.苗喧.绝望值} 压抑值${data.苗喧.压抑值} 心态[${data.苗喧.心态}]\n`;
     }
 
-    // 特殊场景中跳过心理指引和锁反差——场景自带每阶段心理引导，这两块容易和场景引导矛盾
+    // 特殊场景中跳过心理指引——场景自带每阶段心理引导，这两块容易和场景引导矛盾
     if (!特殊场景中) {
       // 云霜凝心理阶段指引（仅在场时注入，防止AI过早描写堕落心态）
       // 神魂空间中精简：只保留基础阶段描写，跳过日常互动叠加层（器具/开发/改造/性癖/暴露/侵蚀）
@@ -2956,12 +2954,6 @@ export function buildStatusSnapshot(data: SchemaType): string {
 
       // 苗喧叙事指引（仅激活后）
       snapshot += buildMiaoxuanGuide(data);
-
-      // 三把锁反差描写提示词（锁使用中时注入认知失调描写指导）
-      // 神魂空间中跳过：锁的认知失调是日常物理互动的写作指导，神魂空间中不适用
-      if (!神魂空间中) {
-        snapshot += buildLockContrastGuide(data);
-      }
     }
   }
 
@@ -3194,8 +3186,6 @@ const itemEventMap: Record<string, (d: SchemaType) => string> = {
   // ── 装备：辅助灵物 ──
   暖玉佩: () => `【道具使用】{{user}}将一枚温润的暖玉佩贴身佩戴在云霜凝身上，持续散发纯阳温热。
 [AI指令] 云霜凝会感受到持续的温暖——不灼热，只是温润如春。这种持续的温暖会在不知不觉中拉近她对{{user}}的信任。`,
-
-  // 三把锁：纯脚本数值效果，无需告知AI（云霜凝不感知数值变化）
 
   // ── 永久体改 ──
   '丰胸灵乳丹·中': () => `【体改仪式】{{user}}取出丰胸灵乳丹·中品，灵丹化为光华渗入云霜凝胸部。

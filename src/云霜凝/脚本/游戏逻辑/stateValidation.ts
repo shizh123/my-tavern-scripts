@@ -1,5 +1,4 @@
 import type { Schema as SchemaType } from '../../schema';
-import { applyLockRetreat } from './shopSystem';
 
 /** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
 let _lastSuspicionFloor = -1;
@@ -52,7 +51,7 @@ export interface ProtectionSnapshot {
 
 /**
  * 打断冻结基线：打断触发时捕获治疗数值，冻结期间用作回滚基准。
- * MESSAGE_RECEIVED 中更新（累积三把锁等效果），冻结结束时清除。
+ * MESSAGE_RECEIVED 中更新，冻结结束时清除。
  */
 export interface FreezeBaseline {
   信任度: number;
@@ -203,6 +202,12 @@ export const SCENE_ACTORS: Record<string, { 云霜凝: boolean; 洛书晴: boole
 /**
  * 执行一轮全量状态验证与自动计算
  * 在 VARIABLE_UPDATE_ENDED 中调用
+ *
+ * 每轮变量更新后执行：
+ * 1. 治疗阶段 由 完成度 自动计算
+ * 2. 苗广心态 由 疑心值 自动推算（屈辱/默许/沉溺是特殊状态，保留不覆盖）
+ * 3. 灵石里程碑发放（治疗阶段突破时一次性奖励）
+ * 4. 装备每轮数值效果
  */
 export function validateAndRecalcState(
   新变量: SchemaType,
@@ -290,9 +295,6 @@ export function validateAndRecalcState(
     新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
     console.info('[状态验证] 楼层>=5，神魂空间已解锁，引导事件已注入');
   }
-
-  // 三把锁现在是"每轮回退"而非"锁定"，不再还原数值
-  // AI的数值变化正常应用，三把锁回退在阶段6单独执行
 
   // ── 1. 治疗阶段自动计算 ──────────────────────────
   const oldStage = 旧变量.治疗.阶段;
@@ -681,7 +683,7 @@ export function validateAndRecalcState(
     const floor = currentFloor ?? 0;
     if (新变量._打断冻结至楼层 > 0 && floor > 0 && floor < 新变量._打断冻结至楼层) {
       if (freezeBaseline) {
-        // 冻结期间 → 回滚到基线（打断触发时捕获，每轮由 MESSAGE_RECEIVED 更新含三把锁效果）
+        // 冻结期间 → 回滚到基线（打断触发时捕获，每轮由 MESSAGE_RECEIVED 更新）
         新变量.云霜凝.信任度 = freezeBaseline.信任度;
         新变量.云霜凝.心理防线 = freezeBaseline.心理防线;
         新变量.治疗.完成度 = freezeBaseline.完成度;
@@ -706,9 +708,6 @@ export function validateAndRecalcState(
       }
     }
   }
-
-  // ── 9b. 三把锁每轮回退（信任-2/防线+3/完成度-0.5）──────
-  applyLockRetreat(新变量);
 
   // ── 11. 地仙境突破剧情（阶段3+且现实互动中，一次性方式1注入） ──
   if (新变量.治疗.阶段 >= 3 && 新变量._当前互动模式 === '现实互动' && !新变量._已发放里程碑灵石['地仙境突破']) {
@@ -904,7 +903,7 @@ export function validateAndRecalcState(
     新变量.苗喧.心理活动 = '';
   }
 
-  // ── 12. 阶段最终校正：delta clamp/三把锁/冻结可能修改完成度，阶段需重算 ──
+  // ── 12. 阶段最终校正：delta clamp/冻结可能修改完成度，阶段需重算 ──
   const finalStage = calcHealingStage(新变量.治疗.完成度);
   if (finalStage !== 新变量.治疗.阶段) {
     console.info(`[状态验证] 阶段校正: ${新变量.治疗.阶段} → ${finalStage}（完成度=${新变量.治疗.完成度}）`);
@@ -1099,7 +1098,6 @@ const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
 
   // ── 装备：环境类（暖玉佩从辅助灵物移到此处）──
   // 暖玉佩 无门槛，普通的温暖灵物
-  // 三把锁 已从商店删除（寒心锁/破心锁/断情锁不再存在）
 
   // ── 洛书晴专属消耗品（方式2注入型，仅阶段1-2有效，阶段3+脚本自动失效）──
   安抚符: {},
@@ -1289,7 +1287,6 @@ export const ITEM_PRICE: Record<string, number> = {
   肉棒口罩: 350,
 
   // 装备：环境类（暖玉佩移到此类）
-  // 三把锁 已删除
 
   // 洛书晴专属消耗品
   安抚符: 30,

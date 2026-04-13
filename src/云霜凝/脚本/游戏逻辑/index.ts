@@ -763,11 +763,11 @@ $(() => {
           }
         }
 
-        // 更新冻结基线：冻结期间累积三把锁等效果，冻结结束后清除
+        // 更新冻结基线：冻结结束后清除
         if (_freezeBaseline) {
           const currentFloor = (globalThis as any).SillyTavern?.chat?.length ?? 0;
           if (_scriptFreezeUntil > 0 && currentFloor < _scriptFreezeUntil) {
-            // 冻结仍在生效：用当前治疗数值更新基线（含三把锁回退效果）
+            // 冻结仍在生效：用当前治疗数值更新基线
             _freezeBaseline = {
               信任度: data.云霜凝.信任度,
               心理防线: data.云霜凝.心理防线,
