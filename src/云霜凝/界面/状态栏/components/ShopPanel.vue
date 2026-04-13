@@ -443,7 +443,7 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       desc: '外观面纱，内侧持续填充口腔',
       unlockDesc: '阶段≥5，小嘴开发≥40',
     },
-    // 辅助灵物
+    // 环境类
     { name: '暖玉佩', price: 10, type: '装备', desc: '信任度每轮+1', unlockDesc: '' },
   ],
   体改: [
@@ -623,7 +623,7 @@ const current_items = computed(() => {
 // ── 装备分组 ──
 type GroupedEntry = { type: 'header'; label: string } | { type: 'item'; item: ItemDef; group?: string };
 const EQUIP_GROUPS: { label: string; names: Set<string> }[] = [
-  { label: '环境', names: new Set(['锚神钉', '影绰纱帘', '透灵幔', '隔音灵阵', '净灵铃']) },
+  { label: '环境', names: new Set(['锚神钉', '影绰纱帘', '透灵幔', '隔音灵阵', '净灵铃', '暖玉佩']) },
   {
     label: '上装',
     names: new Set([
@@ -700,7 +700,6 @@ const EQUIP_GROUPS: { label: string; names: Set<string> }[] = [
     ]),
   },
   { label: '身体器具', names: new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩']) },
-  { label: '辅助灵物', names: new Set(['暖玉佩']) },
 ];
 // 配对场景：点击原版时弹 dialog 让玩家选"单独进行 / 洛书晴参与"
 const SCENE_PAIRS: Record<string, string> = {
