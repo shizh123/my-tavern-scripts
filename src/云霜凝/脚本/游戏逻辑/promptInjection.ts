@@ -267,62 +267,12 @@ const KINK_DIRECTIVES: Record<string, { early: string; mid: string; deep: string
   },
 };
 
-function buildKinkDirectives(data: SchemaType, currentFloor = 0): string {
-  const lines: string[] = [];
-  let ohHohoActive = false;
-  const stage = data.治疗.阶段;
-  const tier: 'early' | 'mid' | 'deep' = stage >= 8 ? 'deep' : stage >= 5 ? 'mid' : 'early';
-  const 信任 = data.云霜凝.信任度;
-  const 防线 = data.云霜凝.心理防线;
-
-  // 1. 商店性癖：从道具状态读取激活中的（最多3个槽位）
-  for (const [itemName, state] of Object.entries(data.系统.道具状态)) {
-    if (state === '使用中' && KINK_ITEM_MAP[itemName]) {
-      if (itemName === '哦齁齁体质') {
-        ohHohoActive = true;
-        continue; // 哦齁齁体质单独注入完整文风提示词
-      }
-      const directive = KINK_DIRECTIVES[itemName];
-      if (directive) {
-        lines.push(`- ${itemName}：${directive[tier]}`);
-      }
-    }
-  }
-
-  // 2. 永久性癖：特殊场景奖励（镜前记忆、改嫁认知等），不占槽位
-  //    跳过已在 Step 1 中通过道具状态输出详细指令的商店性癖
-  for (const [name, tag] of Object.entries(data.云霜凝.性癖列表)) {
-    if (KINK_DIRECTIVES[name] && data.系统.道具状态[name] === '使用中') continue;
-    lines.push(`- ${name}：${tag}`);
-  }
-
-  let result = '';
-  if (lines.length > 0) {
-    // 前置说明：性癖本质 + 信任/防线动态着色规则
-    const trustColor =
-      信任 < 30
-        ? '信任极低——她带着敌意和屈辱承受这些反应，恨{{user}}也恨自己的身体'
-        : 信任 < 60
-          ? '信任一般——她对{{user}}态度矛盾，身体反应让她困惑但不至于愤怒'
-          : '信任较高——她对{{user}}已有依赖，身体反应中混合着期待和羞怯';
-    const defColor =
-      防线 > 60
-        ? '防线较高——她为每一次失控感到恐惧和自我厌恶，拼命维持修士的尊严'
-        : 防线 > 30
-          ? '防线动摇——她的抵抗越来越像一种形式，自己也开始怀疑还要不要抵抗'
-          : '防线崩溃——她已难以否认自己的身体在享受，从挣扎转向接受甚至追求';
-    result += `\n【云霜凝·已觉醒性癖】
-性癖是刻入身体深处的本能反应，不受理性控制。AI必须在相关场景中自然体现——通过身体反应、不自觉的动作、压不住的冲动来表现，而非角色主动宣告"我有这个性癖"。
-当前情绪着色：${trustColor}。${defColor}。
-${lines.join('\n')}\n`;
-  }
-
-  // 哦齁齁体质：注入完整文风提示词（方式1，替代默认文风）
-  // 节流：文风块每 10 楼注入一次（首 2 楼强制 + 此后每整 10 楼）
-  // AI 在 10 楼内的 prompt cache 窗口里仍能看到上次注入的完整文风，不会"失忆"
-  const 文风应注入 = currentFloor <= 2 || currentFloor % 10 === 0;
-  if (ohHohoActive && 文风应注入) {
-    result += `\n<文风·淫媚肉欲母猪文>
+/**
+ * 文风·淫媚肉欲母猪文 — 哦齁齁体质激活时注入的文体规范块
+ * 独立抽出以便两位女角色共用一份文风（避免重复注入）
+ */
+function buildOhHohoStyleBlock(): string {
+  return `\n<文风·淫媚肉欲母猪文>
 忽略其他文风设定。严格遵循以下文体规范。
 
 【作者人格】
@@ -359,9 +309,98 @@ ${lines.join('\n')}\n`;
 - 禁止"这就是……"这种平淡陈述句式
 </文风>
 `;
+}
+
+function buildKinkDirectives(data: SchemaType): string {
+  const lines: string[] = [];
+  const stage = data.治疗.阶段;
+  const tier: 'early' | 'mid' | 'deep' = stage >= 8 ? 'deep' : stage >= 5 ? 'mid' : 'early';
+  const 信任 = data.云霜凝.信任度;
+  const 防线 = data.云霜凝.心理防线;
+
+  // 1. 商店性癖：从道具状态读取激活中的（最多3个槽位）
+  for (const [itemName, state] of Object.entries(data.系统.道具状态)) {
+    if (state === '使用中' && KINK_ITEM_MAP[itemName]) {
+      if (itemName === '哦齁齁体质') continue; // 文风块独立注入
+      const directive = KINK_DIRECTIVES[itemName];
+      if (directive) {
+        lines.push(`- ${itemName}：${directive[tier]}`);
+      }
+    }
   }
 
-  return result;
+  // 2. 永久性癖：特殊场景奖励（镜前记忆、改嫁认知等），不占槽位
+  //    跳过已在 Step 1 中通过道具状态输出详细指令的商店性癖
+  for (const [name, tag] of Object.entries(data.云霜凝.性癖列表)) {
+    if (KINK_DIRECTIVES[name] && data.系统.道具状态[name] === '使用中') continue;
+    lines.push(`- ${name}：${tag}`);
+  }
+
+  if (lines.length === 0) return '';
+  const trustColor =
+    信任 < 30
+      ? '信任极低——她带着敌意和屈辱承受这些反应，恨{{user}}也恨自己的身体'
+      : 信任 < 60
+        ? '信任一般——她对{{user}}态度矛盾，身体反应让她困惑但不至于愤怒'
+        : '信任较高——她对{{user}}已有依赖，身体反应中混合着期待和羞怯';
+  const defColor =
+    防线 > 60
+      ? '防线较高——她为每一次失控感到恐惧和自我厌恶，拼命维持修士的尊严'
+      : 防线 > 30
+        ? '防线动摇——她的抵抗越来越像一种形式，自己也开始怀疑还要不要抵抗'
+        : '防线崩溃——她已难以否认自己的身体在享受，从挣扎转向接受甚至追求';
+  return `\n【云霜凝·已觉醒性癖】
+性癖是刻入身体深处的本能反应，不受理性控制。AI必须在相关场景中自然体现——通过身体反应、不自觉的动作、压不住的冲动来表现，而非角色主动宣告"我有这个性癖"。
+当前情绪着色：${trustColor}。${defColor}。
+${lines.join('\n')}\n`;
+}
+
+/**
+ * 洛书晴·性癖指令（对标 buildKinkDirectives）
+ * 读 _洛书晴道具状态 和 洛书晴.性癖列表；tier 档由 洛书晴.调教阶段 派生
+ * 文风块独立注入，此函数只返回性癖列表块
+ */
+function buildLuoKinkDirectives(data: SchemaType): string {
+  const lines: string[] = [];
+  const stage = data.洛书晴.调教阶段;
+  const tier: 'early' | 'mid' | 'deep' = stage >= 8 ? 'deep' : stage >= 5 ? 'mid' : 'early';
+  const 顺从 = data.洛书晴.顺从度;
+  const 防线 = data.洛书晴.心理防线;
+
+  // 1. 商店性癖：从 _洛书晴道具状态 读取激活中的
+  for (const [itemName, state] of Object.entries(data._洛书晴道具状态)) {
+    if (state === '使用中' && KINK_ITEM_MAP[itemName]) {
+      if (itemName === '哦齁齁体质') continue; // 文风块独立注入
+      const directive = KINK_DIRECTIVES[itemName];
+      if (directive) {
+        lines.push(`- ${itemName}：${directive[tier]}`);
+      }
+    }
+  }
+
+  // 2. 永久性癖：特殊场景奖励（如双重改嫁认知），不占槽位
+  for (const [name, tag] of Object.entries(data.洛书晴.性癖列表)) {
+    if (KINK_DIRECTIVES[name] && data._洛书晴道具状态[name] === '使用中') continue;
+    lines.push(`- ${name}：${tag}`);
+  }
+
+  if (lines.length === 0) return '';
+  const obeyColor =
+    顺从 < 30
+      ? '顺从极低——她仍在抗拒，身体反应令她深感背叛与羞耻，拼命掩饰'
+      : 顺从 < 60
+        ? '顺从中段——她开始矛盾地默许某些反应，但仍以师姐/天骄身份自我克制'
+        : '顺从深——她已从抗拒转向接纳，身体反应成为她的"事实"而非"问题"';
+  const defColor =
+    防线 > 60
+      ? '防线较高——她以寒霜门天骄的尊严为锚，每一次失控都是对传承的亵渎'
+      : 防线 > 30
+        ? '防线动摇——她的抵抗形式化，开始暗自怀疑是不是"应该"继续抵抗'
+        : '防线崩溃——她已不再否认自己的享受，从挣扎转向接受或索求';
+  return `\n【洛书晴·已觉醒性癖】
+性癖是刻入身体深处的本能反应，不受理性控制。AI必须在相关场景中自然体现——通过身体反应、不自觉的动作、压不住的冲动来表现，而非角色主动宣告"我有这个性癖"。
+当前情绪着色：${obeyColor}。${defColor}。
+${lines.join('\n')}\n`;
 }
 
 // ────────────────────────────────────────────
@@ -1417,15 +1456,9 @@ function buildQianjingRealityGuide(data: SchemaType): string {
 
   if (count === 0) return '';
 
-  if (complete) {
-    return `[千晶幻术·现实效果·认知覆写已完成]
-苗广的记忆已被永久改写：他真诚地认为{{user}}是"义父"，云霜凝是"娘/母亲"，自己是他们的"儿子"。
-在宗门日常中，苗广维持正常表面关系——但在私下，他会自然地喊{{user}}为义父、喊云霜凝为娘。
-他会主动帮忙隐瞒这层关系，在外人面前维持掌门夫妇的体面。
-这些不是演戏，而是他的真实认知。他不会困惑、不会挣扎、不会闪回。
-苗广的所有行为应体现"儿子"身份下自然的孝顺、恭敬，以及对"父母"关系的主动维护。
-`;
-  }
+  // 认知改写完成后不再注入此块：AI 的 prompt cache 窗口里还保留着千晶激活期间
+  // 反复注入的同款设定，完成后"义父/娘"身份已成为 AI 的稳定认知，无需每轮复读
+  if (complete) return '';
 
   // 按施术次数分级（共3次）
   const guides: Record<number, string> = {
@@ -2921,7 +2954,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += buildBodyModTags(data);
 
       // 性癖AI行为指令
-      snapshot += buildKinkDirectives(data, currentFloor);
+      snapshot += buildKinkDirectives(data);
     }
 
     // ── 洛书晴状态行（仅激活后 + 在场） ──
@@ -2937,6 +2970,21 @@ export function buildStatusSnapshot(data: SchemaType): string {
       snapshot += `\n`;
       snapshot += `洛书晴身体开发: 小嘴${getDevLevel(data.洛书晴.身体开发.小嘴)} 胸部${getDevLevel(data.洛书晴.身体开发.胸部)} 小屄${getDevLevel(data.洛书晴.身体开发.小屄)} 屁穴${getDevLevel(data.洛书晴.身体开发.屁穴)}\n`;
       snapshot += `苗喧: 绝望值${data.苗喧.绝望值} 压抑值${data.苗喧.压抑值} 心态[${data.苗喧.心态}]\n`;
+      // 洛书晴·性癖指令（补上之前缺失的注入）
+      snapshot += buildLuoKinkDirectives(data);
+    }
+
+    // ── 文风块（哦齁齁体质激活时）──
+    // 两位女角色共用一份文风；只要任一在场角色激活 哦齁齁体质 就注入一次
+    // 节流：首 2 楼强制 + 此后每整 10 楼复习一次（prompt cache 窗口内 AI 不会失忆）
+    {
+      const 云霜凝哦齁齁 = actors.云霜凝 && data.系统.道具状态['哦齁齁体质'] === '使用中';
+      const 洛书晴哦齁齁 =
+        actors.洛书晴 && data._洛书晴线已激活 && data._洛书晴道具状态['哦齁齁体质'] === '使用中';
+      const 文风应注入 = currentFloor <= 2 || currentFloor % 10 === 0;
+      if ((云霜凝哦齁齁 || 洛书晴哦齁齁) && 文风应注入) {
+        snapshot += buildOhHohoStyleBlock();
+      }
     }
 
     // 特殊场景中跳过心理指引——场景自带每阶段心理引导，这两块容易和场景引导矛盾
