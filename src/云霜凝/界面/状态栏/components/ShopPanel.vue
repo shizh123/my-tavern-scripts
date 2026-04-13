@@ -71,7 +71,7 @@
             <span
               v-if="store.data.系统.道具状态[entry.item.name] === '已购买'"
               class="row-check"
-              :class="{ checked: checkedItems.has(entry.item.name) }"
+              :class="{ checked: isCardChecked(entry.item) }"
             >
               <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" /></svg>
             </span>
@@ -181,6 +181,39 @@
             <button class="target-btn tb-luo" @click="pickTarget('洛书晴')">洛书晴</button>
           </div>
           <button class="target-dialog-cancel" @click="showTargetDialog = false">取消</button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 配对场景选择浮层（单独进行 / 洛书晴参与） -->
+    <Transition name="fade">
+      <div v-if="showScenePairDialog" class="target-dialog-mask" @click.self="showScenePairDialog = false">
+        <div class="target-dialog scene-pair-dialog">
+          <div class="target-dialog-title">{{ pendingScenePair }}</div>
+          <div class="target-dialog-desc">选择场景参与形式</div>
+          <div class="scene-pair-btns">
+            <button class="scene-pair-btn scene-pair-solo" @click="pickSceneVersion('solo')">
+              <span class="scene-pair-btn-main">单独进行</span>
+              <span class="scene-pair-btn-sub">云霜凝独自承受</span>
+            </button>
+            <button
+              class="scene-pair-btn scene-pair-luo"
+              :disabled="pendingEnhancedMissing.length > 0"
+              @click="pickSceneVersion('luo')"
+            >
+              <span class="scene-pair-btn-main">洛书晴参与</span>
+              <span class="scene-pair-btn-sub">
+                {{ pendingEnhancedMissing.length > 0 ? '前置条件未满足' : '云霜凝 + 洛书晴联合' }}
+              </span>
+            </button>
+          </div>
+          <div v-if="pendingEnhancedMissing.length > 0" class="scene-pair-missing">
+            <div class="scene-pair-missing-title">「洛书晴参与」尚未开启：</div>
+            <ul class="scene-pair-missing-list">
+              <li v-for="reason in pendingEnhancedMissing" :key="reason">{{ reason }}</li>
+            </ul>
+          </div>
+          <button class="target-dialog-cancel" @click="showScenePairDialog = false">取消</button>
         </div>
       </div>
     </Transition>
@@ -588,7 +621,13 @@ const categories = [
 ];
 
 const active_cat = useLocalStorage<string>('云霜凝:shop:cat', '消耗品');
-const current_items = computed(() => ALL_ITEMS[active_cat.value] ?? []);
+const current_items = computed(() => {
+  const items = ALL_ITEMS[active_cat.value] ?? [];
+  if (active_cat.value === '场景') {
+    return items.filter(i => !HIDDEN_SCENES.has(i.name));
+  }
+  return items;
+});
 
 // ── 装备分组 ──
 type GroupedEntry = { type: 'header'; label: string } | { type: 'item'; item: ItemDef; group?: string };
@@ -672,6 +711,14 @@ const EQUIP_GROUPS: { label: string; names: Set<string> }[] = [
   { label: '身体器具', names: new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩']) },
   { label: '辅助灵物', names: new Set(['暖玉佩', '寒心锁', '破心锁', '断情锁']) },
 ];
+// 配对场景：点击原版时弹 dialog 让玩家选"单独进行 / 洛书晴参与"
+const SCENE_PAIRS: Record<string, string> = {
+  寝取宣告: '寝取宣告增强',
+  绿帽奴调教: '儿媳调教公公',
+  掌门改嫁: '双重改嫁',
+};
+// 从商店列表中隐藏的场景（仅作为 dialog 里的"洛书晴参与"选项存在）
+const HIDDEN_SCENES = new Set(['寝取宣告增强', '儿媳调教公公', '双重改嫁']);
 // ── 可折叠分组 ──
 const collapsedGroups = reactive(new Set<string>());
 
@@ -1210,6 +1257,74 @@ const showYinwenPicker = computed(() => checkedItems.has('淫纹刻印'));
 const showTargetDialog = ref(false);
 const sharedItemsPending = computed(() => [...checkedItems].filter(isSharedItem));
 
+// ── 配对场景 dialog（单独进行 / 洛书晴参与） ─────────────────────
+const showScenePairDialog = ref(false);
+const pendingScenePair = ref(''); // 存原版场景名
+
+function getEnhancedMissing(name: string): string[] {
+  const d = store.data;
+  const missing: string[] = [];
+  if (name === '寝取宣告增强') {
+    if (!d._洛书晴线已激活) missing.push('洛书晴尚未进入你的视野');
+    if (d.洛书晴.调教阶段 < 6) missing.push(`洛书晴调教阶段需 ≥ 6（当前 ${d.洛书晴.调教阶段}）`);
+    if (d.治疗.阶段 < 7) missing.push(`治疗阶段需 ≥ 7（当前 ${d.治疗.阶段}）`);
+    if (d.系统.道具状态['透灵幔'] !== '使用中') missing.push('需装备「透灵幔」');
+    if (!['默许', '沉溺'].includes(d.苗广.心态)) missing.push('苗广心态需达「默许」或「沉溺」');
+    if (!d._已完成特殊场景['两人同侍']) missing.push('需先完成「两人同侍」');
+  } else if (name === '儿媳调教公公') {
+    if (!d._洛书晴线已激活) missing.push('洛书晴尚未进入你的视野');
+    if (d.洛书晴.调教阶段 < 8) missing.push(`洛书晴调教阶段需 ≥ 8（当前 ${d.洛书晴.调教阶段}）`);
+    if (d.治疗.阶段 < 8) missing.push(`治疗阶段需 ≥ 8（当前 ${d.治疗.阶段}）`);
+    if (d.苗广.心态 !== '沉溺') missing.push('苗广心态需达「沉溺」');
+    if (!d._已完成特殊场景['双重目击']) missing.push('需先完成「双重目击」');
+  } else if (name === '双重改嫁') {
+    if (!d._洛书晴线已激活) missing.push('洛书晴尚未进入你的视野');
+    if (d.洛书晴.调教阶段 < 9) missing.push(`洛书晴调教阶段需 ≥ 9（当前 ${d.洛书晴.调教阶段}）`);
+    if (d.治疗.阶段 < 10) missing.push(`治疗阶段需 ≥ 10（当前 ${d.治疗.阶段}）`);
+    if (d.苗广.心态 !== '沉溺') missing.push('苗广心态需达「沉溺」');
+    if (!d.苗广.千晶幻术.认知改写完成) missing.push('千晶幻术认知改写未完成');
+    if (!d._已完成特殊场景['儿媳调教公公']) missing.push('需先完成「儿媳调教公公」');
+  }
+  return missing;
+}
+
+const pendingEnhancedMissing = computed(() => {
+  const original = pendingScenePair.value;
+  if (!original) return [];
+  const enhanced = SCENE_PAIRS[original];
+  return enhanced ? getEnhancedMissing(enhanced) : [];
+});
+
+function openScenePairDialog(originalName: string) {
+  pendingScenePair.value = originalName;
+  showScenePairDialog.value = true;
+}
+
+function pickSceneVersion(version: 'solo' | 'luo') {
+  const original = pendingScenePair.value;
+  if (!original) {
+    showScenePairDialog.value = false;
+    return;
+  }
+  if (version === 'solo') {
+    checkedItems.add(original);
+  } else {
+    const enhanced = SCENE_PAIRS[original];
+    if (!enhanced) return;
+    if (getEnhancedMissing(enhanced).length > 0) return;
+    checkedItems.add(enhanced);
+  }
+  showScenePairDialog.value = false;
+  pendingScenePair.value = '';
+}
+
+// 原版卡片的勾选状态：原版名或配对增强版名在 checkedItems 里都算勾选
+function isCardChecked(item: ItemDef): boolean {
+  if (checkedItems.has(item.name)) return true;
+  const paired = SCENE_PAIRS[item.name];
+  return paired ? checkedItems.has(paired) : false;
+}
+
 // ── 购买/使用逻辑 ──────────────────────────────────────────
 const toast = ref('');
 const toast_class = ref('');
@@ -1304,6 +1419,18 @@ function handleClick(item: ItemDef) {
     store.data.系统.道具状态[item.name] = '已购买';
     showToast(`已购买「${item.name}」`, 'ok');
   } else if (state === '已购买') {
+    // 配对场景：点击已购买的原版 → 若已勾选（原版或增强版）则取消，否则弹 dialog
+    if (SCENE_PAIRS[item.name]) {
+      const enhanced = SCENE_PAIRS[item.name];
+      if (checkedItems.has(item.name)) {
+        checkedItems.delete(item.name);
+      } else if (checkedItems.has(enhanced)) {
+        checkedItems.delete(enhanced);
+      } else {
+        openScenePairDialog(item.name);
+      }
+      return;
+    }
     if (checkedItems.has(item.name)) {
       checkedItems.delete(item.name);
     } else {
@@ -2586,6 +2713,83 @@ $cat-场景: #d8a040;
   cursor: pointer;
   &:hover {
     color: $c-sub;
+  }
+}
+
+// ━━━ 配对场景选择浮层（单独进行 / 洛书晴参与） ━━━
+.scene-pair-dialog {
+  width: min(340px, 92vw);
+}
+.scene-pair-btns {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.scene-pair-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border: 1px solid rgba($c-acc, 0.35);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba($c-pri, 0.25) 0%, rgba($c-acc, 0.12) 100%);
+  color: $c-frost;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  &:hover:not(:disabled) {
+    border-color: rgba($c-acc, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($c-acc, 0.2);
+  }
+  &:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+  }
+  &.scene-pair-luo:not(:disabled) {
+    background: linear-gradient(135deg, rgba(#a855f7, 0.25) 0%, rgba(#7c3aed, 0.12) 100%);
+    border-color: rgba(#a855f7, 0.4);
+    &:hover {
+      border-color: rgba(#a855f7, 0.65);
+      box-shadow: 0 4px 12px rgba(#a855f7, 0.22);
+    }
+  }
+}
+.scene-pair-btn-main {
+  font-size: 0.92rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.scene-pair-btn-sub {
+  font-size: 0.62rem;
+  color: rgba($c-frost, 0.65);
+  letter-spacing: 0.5px;
+}
+.scene-pair-missing {
+  margin: 10px 0 6px;
+  padding: 8px 10px;
+  border: 1px dashed rgba(#a855f7, 0.3);
+  border-radius: 6px;
+  background: rgba(#a855f7, 0.05);
+}
+.scene-pair-missing-title {
+  font-size: 0.66rem;
+  color: rgba(#d8b4fe, 0.85);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.scene-pair-missing-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.66rem;
+  color: rgba($c-sub, 0.9);
+  line-height: 1.6;
+  li {
+    margin-bottom: 1px;
   }
 }
 
