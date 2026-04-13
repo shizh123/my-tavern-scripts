@@ -608,34 +608,55 @@
           // 2. 把 JSONPatch 的所有 replace/add op 应用到 message 0 的 stat_data
           if (patches && Array.isArray(patches) && patches.length > 0) {
             try {
-              const vars = getVariables({ type: 'message', message_id: 0 });
-              const statData = vars && vars.stat_data ? JSON.parse(JSON.stringify(vars.stat_data)) : {};
-              let appliedCount = 0;
-              for (const patch of patches) {
-                if (patch.op !== 'replace' && patch.op !== 'add') continue;
-                if (typeof patch.path !== 'string') continue;
-                const segments = patch.path.replace(/^\//, '').split('/');
-                // 深层 set：创建缺失的中间对象
-                let obj = statData;
-                for (let i = 0; i < segments.length - 1; i++) {
-                  if (obj[segments[i]] == null || typeof obj[segments[i]] !== 'object') {
-                    obj[segments[i]] = {};
+              // 用 updateVariablesWith 直接在原 variables 上做深层 mutation,
+              // 避免 insertOrAssignVariables 整块替换 stat_data 时丢失 initvar 默认值
+              await updateVariablesWith(
+                function(variables) {
+                  if (!variables.stat_data) variables.stat_data = {};
+                  const statData = variables.stat_data;
+                  let appliedCount = 0;
+                  for (const patch of patches) {
+                    if (patch.op !== 'replace' && patch.op !== 'add') continue;
+                    if (typeof patch.path !== 'string') continue;
+                    const segments = patch.path.replace(/^\//, '').split('/');
+                    let obj = statData;
+                    for (let i = 0; i < segments.length - 1; i++) {
+                      if (obj[segments[i]] == null || typeof obj[segments[i]] !== 'object') {
+                        obj[segments[i]] = {};
+                      }
+                      obj = obj[segments[i]];
+                    }
+                    obj[segments[segments.length - 1]] = patch.value;
+                    appliedCount++;
                   }
-                  obj = obj[segments[i]];
+                  // auto-sync 商店道具状态
+                  syncItemStateFromBodyMods(statData);
+                  console.info(
+                    '[云霜凝主页] updateVariablesWith 写入 ' + appliedCount + ' 条 patch (swipe ' + swipeId + ')',
+                    '关键字段验证:',
+                    {
+                      _神魂空间已解锁: statData._神魂空间已解锁,
+                      _洛书晴线已激活: statData._洛书晴线已激活,
+                      治疗阶段: statData.治疗 && statData.治疗.阶段,
+                      信任度: statData.云霜凝 && statData.云霜凝.信任度,
+                    }
+                  );
+                  return variables;
+                },
+                { type: 'message', message_id: 0 }
+              );
+
+              // 写入后再次读取验证（检查是否被其他脚本覆盖）
+              await new Promise(resolve => setTimeout(resolve, 100));
+              const verifyVars = getVariables({ type: 'message', message_id: 0 });
+              console.info(
+                '[云霜凝主页] 100ms 后 getVariables 验证读取:',
+                {
+                  _神魂空间已解锁: verifyVars && verifyVars.stat_data && verifyVars.stat_data._神魂空间已解锁,
+                  _洛书晴线已激活: verifyVars && verifyVars.stat_data && verifyVars.stat_data._洛书晴线已激活,
+                  治疗阶段: verifyVars && verifyVars.stat_data && verifyVars.stat_data.治疗 && verifyVars.stat_data.治疗.阶段,
                 }
-                obj[segments[segments.length - 1]] = patch.value;
-                appliedCount++;
-              }
-
-              // 3. auto-sync 商店道具状态：根据开场白设置的肉体改造 stat 字段
-              //    反推对应的体改品为"已购买"，这样商店不会和状态栏违和
-              //    （云霜凝体改品写入 系统.道具状态；洛书晴写入 _洛书晴道具状态）
-              syncItemStateFromBodyMods(statData);
-
-              if (appliedCount > 0) {
-                await insertOrAssignVariables({ stat_data: statData }, { type: 'message', message_id: 0 });
-                console.info('[云霜凝主页] 已应用开场白 JSONPatch ' + appliedCount + ' 条 (swipe ' + swipeId + ')');
-              }
+              );
             } catch (err) {
               console.error('[云霜凝主页] 应用 JSONPatch 失败:', err);
             }
