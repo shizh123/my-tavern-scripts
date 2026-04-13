@@ -68,6 +68,11 @@
         </template>
       </div>
 
+      <!-- 告知洛书晴（千晶幻术完成后的彩蛋，一次性） -->
+      <div v-if="canTellLuo" class="qj-actions">
+        <button class="qj-btn qj-btn-tell" @click="tellLuo">⟨ 告知洛书晴 ⟩</button>
+      </div>
+
       <div v-if="qj.幻境摘要" class="thought-box qj-content">
         {{ qj.幻境摘要 }}
       </div>
@@ -275,6 +280,30 @@ function castQianjing() {
   store.data._系统操作中 = true;
   store.flush();
   triggerSlash('/send （千晶幻术施术）|/trigger');
+}
+
+// ── 千晶告知洛书晴（千晶幻术完成后彩蛋，一次性触发） ──
+const canTellLuo = computed(
+  () =>
+    qj.value.认知改写完成 &&
+    !!store.data._洛书晴线已激活 &&
+    !store.data._已完成特殊场景['千晶告知洛书晴'] &&
+    !store.data._特殊场景.进行中,
+);
+
+function tellLuo() {
+  if (!canTellLuo.value || !isLatestMessage()) return;
+  store.pull();
+
+  store.data._特殊场景.进行中 = '千晶告知洛书晴';
+  store.data._特殊场景开始楼层 = getCurrentFloor();
+
+  const existing = store.data._待发送道具事件;
+  store.data._待发送道具事件 = existing ? existing + '|||千晶告知洛书晴' : '千晶告知洛书晴';
+
+  store.data._系统操作中 = true;
+  store.flush();
+  triggerSlash('/send （千晶告知洛书晴）|/trigger');
 }
 
 // ── 提前退出千晶幻术副本 ──
@@ -698,6 +727,18 @@ $c-danger: #e05050;
     border-color: rgba($c-warn, 0.6);
     box-shadow: 0 0 14px rgba($c-warn, 0.2);
     background: linear-gradient(135deg, rgba($c-warn, 0.14) 0%, rgba($c-warn, 0.04) 100%);
+  }
+}
+.qj-btn-tell {
+  color: #d36c86;
+  border-color: rgba(#d36c86, 0.4);
+  background: linear-gradient(135deg, rgba(#d36c86, 0.08) 0%, transparent 100%);
+  box-shadow: 0 0 8px rgba(#d36c86, 0.1);
+
+  &:hover {
+    border-color: rgba(#d36c86, 0.6);
+    box-shadow: 0 0 14px rgba(#d36c86, 0.2);
+    background: linear-gradient(135deg, rgba(#d36c86, 0.14) 0%, rgba(#d36c86, 0.04) 100%);
   }
 }
 
