@@ -78,14 +78,10 @@
             <span class="card-name">{{ entry.item.name }}</span>
             <!-- per-target 胶囊徽章：一眼看出谁装备了/拥有该道具 -->
             <span v-if="showOwnerBadges(entry.item)" class="card-owners">
-              <span
-                v-if="isYunOwned(entry.item.name) || isYunUsing(entry.item.name)"
-                class="owner-badge owner-yun"
+              <span v-if="isYunOwned(entry.item.name) || isYunUsing(entry.item.name)" class="owner-badge owner-yun"
                 >云</span
               >
-              <span
-                v-if="isLuoOwned(entry.item.name) || isLuoUsing(entry.item.name)"
-                class="owner-badge owner-luo"
+              <span v-if="isLuoOwned(entry.item.name) || isLuoUsing(entry.item.name)" class="owner-badge owner-luo"
                 >洛</span
               >
             </span>
@@ -1919,9 +1915,7 @@ function showOwnerBadges(item: ItemDef): boolean {
   // 只对共用道具显示（云霜凝专属如蚀心露/定心符 等不显示）
   if (!isSharedItem(item.name)) return false;
   // 只在任一角色拥有/装备时显示
-  return (
-    isYunOwned(item.name) || isLuoOwned(item.name) || isYunUsing(item.name) || isLuoUsing(item.name)
-  );
+  return isYunOwned(item.name) || isLuoOwned(item.name) || isYunUsing(item.name) || isLuoUsing(item.name);
 }
 
 // ════════════════════════════════════════════
