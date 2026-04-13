@@ -636,7 +636,9 @@
                   }
                   // 记录 sync 前的 系统.道具状态 和 肉体改造
                   const preSyncShop = JSON.parse(JSON.stringify((statData.系统 && statData.系统.道具状态) || {}));
-                  const preSyncYunMods = JSON.parse(JSON.stringify((statData.云霜凝 && statData.云霜凝.肉体改造) || {}));
+                  const preSyncYunMods = JSON.parse(
+                    JSON.stringify((statData.云霜凝 && statData.云霜凝.肉体改造) || {}),
+                  );
                   // auto-sync 商店道具状态
                   syncItemStateFromBodyMods(statData);
                   const postSyncShop = JSON.parse(JSON.stringify((statData.系统 && statData.系统.道具状态) || {}));
