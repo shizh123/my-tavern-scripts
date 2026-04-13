@@ -513,6 +513,11 @@
     </div>
 
     <script>
+      // 主页 → 入口 切换逻辑
+      // 问题背景：MVU 不解析开场白里嵌的 <UpdateVariable><JSONPatch> 块，只处理 AI 响应的。
+      // 而 setChatMessage 的 swipe 切换又不触发 MESSAGE_SWIPED 事件（那是 UI swipe 按钮触发的）。
+      // 所以必须在主页 iframe 里直接读取新 swipe 的 JSONPatch 并通过 tavern_helper
+      // 变量 API 写入到 message 0 的 stat_data，才能让入口 2-5 的初始数值生效。
       async function selectEntry(swipeId) {
         try {
           const messages = await getChatMessages('0', { include_swipes: true });
@@ -525,6 +530,49 @@
             alert('入口 ' + swipeId + ' 未找到。请确认所有 ' + messages[0].swipes.length + ' 个开场白都已添加。');
             return;
           }
+
+          // 1. 解析新 swipe 内容里的 <JSONPatch> 块
+          const match = target.match(/<JSONPatch>\s*(\[[\s\S]*?\])\s*<\/JSONPatch>/);
+          let patches = null;
+          if (match) {
+            try {
+              patches = JSON.parse(match[1]);
+            } catch (err) {
+              console.warn('[云霜凝主页] JSONPatch 解析失败:', err);
+            }
+          }
+
+          // 2. 把 JSONPatch 的所有 replace/add op 应用到 message 0 的 stat_data
+          if (patches && Array.isArray(patches) && patches.length > 0) {
+            try {
+              const vars = getVariables({ type: 'message', message_id: 0 });
+              const statData = (vars && vars.stat_data) ? JSON.parse(JSON.stringify(vars.stat_data)) : {};
+              let appliedCount = 0;
+              for (const patch of patches) {
+                if (patch.op !== 'replace' && patch.op !== 'add') continue;
+                if (typeof patch.path !== 'string') continue;
+                const segments = patch.path.replace(/^\//, '').split('/');
+                // 深层 set：创建缺失的中间对象
+                let obj = statData;
+                for (let i = 0; i < segments.length - 1; i++) {
+                  if (obj[segments[i]] == null || typeof obj[segments[i]] !== 'object') {
+                    obj[segments[i]] = {};
+                  }
+                  obj = obj[segments[i]];
+                }
+                obj[segments[segments.length - 1]] = patch.value;
+                appliedCount++;
+              }
+              if (appliedCount > 0) {
+                await insertOrAssignVariables({ stat_data: statData }, { type: 'message', message_id: 0 });
+                console.info('[云霜凝主页] 已应用开场白 JSONPatch ' + appliedCount + ' 条 (swipe ' + swipeId + ')');
+              }
+            } catch (err) {
+              console.error('[云霜凝主页] 应用 JSONPatch 失败:', err);
+            }
+          }
+
+          // 3. 切换 swipe 展示（此时 stat_data 已经写好了，swipe 切换后状态栏立即读到正确值）
           await setChatMessage(target, 0, {
             swipe_id: swipeId,
             refresh: 'display_and_render_current',

@@ -707,65 +707,13 @@ $(() => {
     });
 
     // ────────────────────────────────────────────────────
-    // 事件2b：开场白 swipe 切换 → 解析 <JSONPatch> 并写入 MVU
-    // 场景：玩家在主页点击"寒毒发作/现实初涉/..."按钮时，主页通过 setChatMessage
-    // 切换消息 0 的 swipe。MVU 自身不解析开场白里嵌的 <UpdateVariable> 块，
-    // 脚本在此手动读取当前 swipe 的 JSONPatch 内容并应用到 stat_data，
-    // 使入口 2-5 的初始数值（阶段/信任/神魂解锁/场景角色 等）正确生效。
+    // 注：开场白 → 入口 的 JSONPatch 应用逻辑已迁移到
+    //      src/云霜凝/界面/主页/主页.html 的 selectEntry() 里。
+    //      原因：setChatMessage 的 swipe 切换不触发 MESSAGE_SWIPED 事件
+    //      （那个事件只由 UI swipe 按钮触发），所以脚本侧的 handler 不会
+    //      被触发。改为主页 iframe 在点击入口按钮时直接通过
+    //      insertOrAssignVariables 写入 message 0 的 stat_data。
     // ────────────────────────────────────────────────────
-    eventOn(tavern_events.MESSAGE_SWIPED, async (messageId: number) => {
-      try {
-        if (messageId !== 0) return; // 只处理开场白消息
-        const messages = await getChatMessages('0', { include_swipes: true });
-        const msg = messages?.[0] as any;
-        if (!msg) return;
-        const swipeId = msg.swipe_id ?? 0;
-        const content: string = msg.swipes?.[swipeId] ?? msg.message ?? '';
-        const match = content.match(/<JSONPatch>\s*(\[[\s\S]*?\])\s*<\/JSONPatch>/);
-        if (!match) {
-          console.info(`[云霜凝] 开场白 swipe ${swipeId} 未找到 JSONPatch 块（正常情况，非入口开场白）`);
-          return;
-        }
-        let patches: Array<{ op: string; path: string; value: unknown }>;
-        try {
-          patches = JSON.parse(match[1]);
-        } catch (err) {
-          console.warn('[云霜凝] 开场白 JSONPatch 解析失败:', err);
-          return;
-        }
-        if (!Array.isArray(patches) || patches.length === 0) return;
-
-        // 必须 cloneDeep：Mvu 可能通过引用比较检测变更，直接 mutate 会被跳过
-        const raw = _.cloneDeep(Mvu.getMvuData({ type: 'message', message_id: -1 }));
-        if (!raw || !raw.stat_data) {
-          console.warn('[云霜凝] MESSAGE_SWIPED: 无法读取 Mvu stat_data');
-          return;
-        }
-        let appliedCount = 0;
-        for (const patch of patches) {
-          if (patch.op !== 'replace' && patch.op !== 'add') continue;
-          if (typeof patch.path !== 'string') continue;
-          // 用 array path 避免 lodash 字符串路径解析对特殊字符/下划线的歧义
-          const pathSegments = patch.path.replace(/^\//, '').split('/');
-          _.set(raw, ['stat_data', ...pathSegments], patch.value);
-          appliedCount++;
-        }
-        if (appliedCount > 0) {
-          await Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
-          console.info(
-            `[云霜凝] 已应用开场白 JSONPatch ${appliedCount} 条 (swipe ${swipeId})`,
-            '验证写入值:',
-            {
-              _神魂空间已解锁: _.get(raw, 'stat_data._神魂空间已解锁'),
-              _洛书晴线已激活: _.get(raw, 'stat_data._洛书晴线已激活'),
-              治疗阶段: _.get(raw, 'stat_data.治疗.阶段'),
-            },
-          );
-        }
-      } catch (e) {
-        console.error('[云霜凝] MESSAGE_SWIPED 处理失败:', e);
-      }
-    });
 
     // ────────────────────────────────────────────────────
     // 事件3：AI回复到达 → 临时道具计数递减 + 特殊场景推进
