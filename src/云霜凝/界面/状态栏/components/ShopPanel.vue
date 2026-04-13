@@ -766,8 +766,7 @@ function isUnlocked(item: ItemDef): boolean {
 
   // 共用阶段门槛 helper：服装/特殊配饰等纯阶段限定的共用道具，
   // 任一角色满足即解锁（target 在 confirmUse 时再选）
-  const stageGate = (n: number) =>
-    d.治疗.阶段 >= n || (!!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= n);
+  const stageGate = (n: number) => d.治疗.阶段 >= n || (!!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= n);
 
   const conds: Record<string, () => boolean> = {
     // 消耗品（云霜凝专属）
