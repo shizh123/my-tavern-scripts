@@ -165,11 +165,12 @@ export function calcMiaoguangMind(疑心值: number, 当前心态: string): stri
 
 /**
  * 里程碑灵石奖励映射
+ * 2.0.18 经济调整：全部翻倍（50/100/200 → 100/200/400）
  */
 function getMilestoneReward(stage: number): number {
-  if (stage <= 3) return 50;
-  if (stage <= 6) return 100;
-  return 200;
+  if (stage <= 3) return 100;
+  if (stage <= 6) return 200;
+  return 400;
 }
 
 /**
@@ -367,13 +368,14 @@ export function validateAndRecalcState(
   const newMind = 新变量.苗广.心态;
 
   // ── 3b. 苗广心态进入新阶段 → 里程碑灵石 ──────────────
+  // 2.0.18 经济调整：全部翻倍
   if (newMind !== oldMind) {
     const mindMilestoneRewards: Partial<Record<SchemaType['苗广']['心态'], number>> = {
-      疑惑: 30,
-      察觉: 40,
-      屈辱: 50,
-      默许: 50,
-      沉溺: 60,
+      疑惑: 60,
+      察觉: 80,
+      屈辱: 100,
+      默许: 100,
+      沉溺: 120,
     };
     const reward = mindMilestoneRewards[newMind];
     const key = `心态-${newMind}`;
@@ -670,6 +672,7 @@ export function validateAndRecalcState(
 
   // ── 8. 数值变化 → 灵石奖励（宽松经济，所有治疗相关数值变化都给灵石） ──────
   // 注：神魂空间解锁已移至 MESSAGE_RECEIVED 基于楼层触发
+  // 2.0.18 经济调整：每项 min/max 翻倍，总和上限约从 85 → 170
   {
     let totalReward = 0;
     const details: string[] = [];
@@ -677,7 +680,7 @@ export function validateAndRecalcState(
     // 信任度变化（增减都算）
     const trustDelta = Math.abs(Math.floor(新变量.云霜凝.信任度 - 旧变量.云霜凝.信任度));
     if (trustDelta > 0) {
-      const r = Math.min(15, Math.max(3, trustDelta * 3));
+      const r = Math.min(30, Math.max(6, trustDelta * 6));
       totalReward += r;
       details.push(`信任Δ${trustDelta}→${r}`);
     }
@@ -685,7 +688,7 @@ export function validateAndRecalcState(
     // 防线变化（增减都算）
     const defenseDelta = Math.abs(Math.floor(新变量.云霜凝.心理防线 - 旧变量.云霜凝.心理防线));
     if (defenseDelta > 0) {
-      const r = Math.min(15, Math.max(3, defenseDelta * 2));
+      const r = Math.min(30, Math.max(6, defenseDelta * 4));
       totalReward += r;
       details.push(`防线Δ${defenseDelta}→${r}`);
     }
@@ -693,7 +696,7 @@ export function validateAndRecalcState(
     // 完成度变化（增减都算）
     const compDelta = Math.abs(Math.floor(新变量.治疗.完成度 - 旧变量.治疗.完成度));
     if (compDelta > 0) {
-      const r = Math.min(15, Math.max(3, compDelta * 3));
+      const r = Math.min(30, Math.max(6, compDelta * 6));
       totalReward += r;
       details.push(`完成度Δ${compDelta}→${r}`);
     }
@@ -702,7 +705,7 @@ export function validateAndRecalcState(
     for (const part of ['小嘴', '胸部', '小屄', '屁穴'] as const) {
       const bodyDelta = Math.abs(Math.floor(新变量.云霜凝.身体开发[part] - 旧变量.云霜凝.身体开发[part]));
       if (bodyDelta > 0) {
-        const r = Math.min(10, Math.max(2, bodyDelta * 2));
+        const r = Math.min(20, Math.max(4, bodyDelta * 4));
         totalReward += r;
         details.push(`${part}Δ${bodyDelta}→${r}`);
       }
@@ -722,9 +725,10 @@ export function validateAndRecalcState(
     }
   }
 
-  // ── 8b. 每轮被动灵石收入（基础5 + 完成度加成） ──────────
+  // ── 8b. 每轮被动灵石收入（固定 30） ──────────
+  // 2.0.18 经济调整：固定 30/轮（之前 5-15 动态），玩家反馈太抠
   {
-    let passiveIncome = 5 + Math.floor(新变量.治疗.完成度 / 10);
+    let passiveIncome = 30;
     // 苗喧反抗限制中：被动灵石 ×0.4
     if (新变量._苗喧反抗限制中) {
       const orig = passiveIncome;
@@ -732,9 +736,7 @@ export function validateAndRecalcState(
       console.info(`[状态验证] 苗喧反抗限制中：被动灵石 +${orig} → +${passiveIncome}（×0.4）`);
     }
     新变量.系统.灵石 += passiveIncome;
-    console.info(
-      `[状态验证] 被动灵石 +${passiveIncome}（基础5 + 完成度加成${Math.floor(新变量.治疗.完成度 / 10)}），当前灵石: ${新变量.系统.灵石}`,
-    );
+    console.info(`[状态验证] 被动灵石 +${passiveIncome}，当前灵石: ${新变量.系统.灵石}`);
   }
 
   // ── 9. 打断冻结：纯楼层计时，到期自动解除 ──────────────────

@@ -16,6 +16,7 @@ import { waitUntil } from 'async-wait-until';
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 import { Schema } from '../../schema';
 import { validateAndRecalcState, calcHealingStage } from './stateValidation';
+import { detectAndWriteMilestones } from './milestoneLog';
 import {
   getStatusSnapshot,
   buildBatchUseEvent,
@@ -617,7 +618,8 @@ $(() => {
         // _已触发蚀心露屈辱=true 但不会 push 事件。若用 data flag 会误把入口预设的
         // 高绿帽值（如入口 5 的 80）拍成 0/屈辱。事件只在 shopSystem 蚀心露按钮真正触发
         // 转变时才 push，正好用来区分"yaml 预设"和"运行时按钮触发"。
-        const 蚀心露刚触发 = !_protSnapshot?.已触发蚀心露屈辱 && items.includes('__蚀心露屈辱转变__');
+        const 蚀心露刚触发 =
+          !_protSnapshot?.已触发蚀心露屈辱 && items.includes('__蚀心露屈辱转变__');
         _protSnapshot = {
           灵石: data.系统.灵石,
           神魂空间已解锁: data._神魂空间已解锁,
@@ -687,6 +689,12 @@ $(() => {
 
         // 阶段最终校正（delta cap 可能改完成度）
         newData.治疗.阶段 = calcHealingStage(newData.治疗.完成度);
+
+        // 里程碑日志：检测关键转折并写入聊天世界书（fire-and-forget，降级 safe）
+        // 失败不影响主流程，玩家没装"数据库"插件也照常工作——走酒馆原生 chat worldbook
+        detectAndWriteMilestones(newData, oldData, currentFloor).catch(e => {
+          console.warn('[云霜凝] milestone 写入失败，忽略:', e);
+        });
 
         // 将计算结果写回
         _.set(新变量, 'stat_data', newData);
