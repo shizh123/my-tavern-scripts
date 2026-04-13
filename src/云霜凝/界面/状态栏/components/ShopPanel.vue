@@ -134,11 +134,11 @@
             v-for="pos in YINWEN_POSITIONS"
             :key="pos"
             class="yinwen-opt"
-            :class="{ selected: yinwenPos === pos, done: !!store.data.云霜凝.肉体改造.淫纹[pos] }"
-            :disabled="!!store.data.云霜凝.肉体改造.淫纹[pos]"
+            :class="{ selected: yinwenPos === pos, done: yinwenPosStatus(pos) === 'both' }"
+            :disabled="yinwenPosStatus(pos) === 'both'"
             @click="yinwenPos = pos"
           >
-            {{ pos }}<span v-if="store.data.云霜凝.肉体改造.淫纹[pos]" class="done-mark">已有</span>
+            {{ pos }}<span v-if="yinwenPosLabel(pos)" class="done-mark">{{ yinwenPosLabel(pos) }}</span>
           </button>
         </div>
         <div v-if="yinwenPos" class="yinwen-text-row">
@@ -1336,11 +1336,40 @@ const GIFTABLE_CLOTHING = new Set([...CLOTHING_NAMES]);
 
 // ── 淫纹刻印位置 ──
 const YINWEN_POSITIONS = ['腰腹', '胸前', '大腿内侧', '臀部'] as const;
+type YinwenPos = (typeof YINWEN_POSITIONS)[number];
 const yinwenPos = ref<string>('');
 const yinwenText = ref<string>('');
 
 const needYinwenPos = computed(() => checkedItems.has('淫纹刻印'));
 const showYinwenPicker = computed(() => checkedItems.has('淫纹刻印'));
+
+/**
+ * 淫纹位置可用状态——target 在 confirmUse 时才选，所以位置可用性取决于
+ * 两个角色的当前刻印状态：
+ * - free：两者都未刻 → 可选
+ * - yun-only：云霜凝已刻但洛书晴未刻 → 可选（只能给洛书晴刻）
+ * - luo-only：洛书晴已刻但云霜凝未刻 → 可选（只能给云霜凝刻）
+ * - both：两者都已刻 → 禁用
+ * 洛书晴线未激活时退化为只看云霜凝。
+ */
+function yinwenPosStatus(pos: YinwenPos): 'free' | 'yun-only' | 'luo-only' | 'both' {
+  const yunUsed = !!store.data.云霜凝.肉体改造.淫纹[pos];
+  const luoActive = !!store.data._洛书晴线已激活;
+  const luoUsed = luoActive && !!store.data.洛书晴.肉体改造.淫纹[pos];
+  if (!luoActive) return yunUsed ? 'both' : 'free';
+  if (yunUsed && luoUsed) return 'both';
+  if (yunUsed) return 'yun-only';
+  if (luoUsed) return 'luo-only';
+  return 'free';
+}
+
+function yinwenPosLabel(pos: YinwenPos): string {
+  const s = yinwenPosStatus(pos);
+  if (s === 'both') return '已刻满';
+  if (s === 'yun-only') return '云已刻';
+  if (s === 'luo-only') return '洛已刻';
+  return '';
+}
 
 // ── 共用道具目标选择浮层 ──
 const showTargetDialog = ref(false);
@@ -1767,39 +1796,132 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
   }
 }
 
-function isAlreadyOwned(name: string): boolean {
+// ════════════════════════════════════════════
+// Per-character state helpers（共用道具支持两角色独立状态）
+// ════════════════════════════════════════════
+
+// 肉体改造单向不可卸清单（严格物理改造，只能升级/永久生效）
+const IRREVERSIBLE_BODY_MODS = new Set<string>([
+  '丰胸灵乳丹·中',
+  '丰胸灵乳丹·大',
+  '丰胸灵乳丹·极',
+  '丰臀圆玉丹',
+]);
+
+/** 云霜凝是否已拥有（体改/性癖/淫纹） */
+function isYunOwned(name: string): boolean {
   const d = store.data;
-  if (KINK_EFFECTS[name]) {
-    return name in d.云霜凝.性癖列表;
+  if (KINK_EFFECTS[name]) return KINK_EFFECTS[name].name in d.云霜凝.性癖列表;
+  switch (name) {
+    case '丰胸灵乳丹·中':
+      return d.云霜凝.肉体改造.胸部 !== '默认';
+    case '丰胸灵乳丹·大':
+      return ['G罩杯', 'H罩杯'].includes(d.云霜凝.肉体改造.胸部);
+    case '丰胸灵乳丹·极':
+      return d.云霜凝.肉体改造.胸部 === 'H罩杯';
+    case '丰臀圆玉丹':
+      return d.云霜凝.肉体改造.臀部 !== '默认';
+    case '乳环':
+      return d.云霜凝.肉体改造.乳环;
+    case '阴环':
+      return d.云霜凝.肉体改造.阴环;
+    default:
+      return false;
   }
-  const bodyModChecks: Record<string, () => boolean> = {
-    '丰胸灵乳丹·中': () => d.云霜凝.肉体改造.胸部 !== '默认',
-    '丰胸灵乳丹·大': () => ['G罩杯', 'H罩杯'].includes(d.云霜凝.肉体改造.胸部),
-    '丰胸灵乳丹·极': () => d.云霜凝.肉体改造.胸部 === 'H罩杯',
-    丰臀圆玉丹: () => d.云霜凝.肉体改造.臀部 !== '默认',
-    乳环: () => d.云霜凝.肉体改造.乳环,
-    阴环: () => d.云霜凝.肉体改造.阴环,
-  };
-  if (bodyModChecks[name]) return bodyModChecks[name]();
-  return false;
 }
 
+/** 洛书晴是否已拥有（体改/性癖/淫纹；线未激活视为 false） */
+function isLuoOwned(name: string): boolean {
+  const d = store.data;
+  if (!d._洛书晴线已激活) return false;
+  if (KINK_EFFECTS[name]) return KINK_EFFECTS[name].name in d.洛书晴.性癖列表;
+  switch (name) {
+    case '丰胸灵乳丹·中':
+      return d.洛书晴.肉体改造.胸部 !== '默认';
+    case '丰胸灵乳丹·大':
+      return ['G罩杯', 'H罩杯'].includes(d.洛书晴.肉体改造.胸部);
+    case '丰胸灵乳丹·极':
+      return d.洛书晴.肉体改造.胸部 === 'H罩杯';
+    case '丰臀圆玉丹':
+      return d.洛书晴.肉体改造.臀部 !== '默认';
+    case '乳环':
+      return d.洛书晴.肉体改造.乳环;
+    case '阴环':
+      return d.洛书晴.肉体改造.阴环;
+    default:
+      return false;
+  }
+}
+
+/** 云霜凝是否正在使用（服装/身体器具/装备类） */
+function isYunUsing(name: string): boolean {
+  return store.data.系统.道具状态[name] === '使用中';
+}
+
+/** 洛书晴是否正在使用 */
+function isLuoUsing(name: string): boolean {
+  if (!store.data._洛书晴线已激活) return false;
+  return store.data._洛书晴道具状态[name] === '使用中';
+}
+
+/** 任一角色已拥有（体改/性癖/淫纹） */
+function isAlreadyOwned(name: string): boolean {
+  return isYunOwned(name) || isLuoOwned(name);
+}
+
+/** 任一角色已装备（服装/身体器具） */
+function isEitherUsing(name: string): boolean {
+  return isYunUsing(name) || isLuoUsing(name);
+}
+
+/**
+ * 返回 shop 上显示的合并状态 label。格式：
+ * - 任一"使用中"：云装备中 / 洛装备中 / 两者装备中
+ * - 任一"已拥有"（体改/性癖）：云已有 / 洛已有 / 两者已有
+ * - 单纯"已购买"：已购买
+ * - 未购买：未购买
+ * - 特殊场景已完成：已完成
+ * - 消耗品冷却：冷却X楼
+ */
 function stateLabel(item: ItemDef) {
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return '已完成';
-  if ((item.type === '性癖' || item.type === '体改') && isAlreadyOwned(item.name)) {
-    return store.data.系统.道具状态[item.name] === '使用中' ? '装备中' : '已拥有';
+
+  // 体改/性癖：用 owned 判断
+  if (item.type === '性癖' || item.type === '体改') {
+    const yunO = isYunOwned(item.name);
+    const luoO = isLuoOwned(item.name);
+    if (yunO && luoO) return '两者已有';
+    if (yunO) return '云已有';
+    if (luoO) return '洛已有';
+    // fallthrough 到购买态判断
   }
+
+  // 装备（服装/身体器具/环境）：用 using 判断
+  if (item.type === '装备') {
+    const yunU = isYunUsing(item.name);
+    const luoU = isLuoUsing(item.name);
+    if (yunU && luoU) return '两者装备中';
+    if (yunU) return '云装备中';
+    if (luoU) return '洛装备中';
+    // fallthrough 到购买态
+  }
+
   // 消耗品冷却显示
   if (CONSUMABLE_NAMES.has(item.name)) {
     const { inCooldown, remainingFloors } = getCooldown(item.name);
     if (inCooldown) return `冷却${remainingFloors}楼`;
   }
+
   return store.data.系统.道具状态[item.name] ?? '未购买';
 }
+
 function stateClass(name: string) {
   const item = findItem(name);
   if (item && (item.type === '性癖' || item.type === '体改') && isAlreadyOwned(name)) {
-    return store.data.系统.道具状态[name] === '使用中' ? 'st-kink-active' : 'st-owned';
+    return 'st-owned';
+  }
+  if (item && item.type === '装备' && isEitherUsing(name)) {
+    return 'st-active';
   }
   // 消耗品冷却中
   if (CONSUMABLE_NAMES.has(name) && getCooldown(name).inCooldown) return 'st-cooldown';
@@ -1879,8 +2001,13 @@ function handleSellLiuyingshi(name: string) {
 function rowClass(item: ItemDef) {
   if (!isUnlocked(item)) return 'row-locked';
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return 'row-done';
+  // 体改/性癖：任一角色拥有 = 已应用（对该道具整体完成）
   if ((item.type === '性癖' || item.type === '体改') && isAlreadyOwned(item.name)) {
-    return store.data.系统.道具状态[item.name] === '使用中' ? 'row-active' : 'row-done';
+    return 'row-done';
+  }
+  // 装备：任一角色装备 = 激活
+  if (item.type === '装备' && isEitherUsing(item.name)) {
+    return 'row-active';
   }
   const s = store.data.系统.道具状态[item.name];
   if (s === '使用中') return 'row-active';

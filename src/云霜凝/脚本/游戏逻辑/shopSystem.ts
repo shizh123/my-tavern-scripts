@@ -669,13 +669,18 @@ export function processNewlyActivatedItems(newData: SchemaType, oldData: SchemaT
       // 格式: "淫纹刻印·腰腹·母狗" / "淫纹刻印·胸前·{{user}}专用" / "淫纹刻印·大腿内侧·贱货"
       const body = itemName.substring('淫纹刻印·'.length);
       const sep = body.indexOf('·');
-      const pos = (sep > 0 ? body.substring(0, sep) : body) as '腰腹' | '胸前' | '大腿内侧';
+      const pos = (sep > 0 ? body.substring(0, sep) : body) as '腰腹' | '胸前' | '大腿内侧' | '臀部';
       const text = sep > 0 ? body.substring(sep + 1) : '';
-      if (['腰腹', '胸前', '大腿内侧'].includes(pos) && text) {
-        newData.云霜凝.肉体改造.淫纹[pos] = text;
+      if (['腰腹', '胸前', '大腿内侧', '臀部'].includes(pos) && text) {
+        // 防止覆盖已有刻印（前端 UI 应阻止，但脚本层也加 guard）
+        if (!newData.云霜凝.肉体改造.淫纹[pos]) {
+          newData.云霜凝.肉体改造.淫纹[pos] = text;
+          console.info(`[商店] 云霜凝淫纹刻印 ${pos}: ${text}`);
+        } else {
+          console.warn(`[商店] 云霜凝淫纹 ${pos} 已有刻印"${newData.云霜凝.肉体改造.淫纹[pos]}"，跳过写入"${text}"`);
+        }
       }
       delete newData.系统.道具状态[itemName];
-      console.info(`[商店] 淫纹刻印 位置: ${pos} 文字: ${text}`);
       continue;
     }
 
@@ -816,10 +821,16 @@ export function processNewlyActivatedLuoItems(newData: SchemaType, oldData: Sche
     if (itemName.startsWith('淫纹刻印·')) {
       const body = itemName.substring('淫纹刻印·'.length);
       const sep = body.indexOf('·');
-      const pos = (sep > 0 ? body.substring(0, sep) : body) as '腰腹' | '胸前' | '大腿内侧';
+      const pos = (sep > 0 ? body.substring(0, sep) : body) as '腰腹' | '胸前' | '大腿内侧' | '臀部';
       const text = sep > 0 ? body.substring(sep + 1) : '';
-      if (['腰腹', '胸前', '大腿内侧'].includes(pos) && text) {
-        newData.洛书晴.肉体改造.淫纹[pos] = text;
+      if (['腰腹', '胸前', '大腿内侧', '臀部'].includes(pos) && text) {
+        // 防止覆盖已有刻印
+        if (!newData.洛书晴.肉体改造.淫纹[pos]) {
+          newData.洛书晴.肉体改造.淫纹[pos] = text;
+          console.info(`[商店] 洛书晴淫纹刻印 ${pos}: ${text}`);
+        } else {
+          console.warn(`[商店] 洛书晴淫纹 ${pos} 已有刻印"${newData.洛书晴.肉体改造.淫纹[pos]}"，跳过写入"${text}"`);
+        }
       }
       delete newData._洛书晴道具状态[itemName];
       continue;
