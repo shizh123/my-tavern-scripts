@@ -35,14 +35,15 @@
         <span class="decor-line"></span><span>身体开发</span><span class="decor-line"></span>
       </div>
       <div class="body-grid">
-        <div
-          v-for="part in bodyParts"
-          :key="part"
-          class="body-item"
-          :class="'lv' + lv(store.data.洛书晴.身体开发[part])"
-        >
-          <div class="body-label">{{ part }}</div>
-          <div class="body-val">{{ store.data.洛书晴.身体开发[part] }}</div>
+        <div v-for="part in bodyParts" :key="part" class="body-item">
+          <span class="body-lbl">{{ part }}</span>
+          <div class="track">
+            <div class="fill body" :style="{ width: store.data.洛书晴.身体开发[part] + '%' }"></div>
+          </div>
+          <span class="lv-badge" :class="'lv' + lv(store.data.洛书晴.身体开发[part])"
+            >Lv{{ lv(store.data.洛书晴.身体开发[part]) }}</span
+          >
+          <span class="body-num">{{ store.data.洛书晴.身体开发[part] }}</span>
         </div>
       </div>
     </div>
@@ -283,41 +284,82 @@ $c-sub: #a07080;
   border-radius: 3px;
 }
 
-// ── 身体开发网格 ──
+// ── 身体开发（横向进度条 + Lv 徽章，对齐云霜凝面板）──
 .body-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 .body-item {
-  background: rgba($c-pri-d, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba($c-pri, 0.04);
   border-radius: 6px;
-  padding: 8px 4px;
-  text-align: center;
-  font-size: 0.7rem;
+}
+.body-lbl {
+  width: 28px;
+  font-size: 0.75rem;
+  color: rgba($c-pri, 0.9);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.track {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba($c-pri, 0.15);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.fill.body {
+  height: 100%;
+  background: linear-gradient(to right, $c-pri-d, $c-pri, $c-acc);
+  transition: width 0.5s;
+  border-radius: 4px;
+}
+.body-num {
+  width: 24px;
+  text-align: right;
+  font-size: 0.72rem;
+  color: rgba($c-frost, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.lv-badge {
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
   &.lv0 {
-    color: $c-sub;
+    color: rgba($c-sub, 0.5);
   }
   &.lv1 {
-    color: #a0a0c0;
+    color: #c0a0b0;
+    background: rgba(#c0a0b0, 0.1);
+    border: 1px solid rgba(#c0a0b0, 0.2);
   }
   &.lv2 {
     color: $c-pri;
+    background: rgba($c-pri, 0.1);
+    border: 1px solid rgba($c-pri, 0.2);
   }
   &.lv3 {
     color: $c-acc;
+    background: rgba($c-acc, 0.12);
+    border: 1px solid rgba($c-acc, 0.25);
+    box-shadow: 0 0 4px rgba($c-acc, 0.12);
   }
   &.lv4 {
     color: $c-frost;
-    background: rgba($c-pri, 0.25);
+    background: rgba($c-frost, 0.14);
+    border: 1px solid rgba($c-frost, 0.3);
+    box-shadow: 0 0 6px rgba($c-frost, 0.2);
   }
-}
-.body-label {
-  color: $c-sub;
-}
-.body-val {
-  font-weight: 600;
-  margin-top: 3px;
 }
 
 // ── 服装槽 ──

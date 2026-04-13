@@ -62,6 +62,7 @@
   { "op": "replace", "path": "/云霜凝/肉体改造/乳环", "value": true },
   { "op": "replace", "path": "/云霜凝/肉体改造/淫纹/腰腹", "value": "一道淡红的霜花纹路自脐下蜿蜒而出，遇情潮则微微生光" },
   { "op": "replace", "path": "/云霜凝/服装/暴露程度", "value": "轻露" },
+  { "op": "replace", "path": "/云霜凝/心理活动", "value": "千晶幻术的禁法今日终于要授予{{user}}。苗广已经默许了这一切——可她仍分不清，这是她棋局中最后的布子，还是她心防溃散后的顺势而为。" },
   { "op": "replace", "path": "/苗广/疑心值", "value": 5 },
   { "op": "replace", "path": "/苗广/心态", "value": "默许" },
   { "op": "replace", "path": "/苗广/千晶幻术/激活中", "value": false },

@@ -49,6 +49,7 @@
   { "op": "replace", "path": "/云霜凝/身体开发/小嘴", "value": 8 },
   { "op": "replace", "path": "/云霜凝/身体开发/胸部", "value": 12 },
   { "op": "replace", "path": "/云霜凝/身体开发/小屄", "value": 5 },
+  { "op": "replace", "path": "/云霜凝/心理活动", "value": "地仙境的封禁松动了一丝，她第一次能在榻上短暂坐起。那少年的气息仍是旧的，可她却开始察觉——苗广为她请来的这个人，似乎并不只是一剂药。" },
   { "op": "replace", "path": "/苗广/疑心值", "value": 8 },
   { "op": "replace", "path": "/苗广/心态", "value": "正常" },
   { "op": "replace", "path": "/系统/灵石", "value": 350 },

@@ -49,6 +49,7 @@
   { "op": "replace", "path": "/云霜凝/身体开发/小嘴", "value": 18 },
   { "op": "replace", "path": "/云霜凝/身体开发/胸部", "value": 28 },
   { "op": "replace", "path": "/云霜凝/身体开发/小屄", "value": 22 },
+  { "op": "replace", "path": "/云霜凝/心理活动", "value": "神魂空间的那一夜已经过去，可她的神识里留下的并不只是她自己的回响。她不愿承认，却无法抹去——那道门若再推开一次，命运便要分岔。" },
   { "op": "replace", "path": "/苗广/疑心值", "value": 10 },
   { "op": "replace", "path": "/苗广/心态", "value": "正常" },
   { "op": "replace", "path": "/系统/灵石", "value": 480 },
