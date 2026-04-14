@@ -3294,10 +3294,14 @@ export function buildStatusSnapshot(data: SchemaType): string {
 
   let snapshot = `\n[当前游戏状态快照]\n`;
   snapshot += `当前在场角色: 【${actorLine}】 ← 叙事焦点严格限定在此列表内的角色，不在场的角色本轮不参与任何描写\n`;
+  // 2.0.21 修复:神魂空间模式必须明示是谁的意识领域,否则非入口轮 AI 会混淆云洛归属
+  // (getSoulSpaceGuidance 只在入口轮注入完整指引,后续轮 AI 只能从这里识别)
+  const modeLabel =
+    data._当前互动模式 === '神魂空间' ? `神魂空间·${data._当前神魂空间角色}的意识领域` : data._当前互动模式;
   if (data._神魂空间已解锁 || data._神魂空间已进入过) {
-    snapshot += `当前互动模式: 【${data._当前互动模式}】 ← 模式由玩家按钮控制，AI绝对不要自行描写进入或退出任何空间的过程。所有场景描写必须在当前模式内进行。\n`;
+    snapshot += `当前互动模式: 【${modeLabel}】 ← 模式由玩家按钮控制，AI绝对不要自行描写进入或退出任何空间的过程。所有场景描写必须在当前模式内进行。\n`;
   } else {
-    snapshot += `当前互动模式: 【${data._当前互动模式}】\n`;
+    snapshot += `当前互动模式: 【${modeLabel}】\n`;
   }
   snapshot += `时间: ${timeLabel} | 治疗阶段: 第${data.治疗.阶段}阶·${phase} | 治疗完成度: ${data.治疗.完成度}%\n`;
   // 苗广状态行：场景感知注入（AI 数据隔离原则）
