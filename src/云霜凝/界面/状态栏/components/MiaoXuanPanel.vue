@@ -75,6 +75,8 @@ const isBusyInScenario = computed(() => {
   if (d.苗广.孝敬师父.激活中) return true;
   if (d._特殊场景.进行中) return true;
   if (d._洛书晴激活轮次进度 > 0) return true;
+  // 2.0.20: 本楼若已 push 道具事件待发送，也视为忙——防止"道具楼 + 倾诉/反抗"事件叠加
+  if (d._待发送道具事件) return true;
   return false;
 });
 

@@ -13,13 +13,41 @@
             >{{ name }} <span class="temp-turns">{{ turns }}轮</span></span
           >
         </div>
-        <div v-if="store.data._特殊场景.进行中" class="scene-badge">
+        <div v-if="scenarioProgress" class="scene-badge">
           <span class="scene-icon">⟐</span>
-          {{ store.data._特殊场景.进行中 }}
-          <span class="scene-progress">进行中</span>
+          {{ scenarioProgress.label }}
+          <span class="scene-progress">第 {{ scenarioProgress.current }}/{{ scenarioProgress.max }} 轮</span>
+        </div>
+        <!-- 多选按钮（默认模式）/ 退出多选 + target 指示（多选模式） -->
+        <button v-if="!multiSelectMode" class="multi-btn" @click="enterMultiSelect">多选</button>
+        <div v-else class="multi-active">
+          <span class="multi-target-label">目标:</span>
+          <span class="multi-target-name" :class="'tb-' + (multiSelectTarget === '云霜凝' ? 'yun' : 'luo')">{{
+            multiSelectTarget
+          }}</span>
+          <button class="multi-exit-btn" @click="exitMultiSelect">退出</button>
         </div>
       </div>
     </div>
+
+    <!-- 多选 target chooser 浮层 -->
+    <Transition name="fade">
+      <div
+        v-if="showMultiTargetChooser"
+        class="target-dialog-mask"
+        @click.self="showMultiTargetChooser = false"
+      >
+        <div class="target-dialog">
+          <div class="target-dialog-title">选择多选目标</div>
+          <div class="target-dialog-desc">选定目标后进入多选模式，批量使用道具</div>
+          <div class="target-dialog-btns">
+            <button class="target-btn tb-yun" @click="pickMultiTarget('云霜凝')">云霜凝</button>
+            <button class="target-btn tb-luo" @click="pickMultiTarget('洛书晴')">洛书晴</button>
+          </div>
+          <button class="target-dialog-cancel" @click="showMultiTargetChooser = false">取消</button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 类别标签页 -->
     <nav class="cat-tabs">
@@ -162,10 +190,13 @@
       <button
         v-if="checkedItems.size > 0"
         class="confirm-btn"
+        :class="{ 'confirm-btn-multi': multiSelectMode }"
         :disabled="needYinwenPos && !yinwenPos"
         @click="confirmUse"
       >
-        <span class="confirm-text">确定使用</span>
+        <span class="confirm-text">{{
+          multiSelectMode ? `使用到${multiSelectTarget}` : '确定使用'
+        }}</span>
         <span class="confirm-count">{{ checkedItems.size }}件</span>
       </button>
     </Transition>
@@ -262,6 +293,13 @@ import {
   INSTANT_EFFECTS,
   enforceExclusiveGroup,
 } from '../../../脚本/游戏逻辑/shopSystem';
+import {
+  getQianjingMaxRounds,
+  XIAOJING_MAX_ROUNDS,
+  getSpecialSceneMaxRounds,
+  LUO_ACTIVATION_MAX_ROUNDS,
+  LUO_FIRST_MEET_MAX_ROUNDS,
+} from '../../../脚本/游戏逻辑/promptInjection';
 
 const store = useDataStore();
 
@@ -274,6 +312,57 @@ function isLatestMessage(): boolean {
   if (!chat || chat.length === 0) return true;
   return currentId === chat.length - 1;
 }
+
+/**
+ * 统一场景进度 badge（2.0.20）
+ *
+ * 任一"AI 有引导步骤"的多轮副本进行中时，返回 {label, current, max}。
+ * 覆盖 5 个系统：千晶幻术 / 孝敬师父 / 特殊场景 / 洛书晴激活 / 洛书晴现实初遇。
+ * 排他保证一次只有一个副本激活，所以按优先级顺序检测，命中即返回。
+ * 进度计算用 nominalRound（不扣延后）——让玩家看到的是"自然"进度。
+ */
+const scenarioProgress = computed((): { label: string; current: number; max: number } | null => {
+  const d = store.data;
+  const currentFloor = (window as any).SillyTavern?.chat?.length ?? 0;
+
+  // 千晶幻术
+  if (d.苗广.千晶幻术.激活中 && d._千晶幻术开始楼层 > 0) {
+    const max = getQianjingMaxRounds(d.苗广.千晶幻术.已使用次数);
+    const current = Math.max(1, Math.min(max, Math.floor((currentFloor - d._千晶幻术开始楼层) / 2) + 1));
+    return { label: '千晶幻术', current, max };
+  }
+
+  // 孝敬师父
+  if (d.苗广.孝敬师父.激活中 && d._孝敬师父开始楼层 > 0) {
+    const max = XIAOJING_MAX_ROUNDS;
+    const current = Math.max(1, Math.min(max, Math.floor((currentFloor - d._孝敬师父开始楼层) / 2) + 1));
+    return { label: '孝敬师父', current, max };
+  }
+
+  // 洛书晴激活剧情（显式 5 轮计数器）
+  if (d._洛书晴激活轮次进度 >= 1 && d._洛书晴激活轮次进度 <= LUO_ACTIVATION_MAX_ROUNDS) {
+    return {
+      label: '洛书晴激活',
+      current: d._洛书晴激活轮次进度,
+      max: LUO_ACTIVATION_MAX_ROUNDS,
+    };
+  }
+
+  // 特殊场景（含洛书晴现实初遇，它通过 _特殊场景.进行中 === '洛书晴现实初遇' 走这条路径）
+  if (d._特殊场景.进行中 && d._特殊场景开始楼层 > 0) {
+    const sceneName = d._特殊场景.进行中;
+    if (sceneName === '洛书晴现实初遇') {
+      const max = LUO_FIRST_MEET_MAX_ROUNDS;
+      const current = Math.max(1, Math.min(max, Math.floor((currentFloor - d._特殊场景开始楼层) / 2) + 1));
+      return { label: '洛书晴初遇', current, max };
+    }
+    const max = getSpecialSceneMaxRounds(sceneName);
+    const current = Math.max(1, Math.min(max, Math.floor((currentFloor - d._特殊场景开始楼层) / 2) + 1));
+    return { label: sceneName, current, max };
+  }
+
+  return null;
+});
 
 /**
  * 多轮脚本剧情排他检测——任何脚本驱动的多轮副本进行中时，
@@ -1499,6 +1588,54 @@ function showToast(msg: string, type: 'ok' | 'err' | 'info' = 'ok') {
 // 批量选择集合
 const checkedItems = reactive(new Set<string>());
 
+// ── 道具系统 v2 (2.0.20) 多选模式 ──
+// 默认模式：点一下直接执行（消耗品/特殊场景/淫纹刻印 都有二次确认或目标选择）
+// 多选模式：玩家先点"多选"按钮，选 target，然后勾选道具批量处理
+// 特殊场景不参与多选（决策 8），卡片对当前 target 不可用的会灰显
+const multiSelectMode = ref(false);
+const multiSelectTarget = ref<'云霜凝' | '洛书晴' | null>(null);
+const showMultiTargetChooser = ref(false);
+
+function enterMultiSelect() {
+  if (!isLatestMessage()) {
+    showToast('只能在最新楼层操作商店', 'err');
+    return;
+  }
+  // 洛书晴未激活 → 直接进入多选模式（target=云霜凝），不弹 chooser
+  if (!store.data._洛书晴线已激活) {
+    multiSelectTarget.value = '云霜凝';
+    multiSelectMode.value = true;
+    return;
+  }
+  // 洛已激活 → 弹 target chooser
+  showMultiTargetChooser.value = true;
+}
+
+function pickMultiTarget(target: '云霜凝' | '洛书晴') {
+  showMultiTargetChooser.value = false;
+  multiSelectTarget.value = target;
+  multiSelectMode.value = true;
+}
+
+function exitMultiSelect() {
+  multiSelectMode.value = false;
+  multiSelectTarget.value = null;
+  checkedItems.clear();
+}
+
+/**
+ * 道具对当前多选 target 是否不可用：
+ *  - target=洛书晴 但道具不是共用道具 → invalid
+ *  - 特殊场景 → 总 invalid（多选不支持特殊场景，决策 8）
+ *  - 未解锁 → invalid（rowClass 会先 row-locked，但防御性写一遍）
+ */
+function isMultiTargetInvalid(item: ItemDef): boolean {
+  if (item.type === '特殊场景') return true;
+  if (!isUnlocked(item)) return true;
+  if (multiSelectTarget.value === '洛书晴' && !isSharedItem(item.name)) return true;
+  return false;
+}
+
 function findItem(name: string): ItemDef | undefined {
   for (const list of Object.values(ALL_ITEMS)) {
     const found = list.find(i => i.name === name);
@@ -1518,6 +1655,20 @@ function handleClick(item: ItemDef) {
     return;
   }
 
+  // ── 多选模式 gate (2.0.20)：特殊场景禁用 + target-invalid 禁用 + 绕过 immediate flow ──
+  if (multiSelectMode.value) {
+    if (item.type === '特殊场景') {
+      showToast('多选模式不支持特殊场景，请退出多选后单件触发', 'info');
+      return;
+    }
+    if (isMultiTargetInvalid(item)) {
+      showToast(`「${item.name}」对${multiSelectTarget.value}不可用`, 'info');
+      return;
+    }
+    // 装备/体改/性癖 在多选模式下走 checkedItems toggle（不走 EquipDialog），
+    // 消耗品/淫纹刻印 继续走现有 toggle 路径——落到下方统一的 checkedItems 逻辑
+  }
+
   if (item.type === '特殊场景') {
     const busy = busyScenarioReason();
     if (busy) {
@@ -1531,10 +1682,10 @@ function handleClick(item: ItemDef) {
     return;
   }
 
-  // ── Phase 2 新流程：装备/体改/性癖 走即时 dialog ──
+  // ── Phase 2 新流程：装备/体改/性癖 走即时 dialog（多选模式除外） ──
   // （消耗品/特殊场景/淫纹刻印 保留批量 checkedItems 流程）
   // 按用户设计：点击分三步（第一次买，第二次选装备对象，第三次选卸下对象）
-  if (isImmediateFlowItem(item)) {
+  if (!multiSelectMode.value && isImmediateFlowItem(item)) {
     const purchased = !!store.data.系统.道具状态[item.name];
     if (!purchased) {
       // 第一次点：扣灵石购买，不自动弹 dialog（给用户看到"已购买"状态）
@@ -1650,6 +1801,13 @@ function confirmUse() {
       return;
     }
   }
+  // 多选模式 (2.0.20)：target 已锁定，跳过 target dialog 直接执行 + 自动退出多选
+  if (multiSelectMode.value && multiSelectTarget.value) {
+    const target = multiSelectTarget.value;
+    executeConfirmUse(target);
+    exitMultiSelect();
+    return;
+  }
   // 洛书晴激活 + 有共用道具 → 弹目标选择
   if (store.data._洛书晴线已激活 && sharedItemsPending.value.length > 0) {
     showTargetDialog.value = true;
@@ -1711,14 +1869,29 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       } else {
         // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
         store.data._洛书晴道具状态[name] = '使用中';
-        delete store.data.系统.道具状态[name];
+        // 【修复 2.0.20】：装备/体改/性癖 不删除 系统.道具状态（云洛可共存装载）；
+        // 只有消耗品真正被"消耗"，才清掉 云侧购买记录
+        const it = findItem(name);
+        const isConsumable = LUO_CONSUMABLES.has(name) || (it && CONSUMABLE_NAMES.has(name));
+        if (isConsumable) {
+          delete store.data.系统.道具状态[name];
+        }
         // 洛书晴消耗品一律静默激活，不触发 narrative：
         // - 安抚符/真心符：方式2注入型，由快照每轮 tone modifier 生效
         // - 安神香/神魂共鸣石：即时数值型，效果直接走快照和状态栏显示
         if (LUO_CONSUMABLES.has(name)) {
           // 静默激活
+        } else if (KINK_EFFECTS[name]) {
+          // 2.0.20 性癖：只在第一次觉醒时 push 事件，再次装载静默
+          const kinkName = KINK_EFFECTS[name].name;
+          const awakenKey = `洛书晴:${kinkName}`;
+          if (!store.data._已觉醒性癖[awakenKey]) {
+            store.data._已觉醒性癖[awakenKey] = true;
+            eventNames.push(`洛书晴·${name}`);
+            needTriggerAI = true;
+          }
         } else {
-          // 性癖/身体器具/体改/服装 → 触发 narrative（送衣/仪式/觉醒/施加）
+          // 身体器具/体改/服装 → 每次都触发 narrative（送衣/仪式/施加）
           eventNames.push(`洛书晴·${name}`);
           needTriggerAI = true;
         }
@@ -1751,7 +1924,14 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       const { name: kinkName, tag } = KINK_EFFECTS[name];
       store.data.云霜凝.性癖列表[kinkName] = tag;
       store.data.系统.道具状态[name] = '使用中';
-      // 性癖不写入 _待发送道具事件：效果通过 buildKinkDirectives() 读取 性癖列表+道具状态 注入
+      // 2.0.20: 第一次觉醒 push event 走 legacy itemEventMap 生成【性癖觉醒】叙事；
+      // 再次装载静默（通过 _已觉醒性癖 gate），后续每轮仍由 buildKinkDirectives 注入 tone modifier
+      const awakenKey = `云霜凝:${kinkName}`;
+      if (!store.data._已觉醒性癖[awakenKey]) {
+        store.data._已觉醒性癖[awakenKey] = true;
+        eventNames.push(name);
+        needTriggerAI = true;
+      }
     } else if (name === '淫纹刻印') {
       if (!yinwenPos.value) continue;
       const pos = yinwenPos.value as '腰腹' | '胸前' | '大腿内侧' | '臀部';
@@ -1766,7 +1946,7 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       yinwenText.value = '';
     } else if (BODY_MOD_EFFECTS[name]) {
       BODY_MOD_EFFECTS[name]();
-      delete store.data.系统.道具状态[name];
+      store.data.系统.道具状态[name] = '已购买';
       eventNames.push(name);
       needTriggerAI = true;
     } else if (SCENE_TURNS[name]) {
@@ -2078,8 +2258,9 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       eventNames.push(`洛书晴·${name}`);
     }
   } else if (item.type === '性癖') {
-    // 性癖静默应用：不 push narrative event，不 triggerSlash
-    // 效果通过下一轮 buildKinkDirectives / buildLuoKinkDirectives 快照注入
+    // 2.0.20 性癖觉醒接通：
+    //   · 第一次装载 → push 觉醒 event + triggerSlash，走 legacy itemEventMap 生成【性癖觉醒】叙事
+    //   · 再次装载 → 静默（_已觉醒性癖 gate），每轮效果仍由 buildKinkDirectives 快照 tone modifier 注入
     const kink = KINK_EFFECTS[name];
     if (!kink) return;
     if (target === '云霜凝') {
@@ -2097,8 +2278,21 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       store.data._洛书晴道具状态[name] = '使用中';
       store.data.洛书晴.性癖列表[kink.name] = kink.tag;
     }
-    store.flush();
-    showToast(`已对${target}应用「${name}」`, 'ok');
+    // 第一次觉醒 gate：push event + triggerSlash；后续再次装载静默
+    const awakenKey = `${target}:${kink.name}`;
+    if (!store.data._已觉醒性癖[awakenKey]) {
+      store.data._已觉醒性癖[awakenKey] = true;
+      const eventName = target === '云霜凝' ? name : `洛书晴·${name}`;
+      const pending = store.data._待发送道具事件;
+      store.data._待发送道具事件 = pending ? pending + '|||' + eventName : eventName;
+      store.data._系统操作中 = true;
+      store.flush();
+      triggerSlash(`/send （为${target}觉醒了${kink.name}）|/trigger`);
+      showToast(`${target}「${kink.name}」觉醒中…`, 'ok');
+    } else {
+      store.flush();
+      showToast(`已对${target}装上「${name}」`, 'ok');
+    }
     return;
   }
 
@@ -2351,6 +2545,8 @@ function handleSellLiuyingshi(name: string) {
 
 function rowClass(item: ItemDef) {
   if (!isUnlocked(item)) return 'row-locked';
+  // 多选模式：对当前 target 不可用的道具灰显
+  if (multiSelectMode.value && isMultiTargetInvalid(item)) return 'row-target-invalid';
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return 'row-done';
   // 体改/性癖：区分单方 vs 双方 —— 双方都拥有才算"完成"变灰
   if (item.type === '性癖' || item.type === '体改') {
@@ -2493,6 +2689,64 @@ $cat-场景: #d8a040;
     padding: 1px 6px;
     border-radius: 6px;
     font-size: 0.58rem;
+  }
+}
+
+// ━━━ 多选模式（2.0.20） ━━━
+.multi-btn {
+  font-size: 0.65rem;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba($c-pri, 0.25) 0%, rgba($c-pri, 0.08) 100%);
+  border: 1px solid rgba($c-pri, 0.4);
+  color: $c-frost;
+  cursor: pointer;
+  font-weight: 700;
+  transition: all 0.15s;
+  &:hover {
+    background: linear-gradient(135deg, rgba($c-pri, 0.4) 0%, rgba($c-pri, 0.15) 100%);
+    border-color: $c-pri-l;
+  }
+}
+.multi-active {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba($c-gold, 0.12) 0%, rgba($c-gold, 0.03) 100%);
+  border: 1px solid rgba($c-gold, 0.4);
+  .multi-target-label {
+    color: $c-sub;
+    font-weight: 600;
+  }
+  .multi-target-name {
+    font-weight: 900;
+    padding: 1px 6px;
+    border-radius: 5px;
+    &.tb-yun {
+      background: rgba($c-frost, 0.15);
+      color: $c-frost;
+    }
+    &.tb-luo {
+      background: rgba($c-acc, 0.15);
+      color: $c-acc;
+    }
+  }
+  .multi-exit-btn {
+    font-size: 0.58rem;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba($c-danger, 0.15);
+    border: 1px solid rgba($c-danger, 0.35);
+    color: $c-frost;
+    cursor: pointer;
+    font-weight: 700;
+    margin-left: 3px;
+    &:hover {
+      background: rgba($c-danger, 0.3);
+    }
   }
 }
 
@@ -2846,6 +3100,18 @@ $cat-场景: #d8a040;
   &.row-done {
     opacity: 0.25;
     cursor: default;
+    &:hover {
+      transform: none;
+      box-shadow: none;
+      background: rgba($c-panel, 0.45);
+      border-color: rgba($c-mute, 0.12);
+    }
+  }
+  // 多选模式下对当前 target 不可用的道具（2.0.20）
+  &.row-target-invalid {
+    opacity: 0.3;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
     &:hover {
       transform: none;
       box-shadow: none;

@@ -29,7 +29,9 @@
 
       <!-- 孝敬师父按钮 -->
       <div v-if="xjVisible" class="xj-actions">
-        <span v-if="xjData.激活中" class="xj-state xj-on">孝敬中 · 第{{ xjCurrentRound }}/3轮</span>
+        <span v-if="xjData.激活中" class="xj-state xj-on"
+          >孝敬中 · 第{{ xjCurrentRound }}/{{ XIAOJING_MAX_ROUNDS }}轮</span
+        >
         <template v-else>
           <button class="qj-btn qj-btn-xj" :disabled="!xjCanStart" @click="startXiaojing">⟨ 孝敬师父 ⟩</button>
           <span v-if="xjCooling" class="xj-cd">冷却 {{ xjCdRemain }} 楼</span>
@@ -103,7 +105,7 @@
 <script setup lang="ts">
 import { useDataStore } from '../store';
 import { useJingLingLing } from '../../../脚本/游戏逻辑/shopSystem';
-import { pickXiaojingByContext } from '../../../脚本/游戏逻辑/promptInjection';
+import { pickXiaojingByContext, XIAOJING_MAX_ROUNDS } from '../../../脚本/游戏逻辑/promptInjection';
 const store = useDataStore();
 
 /** 检查当前状态栏是否属于最新消息，旧楼层不允许操作 */
@@ -121,6 +123,7 @@ const qj = computed(() => store.data.苗广.千晶幻术);
  * 其他副本/特殊场景/神魂空间入口都应被禁用，确保 AI 一次只处理一件事。
  *
  * 包含：神魂空间（含洛书晴激活剧情）、千晶幻术、孝敬师父、特殊场景。
+ * 2.0.20: 本楼若已 push 道具事件待发送，也视为忙——防止"道具楼 + 倾诉/反抗"事件叠加。
  */
 const isBusyInScenario = computed(() => {
   const d = store.data;
@@ -129,6 +132,7 @@ const isBusyInScenario = computed(() => {
   if (d.苗广.孝敬师父.激活中) return true;
   if (d._特殊场景.进行中) return true;
   if (d._洛书晴激活轮次进度 > 0) return true;
+  if (d._待发送道具事件) return true;
   return false;
 });
 

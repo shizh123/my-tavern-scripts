@@ -29,11 +29,9 @@ import {
   getQianjingMaxRounds,
   getSpecialSceneMaxRounds,
   getSpecialSceneRoundGuidance,
-  getSpecialSceneExitText,
   XIAOJING_MAX_ROUNDS,
   getXiaojingEntryTrigger,
   getXiaojingRoundGuidance,
-  getXiaojingExitText,
   isXiaojingRebellionScene,
 } from './promptInjection';
 import {
@@ -66,6 +64,10 @@ let _scriptFreezeUntil = 0;
 let _scriptConsumableCooldowns: Record<string, number> = {};
 // 上次消费的道具事件（重roll保护：楼层号相同说明是重roll，重注入事件文本）
 let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items: [] };
+// 打断冻结"解除提示已发送"的门控：记录最近一次已注入解除提示的 _打断冻结至楼层 值。
+// 不把 _打断冻结至楼层 清零，因为 stateValidation.ts 的冷却闸门需要它做锚点；
+// 清零会导致 `currentFloor >= 0 + 8` 恒为 true，冷却失效 → 监视结束立刻复发死循环。
+let _freezeNoticeSent = 0;
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 
@@ -73,6 +75,36 @@ let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items:
 // 用于区分"AI 回复后的变量更新"与"手动 MVU 重新处理"。
 // 手动重新处理时硬保护/去重不应介入，否则会用旧快照覆盖正确的重新解析结果。
 let _isInAiCycle = false;
+
+// 道具系统 v2 (2.0.20)：本楼跳过分阶段引导标志。
+// Phase 1.6 设置：当 richEvent 非空 + 任一分阶段系统激活 → true，本楼让位给道具叙事。
+// Phase 1.7/1.8/1.9 + stateValidation 洛书晴激活推进 都读这个 flag。
+// 每楼 Phase 1.6 开头无条件重置为 false（防止上楼残值泄漏）。
+let _本楼跳过分阶段引导 = false;
+export const isSkipPhaseGuide = () => _本楼跳过分阶段引导;
+
+// 道具系统 v2：清零指定场景的引导延后楼数（场景退出时调用，防 stale 影响下一次激活）
+type DelayScene = '千晶' | '孝敬' | '特殊场景' | '洛书晴激活';
+const _DELAY_FIELD: Record<DelayScene, string> = {
+  千晶: '_千晶引导延后楼数',
+  孝敬: '_孝敬引导延后楼数',
+  特殊场景: '_特殊场景引导延后楼数',
+  洛书晴激活: '_洛书晴激活引导延后楼数',
+};
+function resetSceneDelayCount(scenes: DelayScene | DelayScene[] | 'all', data: any, raw: any): void {
+  const targets: DelayScene[] =
+    scenes === 'all' ? (Object.keys(_DELAY_FIELD) as DelayScene[]) : Array.isArray(scenes) ? scenes : [scenes];
+  let changed = false;
+  for (const s of targets) {
+    const f = _DELAY_FIELD[s];
+    if (data[f] !== 0) {
+      data[f] = 0;
+      _.set(raw, `stat_data.${f}`, 0);
+      changed = true;
+    }
+  }
+  if (changed) Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+}
 
 $(() => {
   (async () => {
@@ -293,19 +325,86 @@ $(() => {
 ═══════════════════════════════════════`;
             richEvent = richEvent ? richEvent + '\n\n' + freezeNotice : freezeNotice;
             console.info(`[云霜凝] 打断冻结持续提示注入（剩余${freezeUntil - currentFloor}楼）`);
-          } else if (freezeUntil > 0 && currentFloor >= freezeUntil) {
+          } else if (freezeUntil > 0 && currentFloor >= freezeUntil && _freezeNoticeSent < freezeUntil) {
             // 冻结刚结束：注入解除提示，引导AI回归正常剧情
             // 注意：必须用 >= 而非 ===，因为 chat.length 每轮+2（user+AI），
             // 奇偶不匹配时 === 永远命中不了目标楼层
+            //
+            // 关键：不再把 _打断冻结至楼层 清零——stateValidation.ts:603 的冷却闸门
+            // `currentFloor >= _打断冻结至楼层 + INTERRUPT_COOLDOWN` 需要它作为锚点。
+            // 清零会让冷却闸门变成 `currentFloor >= 8` 恒为 true，导致监视结束后
+            // 立即可以触发新的打断 → "监视结束立刻被监视"死循环。
+            //
+            // 用 _freezeNoticeSent 门控"只发一次"：只要它小于当前 freezeUntil 就发，
+            // 发完记录为 freezeUntil；下次新的打断把 _打断冻结至楼层 覆写到更大的值时，
+            // 新值 > _freezeNoticeSent，门控重新放行。
             const unfreezeNotice = `【监视解除】苗广的监视告一段落，{{user}}和云霜凝又有了单独相处的空间，治疗互动可以恢复。
 不要继续描写苗广的监视行为，苗广当前不在房间内。回归正常互动节奏。`;
             richEvent = richEvent ? richEvent + '\n\n' + unfreezeNotice : unfreezeNotice;
-            // 清除冻结标记，后续轮次不再注入
-            data._打断冻结至楼层 = 0;
-            _scriptFreezeUntil = 0;
-            _.set(raw, 'stat_data._打断冻结至楼层', 0);
-            Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
-            console.info('[云霜凝] 打断冻结结束，已注入解除提示并清除标记');
+            _freezeNoticeSent = freezeUntil;
+            console.info(`[云霜凝] 打断冻结结束，已注入解除提示（锚点 _打断冻结至楼层=${freezeUntil} 保留用于冷却闸门）`);
+          }
+        }
+
+        // ── Phase 1.6: 道具楼让位机制（2.0.20 新增） ──
+        // 当 richEvent 非空 + 任一分阶段引导系统激活中：
+        //   · 跳过本楼分阶段引导（让位给道具叙事）—— 用 richEvent 判断（覆盖 reroll）
+        //   · 仅在首次消费时（items.length > 0）累加对应延后字段（reroll 不重复 +1）
+        //   · 打断/坏结局事件则一次性清零所有 4 个延后字段（场景被强制中断）
+        // skip flag 通过 module variable _本楼跳过分阶段引导 共享给 Phase 1.7/1.8/1.9 + stateValidation
+        {
+          _本楼跳过分阶段引导 = false; // 每楼无条件重置
+
+          // 通用兜底：打断/坏结局触发 → 清零 all
+          const isInterrupted =
+            items.includes('__打断治疗__') ||
+            items.includes('__打断治疗_神魂__') ||
+            items.includes('__坏结局_愤怒__');
+          if (isInterrupted) {
+            resetSceneDelayCount('all', data, raw);
+            console.info('[云霜凝] Phase 1.6: 打断/坏结局触发，清零所有引导延后字段');
+          }
+
+          if (richEvent) {
+            const currentFloor = SillyTavern.chat?.length ?? 0;
+            const qjActive = data.苗广.千晶幻术.激活中 && data._千晶幻术开始楼层 > 0;
+            const xjActive = data.苗广.孝敬师父.激活中 && data._孝敬师父开始楼层 > 0;
+            const sceneActive = !!data._特殊场景.进行中 && data._特殊场景开始楼层 > 0;
+            const luoActivating = data._洛书晴激活轮次进度 >= 1 && data._洛书晴激活轮次进度 < 5;
+            const anyActive = qjActive || xjActive || sceneActive || luoActivating;
+
+            if (anyActive) {
+              _本楼跳过分阶段引导 = true;
+
+              // 仅在首次消费时累加（reroll 时 items=[] 但 richEvent 由 Phase 1.3b 重注入）
+              if (items.length > 0) {
+                let changed = false;
+                if (qjActive) {
+                  data._千晶引导延后楼数 += 1;
+                  _.set(raw, 'stat_data._千晶引导延后楼数', data._千晶引导延后楼数);
+                  changed = true;
+                }
+                if (xjActive) {
+                  data._孝敬引导延后楼数 += 1;
+                  _.set(raw, 'stat_data._孝敬引导延后楼数', data._孝敬引导延后楼数);
+                  changed = true;
+                }
+                if (sceneActive) {
+                  data._特殊场景引导延后楼数 += 1;
+                  _.set(raw, 'stat_data._特殊场景引导延后楼数', data._特殊场景引导延后楼数);
+                  changed = true;
+                }
+                if (luoActivating) {
+                  data._洛书晴激活引导延后楼数 += 1;
+                  _.set(raw, 'stat_data._洛书晴激活引导延后楼数', data._洛书晴激活引导延后楼数);
+                  changed = true;
+                }
+                if (changed) Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+              }
+              console.info(
+                `[云霜凝] Phase 1.6: 道具楼让位 (qj=${qjActive} xj=${xjActive} scene=${sceneActive} luo=${luoActivating}, items=${items.length}, floor=${currentFloor})`,
+              );
+            }
           }
         }
 
@@ -320,36 +419,58 @@ $(() => {
           if (qjActive && !hasQjEntry && qjStartFloor > 0) {
             const 已使用次数 = data.苗广.千晶幻术.已使用次数;
             const maxRounds = getQianjingMaxRounds(已使用次数);
-            const currentRound = Math.floor((currentFloor - qjStartFloor) / 2) + 1;
+            // 双轨：nominal 用于 auto-exit（防永不退出）；actual 扣延后楼数用于引导注入
+            const nominalRound = Math.floor((currentFloor - qjStartFloor) / 2) + 1;
+            const actualRound = Math.floor((currentFloor - qjStartFloor - data._千晶引导延后楼数) / 2) + 1;
 
-            if (currentRound > maxRounds) {
-              // ── 自动退出：轮次已满 ──
+            // 2.0.20 修法：最后一轮（actualRound == maxRounds）注入"最后一轮"引导后立即清场——
+            // roundGuidance[maxRounds] 本身已经包含"退出识海 + 苗广醒来"等结束动作，
+            // 不再单独触发 exitText 楼，避免玩家在 maxRounds+1 楼"还能继续在副本里玩一轮"。
+            // 兜底：若 nominalRound 越过 maxRounds（reroll/异常），仍清场。
+            const isFinalRound = !_本楼跳过分阶段引导 && actualRound >= maxRounds;
+            const isOvershoot = nominalRound > maxRounds;
+
+            if (isFinalRound || isOvershoot) {
+              // ── 注入最后一轮引导（仅 isFinalRound 情况，且当前未越界）──
+              if (isFinalRound && !isOvershoot) {
+                const guidance = getQianjingRoundGuidance(已使用次数, maxRounds);
+                if (guidance) {
+                  for (let i = chat.length - 1; i >= 0; i--) {
+                    if (chat[i].role === 'user') {
+                      const content = chat[i].content;
+                      chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // ── 立即清场 ──
               data.苗广.千晶幻术.激活中 = false;
               data.苗广.千晶幻术.冷却结束楼层 = currentFloor + 4;
               if (已使用次数 >= 3) {
                 data.苗广.千晶幻术.认知改写完成 = true;
               }
               data._千晶幻术开始楼层 = 0;
-
-              // 持久化变量
               _.set(raw, 'stat_data.苗广.千晶幻术.激活中', false);
               _.set(raw, 'stat_data.苗广.千晶幻术.冷却结束楼层', currentFloor + 4);
               _.set(raw, 'stat_data.苗广.千晶幻术.认知改写完成', data.苗广.千晶幻术.认知改写完成);
               _.set(raw, 'stat_data._千晶幻术开始楼层', 0);
               Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+              resetSceneDelayCount('千晶', data, raw);
 
-              const exitText = getQianjingExitText(已使用次数, false);
-              // 替换user消息为退出事件
-              for (let i = chat.length - 1; i >= 0; i--) {
-                if (chat[i].role === 'user') {
-                  chat[i].content = exitText;
-                  break;
-                }
+              if (isOvershoot) {
+                console.warn(
+                  `[云霜凝] 千晶幻术第${已使用次数}次 nominalRound=${nominalRound} 越过 maxRounds=${maxRounds}，强制清场（兜底）`,
+                );
+              } else {
+                console.info(
+                  `[云霜凝] 千晶幻术第${已使用次数}次·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`,
+                );
               }
-              console.info(`[云霜凝] 千晶幻术第${已使用次数}次自动退出（${maxRounds}轮已满），冷却4楼`);
-            } else if (currentRound >= 2) {
-              // ── 注入逐轮引导 ──
-              const guidance = getQianjingRoundGuidance(已使用次数, currentRound);
+            } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
+              // ── 中间轮：注入逐轮引导（actualRound 扣延后楼数）──
+              const guidance = getQianjingRoundGuidance(已使用次数, actualRound);
               if (guidance) {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
@@ -358,7 +479,7 @@ $(() => {
                     break;
                   }
                 }
-                console.info(`[云霜凝] 千晶幻术第${已使用次数}次·第${currentRound}/${maxRounds}轮引导已注入`);
+                console.info(`[云霜凝] 千晶幻术第${已使用次数}次·第${actualRound}/${maxRounds}轮引导已注入`);
               }
             }
           }
@@ -374,10 +495,29 @@ $(() => {
           if (xjActive && !hasXjEntry && xjStartFloor > 0) {
             const scenarioIdx = Math.max(0, data.苗广.孝敬师父.上次场景索引);
             const maxRounds = XIAOJING_MAX_ROUNDS;
-            const currentRound = Math.floor((currentFloor - xjStartFloor) / 2) + 1;
+            const nominalRound = Math.floor((currentFloor - xjStartFloor) / 2) + 1;
+            const actualRound = Math.floor((currentFloor - xjStartFloor - data._孝敬引导延后楼数) / 2) + 1;
 
-            if (currentRound > maxRounds) {
-              // ── 自动退出：轮次已满，疑心值 -5~8 ──
+            // 2.0.20: 最后一轮注入引导后立即清场（同千晶幻术）
+            const isFinalRound = !_本楼跳过分阶段引导 && actualRound >= maxRounds;
+            const isOvershoot = nominalRound > maxRounds;
+
+            if (isFinalRound || isOvershoot) {
+              // ── 注入最后一轮引导（仅 isFinalRound 情况，且当前未越界）──
+              if (isFinalRound && !isOvershoot) {
+                const guidance = getXiaojingRoundGuidance(scenarioIdx, maxRounds);
+                if (guidance) {
+                  for (let i = chat.length - 1; i >= 0; i--) {
+                    if (chat[i].role === 'user') {
+                      const content = chat[i].content;
+                      chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // ── 立即清场 ──
               data.苗广.孝敬师父.激活中 = false;
               data.苗广.孝敬师父.冷却结束楼层 = currentFloor + 5;
               data._孝敬师父开始楼层 = 0;
@@ -401,31 +541,23 @@ $(() => {
                 console.info('[云霜凝] 孝敬师父反抗类场景完成，_苗喧反抗限制中 → false');
               }
 
-              // 持久化变量
               _.set(raw, 'stat_data.苗广.孝敬师父.激活中', false);
               _.set(raw, 'stat_data.苗广.孝敬师父.冷却结束楼层', currentFloor + 5);
               _.set(raw, 'stat_data.苗广.疑心值', data.苗广.疑心值);
               _.set(raw, 'stat_data._孝敬师父开始楼层', 0);
               Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+              resetSceneDelayCount('孝敬', data, raw);
 
-              const exitText = getXiaojingExitText(scenarioIdx, false);
-              const sceneBreak = `【系统指令：场景强制切换】
-以上孝敬师父的师徒互动剧情已经结束，达到约定轮数。{{user}}已经离开苗广，回到自己的修炼场所。
-从此刻起，场景回到主线日常剧情。严禁继续描写、引用或延续任何师徒互动内容。
-下方是本轮必须演绎的场景结束文本，演绎完毕后即回归主线。`;
-              for (let i = chat.length - 1; i >= 0; i--) {
-                if (chat[i].role === 'user') {
-                  // 在 user 消息前插入 system 场景切换指令，截断上文影响
-                  chat.splice(i, 0, { role: 'system', content: sceneBreak });
-                  // splice 后 user 消息在 i+1
-                  chat[i + 1].content = exitText;
-                  break;
-                }
+              if (isOvershoot) {
+                console.warn(
+                  `[云霜凝] 孝敬师父 nominalRound=${nominalRound} 越过 maxRounds=${maxRounds}，强制清场（兜底）`,
+                );
+              } else {
+                console.info(`[云霜凝] 孝敬师父·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`);
               }
-              console.info(`[云霜凝] 孝敬师父自动退出（${maxRounds}轮已满），冷却5楼`);
-            } else if (currentRound >= 2) {
-              // ── 注入逐轮引导 ──
-              const guidance = getXiaojingRoundGuidance(scenarioIdx, currentRound);
+            } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
+              // ── 注入逐轮引导（actualRound 扣延后）──
+              const guidance = getXiaojingRoundGuidance(scenarioIdx, actualRound);
               if (guidance) {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
@@ -434,7 +566,7 @@ $(() => {
                     break;
                   }
                 }
-                console.info(`[云霜凝] 孝敬师父·第${currentRound}/${maxRounds}轮引导已注入`);
+                console.info(`[云霜凝] 孝敬师父·第${actualRound}/${maxRounds}轮引导已注入`);
               }
             }
           }
@@ -448,38 +580,51 @@ $(() => {
 
           if (sceneName && sceneStartFloor > 0) {
             const maxRounds = getSpecialSceneMaxRounds(sceneName);
-            const currentRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
+            const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
+            const actualRound = Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1;
 
-            if (currentRound > maxRounds) {
-              // ── 自动退出：轮次已满 ──
+            // 2.0.20: 最后一轮注入引导后立即清场（同千晶幻术）
+            const isFinalRound = !_本楼跳过分阶段引导 && actualRound >= maxRounds;
+            const isOvershoot = nominalRound > maxRounds;
+
+            if (isFinalRound || isOvershoot) {
+              // ── 注入最后一轮引导（仅 isFinalRound 情况，且未越界）──
+              if (isFinalRound && !isOvershoot) {
+                const guidance = getSpecialSceneRoundGuidance(sceneName, maxRounds);
+                if (guidance) {
+                  for (let i = chat.length - 1; i >= 0; i--) {
+                    if (chat[i].role === 'user') {
+                      const content = chat[i].content;
+                      chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              // ── 立即清场 ──
               applySpecialSceneConsequences(sceneName, data);
               data._已完成特殊场景[sceneName] = true;
               data._特殊场景.进行中 = '';
               data._特殊场景开始楼层 = 0;
-
-              // 持久化变量
               _.set(raw, 'stat_data._已完成特殊场景', data._已完成特殊场景);
               _.set(raw, 'stat_data._特殊场景.进行中', '');
               _.set(raw, 'stat_data._特殊场景开始楼层', 0);
               Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+              resetSceneDelayCount('特殊场景', data, raw);
 
-              const exitText = getSpecialSceneExitText(sceneName);
-              // 在 user 消息前插入 system 场景切换指令，截断上文影响
-              const sceneBreak = `【系统指令：场景强制切换】
-以上特殊场景「${sceneName}」的剧情已经结束，达到约定轮数。
-从此刻起，场景回到主线日常剧情。严禁继续描写、引用或延续特殊场景内容。
-下方是本轮必须演绎的场景结束文本，演绎完毕后即回归主线。`;
-              for (let i = chat.length - 1; i >= 0; i--) {
-                if (chat[i].role === 'user') {
-                  chat.splice(i, 0, { role: 'system', content: sceneBreak });
-                  chat[i + 1].content = exitText;
-                  break;
-                }
+              if (isOvershoot) {
+                console.warn(
+                  `[云霜凝] 特殊场景「${sceneName}」 nominalRound=${nominalRound} 越过 maxRounds=${maxRounds}，强制清场（兜底）`,
+                );
+              } else {
+                console.info(
+                  `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`,
+                );
               }
-              console.info(`[云霜凝] 特殊场景自动退出: ${sceneName}（${maxRounds}轮已满）`);
-            } else if (currentRound >= 2) {
-              // ── 注入逐轮引导到 user 消息 ──
-              const guidance = getSpecialSceneRoundGuidance(sceneName, currentRound);
+            } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
+              // ── 注入逐轮引导到 user 消息（actualRound 扣延后）──
+              const guidance = getSpecialSceneRoundGuidance(sceneName, actualRound);
               if (guidance) {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
@@ -488,14 +633,22 @@ $(() => {
                     break;
                   }
                 }
-                console.info(`[云霜凝] 特殊场景·${sceneName}·第${currentRound}/${maxRounds}轮引导已注入`);
+                console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮引导已注入`);
               }
             }
           }
         }
 
         // ── Phase 2: 构建状态快照（注入在 Phase 3 之后执行，避免被事件替换覆盖）──
-        const snapshot = getStatusSnapshot(data);
+        // v2: pendingItems 传入 getStatusSnapshot 用于动态焦点收窄。
+        // reroll 情况 items=[]，但 richEvent 由 Phase 1.3b 重注入 → 从 _lastConsumedEvent 兜底。
+        const effectivePending =
+          items.length > 0
+            ? items
+            : richEvent && _lastConsumedEvent.floor === currentFloor
+              ? _lastConsumedEvent.items
+              : [];
+        const snapshot = getStatusSnapshot(data, effectivePending);
 
         // ── Phase 3: 注入事件文本到玩家消息 + 特殊场景触发 ──
         if (richEvent) {
@@ -535,6 +688,7 @@ $(() => {
                 break;
               }
             }
+            resetSceneDelayCount('千晶', data, raw);
             console.info(`[云霜凝] 千晶幻术第${data.苗广.千晶幻术.已使用次数}次提前退出`);
           }
 

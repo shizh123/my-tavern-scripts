@@ -788,6 +788,18 @@
     "_孝敬师父开始楼层": {
       "type": "number"
     },
+    "_千晶引导延后楼数": {
+      "type": "number"
+    },
+    "_孝敬引导延后楼数": {
+      "type": "number"
+    },
+    "_特殊场景引导延后楼数": {
+      "type": "number"
+    },
+    "_洛书晴激活引导延后楼数": {
+      "type": "number"
+    },
     "_洛书晴线已激活": {
       "type": "boolean"
     },
@@ -837,6 +849,16 @@
           "已购买",
           "使用中"
         ]
+      }
+    },
+    "_已觉醒性癖": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "boolean"
       }
     },
     "_洛书晴_安抚符生效至": {

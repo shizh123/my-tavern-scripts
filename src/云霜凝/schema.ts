@@ -515,6 +515,30 @@ export const Schema = z.object({
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
 
+  // ── 道具系统 v2: 分阶段引导延后楼数（2.0.20 新增） ──
+  // 当玩家在分阶段引导期间使用道具，本楼引导让位给道具叙事，引导推迟到下一非道具楼。
+  // 公式: actualRound = floor((currentFloor - startFloor - 延后) / 2) + 1
+  // auto-exit 用名义 round（不扣延后），保证场景不会因连续用道具永不结束。
+  // 场景退出时（含 auto-exit / 提前退出 / 打断 / 坏结局）必须清零对应字段。
+  _千晶引导延后楼数: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  _孝敬引导延后楼数: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 共享给所有 _特殊场景.进行中 的子场景（含掌门改嫁、洛书晴现实初遇等）
+  _特殊场景引导延后楼数: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 洛书晴激活剧情（5 轮显式计数器，stateValidation 推进进度时检查此值决定是否跳过推进）
+  _洛书晴激活引导延后楼数: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+
   // ── 洛书晴/苗喧线相关隐藏变量 ──
   // 洛书晴线是否已激活（新婚之夜后第一次点击进入神魂空间触发）
   _洛书晴线已激活: z.boolean().prefault(false),
@@ -546,6 +570,10 @@ export const Schema = z.object({
   _当前神魂空间角色: z.enum(['云霜凝', '洛书晴']).prefault('云霜凝'),
   // 洛书晴独立的道具状态表（与系统.道具状态分开，共用道具各买各的）
   _洛书晴道具状态: z.record(z.string(), z.enum(['未购买', '已购买', '使用中'])).prefault({}),
+  // 2.0.20: 已觉醒性癖追踪——key="云霜凝:性癖名" 或 "洛书晴:性癖名"。
+  // 第一次装载时 push 觉醒 event 到 _待发送道具事件，标记后后续装载静默。
+  // 移除/卸下不重置，保持"曾觉醒"永久记录——避免重复触发相同性癖的觉醒叙事。
+  _已觉醒性癖: z.record(z.string(), z.boolean()).prefault({}),
   // 洛书晴安抚符消耗品生效楼层（方式2注入型；阶段3+不再生效）
   _洛书晴_安抚符生效至: z.coerce
     .number()

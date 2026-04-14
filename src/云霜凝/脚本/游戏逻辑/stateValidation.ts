@@ -1,4 +1,13 @@
 import type { Schema as SchemaType } from '../../schema';
+import { isSkipPhaseGuide } from './index';
+
+/** 道具系统 v2 (2.0.20)：清零所有 4 个分阶段引导延后字段（打断/坏结局/手动重置场景使用） */
+function clearAllPhaseDelays(d: SchemaType): void {
+  d._千晶引导延后楼数 = 0;
+  d._孝敬引导延后楼数 = 0;
+  d._特殊场景引导延后楼数 = 0;
+  d._洛书晴激活引导延后楼数 = 0;
+}
 
 /** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
 let _lastSuspicionFloor = -1;
@@ -509,6 +518,8 @@ export function validateAndRecalcState(
       新变量._神魂空间激活中 = false;
       console.warn('[状态验证] ⚠️ 神魂空间中触发坏结局，已强制退出');
     }
+    // v2: 清零所有分阶段引导延后字段（场景被强制中断）
+    clearAllPhaseDelays(新变量);
     // 注入坏结局事件
     const existing = 新变量._待发送道具事件;
     const event = '__坏结局_愤怒__';
@@ -624,6 +635,8 @@ export function validateAndRecalcState(
         新变量._打断冻结至楼层 = floor + 5;
         _freezeHadTreatmentAttempt = false; // 冻结开始，重置治疗尝试标记
         _freezeRewardGiven = false;
+        // v2: 清零所有分阶段引导延后字段（进行中的场景被打断治疗强制中断）
+        clearAllPhaseDelays(新变量);
         // 疑心值惩罚：察觉心态+8，其他+5
         const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
         新变量.苗广.疑心值 += suspicionPenalty;
@@ -780,12 +793,18 @@ export function validateAndRecalcState(
   }
 
   // ── 11a. 洛书晴激活剧情轮次推进（5 轮后正式激活） ──
+  // v2 (2.0.20): 本楼若是道具楼（_本楼跳过分阶段引导=true），跳过推进——
+  // 这一楼让位给道具叙事，AI 没有看到本轮引导，进度不应推进。
   if (新变量._洛书晴激活轮次进度 >= 1 && 新变量._洛书晴激活轮次进度 < 5) {
-    // 本轮已经展示了第 N 轮的引导，下一轮推进到 N+1
-    // 使用旧值作为基准避免重复+1（前端可能已经写过1）
-    const next = (旧变量._洛书晴激活轮次进度 || 0) + 1;
-    if (next > 旧变量._洛书晴激活轮次进度 && next <= 5) {
-      新变量._洛书晴激活轮次进度 = next;
+    if (isSkipPhaseGuide()) {
+      console.info('[状态验证] 洛书晴激活进度推进被跳过（本楼为道具楼）');
+    } else {
+      // 本轮已经展示了第 N 轮的引导，下一轮推进到 N+1
+      // 使用旧值作为基准避免重复+1（前端可能已经写过1）
+      const next = (旧变量._洛书晴激活轮次进度 || 0) + 1;
+      if (next > 旧变量._洛书晴激活轮次进度 && next <= 5) {
+        新变量._洛书晴激活轮次进度 = next;
+      }
     }
   } else if (新变量._洛书晴激活轮次进度 === 5 && !新变量._洛书晴线已激活) {
     // 第5轮完成 → 正式激活洛书晴线
@@ -793,6 +812,7 @@ export function validateAndRecalcState(
     新变量._洛书晴激活轮次进度 = 0; // 重置
     新变量._当前互动模式 = '日常';
     新变量._神魂空间激活中 = false;
+    新变量._洛书晴激活引导延后楼数 = 0; // v2: 清零延后计数
     console.info('[状态验证] 洛书晴线已正式激活！');
   }
 
