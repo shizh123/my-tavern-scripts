@@ -79,10 +79,7 @@ $(() => {
     const _top = (window.parent ?? window) as any;
     try {
       const mvuInitTimeout = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('等待 Mvu 初始化超时（>10s），请检查 MVU 插件是否启用')),
-          10000,
-        ),
+        setTimeout(() => reject(new Error('等待 Mvu 初始化超时（>10s），请检查 MVU 插件是否启用')), 10000),
       );
       await Promise.race([waitGlobalInitialized('Mvu'), mvuInitTimeout]);
       registerMvuSchema(Schema);
