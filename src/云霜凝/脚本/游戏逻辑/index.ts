@@ -342,7 +342,9 @@ $(() => {
 不要继续描写苗广的监视行为，苗广当前不在房间内。回归正常互动节奏。`;
             richEvent = richEvent ? richEvent + '\n\n' + unfreezeNotice : unfreezeNotice;
             _freezeNoticeSent = freezeUntil;
-            console.info(`[云霜凝] 打断冻结结束，已注入解除提示（锚点 _打断冻结至楼层=${freezeUntil} 保留用于冷却闸门）`);
+            console.info(
+              `[云霜凝] 打断冻结结束，已注入解除提示（锚点 _打断冻结至楼层=${freezeUntil} 保留用于冷却闸门）`,
+            );
           }
         }
 
@@ -357,9 +359,7 @@ $(() => {
 
           // 通用兜底：打断/坏结局触发 → 清零 all
           const isInterrupted =
-            items.includes('__打断治疗__') ||
-            items.includes('__打断治疗_神魂__') ||
-            items.includes('__坏结局_愤怒__');
+            items.includes('__打断治疗__') || items.includes('__打断治疗_神魂__') || items.includes('__坏结局_愤怒__');
           if (isInterrupted) {
             resetSceneDelayCount('all', data, raw);
             console.info('[云霜凝] Phase 1.6: 打断/坏结局触发，清零所有引导延后字段');

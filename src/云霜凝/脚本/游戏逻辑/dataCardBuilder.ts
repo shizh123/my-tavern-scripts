@@ -159,7 +159,9 @@ export function buildDataCard(items: string[], target: CharTarget, data: SchemaT
 
   // ─── 段 6: AI 指令（色情小说化 + 数据→物理反应映射，禁内心独白） ───
   const multiHint =
-    items.length > 1 ? '\n- **多件合并**: 本轮多件道具用蒙太奇笔法串联成一段连贯叙事，不要分段写"道具1 → 道具2 → 道具3"' : '';
+    items.length > 1
+      ? '\n- **多件合并**: 本轮多件道具用蒙太奇笔法串联成一段连贯叙事，不要分段写"道具1 → 道具2 → 道具3"'
+      : '';
   card += `【AI 指令 · 必读】
 
 **文风要求**：本轮按**成人色情小说**的笔法描写——画面优先、动作优先、感官优先。**不要写大段内心独白**。

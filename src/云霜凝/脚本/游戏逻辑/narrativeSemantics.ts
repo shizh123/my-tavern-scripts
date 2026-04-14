@@ -144,9 +144,7 @@ export function describeBodyMod(modName: string, current: unknown, initial: unkn
     else if (curIdx > initIdx) delta = `${init} → ${cur}（推进 ${curIdx - initIdx} 档）`;
     else delta = `初见 ${init}，现 ${cur}`;
     const potential =
-      curIdx < CUP_ORDER.length - 1
-        ? `可继续改造至 ${CUP_ORDER.slice(curIdx + 1).join(' / ')}`
-        : '已达改造上限';
+      curIdx < CUP_ORDER.length - 1 ? `可继续改造至 ${CUP_ORDER.slice(curIdx + 1).join(' / ')}` : '已达改造上限';
     return `· 胸部罩杯: ${cur}\n  · 此刻: ${meaning}\n  · 来路: ${delta}\n  · 潜力: ${potential}`;
   }
 
@@ -181,10 +179,8 @@ const EXPOSURE_MEANINGS: Record<string, string> = {
   全覆盖: '严丝合缝——颈部以下没有一寸肌肤暴露',
   微露: '仅露颈、腕、脚踝这类日常可见处——出门毫无心理负担',
   轻露: '锁骨、小臂、小腿外侧裸露——已经是修士不太穿的打扮，走在人前会被偷瞄',
-  半露:
-    '锁骨/肩头/大腿外侧裸露，下蹲时内裤边缘可被瞥见，弯腰时胸前会松垂到几乎能看到乳晕——穿这种衣服出门就已经是某种宣言',
-  大露:
-    '近乎情趣内衣的尺度——锁骨、整片肩背、半边乳房、腰部、整段大腿全部裸露，走动时几次"差点露出"，在公共场所穿这身等同主动暴露',
+  半露: '锁骨/肩头/大腿外侧裸露，下蹲时内裤边缘可被瞥见，弯腰时胸前会松垂到几乎能看到乳晕——穿这种衣服出门就已经是某种宣言',
+  大露: '近乎情趣内衣的尺度——锁骨、整片肩背、半边乳房、腰部、整段大腿全部裸露，走动时几次"差点露出"，在公共场所穿这身等同主动暴露',
   极露: '仅几片布料遮住乳头/阴部——不弯腰也几乎能看见全部，走两步就会露出，完全是为情趣而存在',
 };
 
@@ -197,9 +193,7 @@ export function describeClothing(
   if (slot === '暴露程度') {
     const meaning = EXPOSURE_MEANINGS[current] ?? current;
     const deltaText = current === initial ? `保持"${current}"` : `从"${initial}"推到"${current}"`;
-    const potentialText = potentialMaxLabel
-      ? `本阶段/防线允许推到"${potentialMaxLabel}"`
-      : '';
+    const potentialText = potentialMaxLabel ? `本阶段/防线允许推到"${potentialMaxLabel}"` : '';
     let out = `· 整体暴露程度: ${current}\n  · 此刻: ${meaning}\n  · 来路: ${deltaText}`;
     if (potentialText) out += `\n  · 潜力: ${potentialText}`;
     return out;
@@ -215,12 +209,9 @@ export function describeClothing(
 // ════════════════════════════════════════════════════════════
 
 function defenseMeaning(v: number): string {
-  if (v >= 75)
-    return '防线基本完好——遇到越界行为会立即怒斥/反抗，会用语言明确拒绝，大幅度肢体抗拒，理智完全在线';
-  if (v >= 50)
-    return '防线明显松动——抗拒变成"嘴上拒绝身体不动"，越界行为会让她皱眉但不再立即反抗，理智仍在但开始拉锯';
-  if (v >= 25)
-    return '防线大面积崩——已经不会主动拒绝，被越界时只会下意识收紧但不躲避，理智知道"不该"但身体先回应了';
+  if (v >= 75) return '防线基本完好——遇到越界行为会立即怒斥/反抗，会用语言明确拒绝，大幅度肢体抗拒，理智完全在线';
+  if (v >= 50) return '防线明显松动——抗拒变成"嘴上拒绝身体不动"，越界行为会让她皱眉但不再立即反抗，理智仍在但开始拉锯';
+  if (v >= 25) return '防线大面积崩——已经不会主动拒绝，被越界时只会下意识收紧但不躲避，理智知道"不该"但身体先回应了';
   return '防线几乎崩——主动迎合，被命令时会照做，"不"字几乎说不出口，理智已不再相信自己能拒绝';
 }
 
@@ -238,11 +229,7 @@ function submissionMeaning(v: number): string {
   return '基本独立——保留自我判断，不轻易服从命令，需要被"说服"才会配合';
 }
 
-export function describePsych(
-  fieldName: '心理防线' | '信任度' | '顺从度',
-  current: number,
-  initial: number,
-): string {
+export function describePsych(fieldName: '心理防线' | '信任度' | '顺从度', current: number, initial: number): string {
   const cur = Math.max(0, Math.min(100, current));
   const init = Math.max(0, Math.min(100, initial));
   const meaning =
@@ -251,8 +238,7 @@ export function describePsych(
       : fieldName === '信任度'
         ? trustMeaning(cur)
         : submissionMeaning(cur);
-  const delta =
-    cur === init ? '与初见一致' : `从 ${init} 走到 ${cur}（${cur > init ? '+' : ''}${cur - init}）`;
+  const delta = cur === init ? '与初见一致' : `从 ${init} 走到 ${cur}（${cur > init ? '+' : ''}${cur - init}）`;
   return `· ${fieldName} ${cur}/100\n  · 此刻她会做的事: ${meaning}\n  · 来路: ${delta}`;
 }
 

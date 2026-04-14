@@ -32,11 +32,7 @@
 
     <!-- 多选 target chooser 浮层 -->
     <Transition name="fade">
-      <div
-        v-if="showMultiTargetChooser"
-        class="target-dialog-mask"
-        @click.self="showMultiTargetChooser = false"
-      >
+      <div v-if="showMultiTargetChooser" class="target-dialog-mask" @click.self="showMultiTargetChooser = false">
         <div class="target-dialog">
           <div class="target-dialog-title">选择多选目标</div>
           <div class="target-dialog-desc">选定目标后进入多选模式，批量使用道具</div>
@@ -194,9 +190,7 @@
         :disabled="needYinwenPos && !yinwenPos"
         @click="confirmUse"
       >
-        <span class="confirm-text">{{
-          multiSelectMode ? `使用到${multiSelectTarget}` : '确定使用'
-        }}</span>
+        <span class="confirm-text">{{ multiSelectMode ? `使用到${multiSelectTarget}` : '确定使用' }}</span>
         <span class="confirm-count">{{ checkedItems.size }}件</span>
       </button>
     </Transition>

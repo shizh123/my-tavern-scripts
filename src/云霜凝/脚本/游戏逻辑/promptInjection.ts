@@ -3268,11 +3268,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
   // ── 洛书晴激活剧情（5 轮）或阶段3现实初遇（4 轮）引导注入 ──
   // 激活剧情：进度 1-5，结束后脚本设置 _洛书晴线已激活=true
   // v2 (2.0.20): 本楼若是道具楼，跳过引导注入（让位给道具叙事）
-  if (
-    !isSkipPhaseGuide() &&
-    data._洛书晴激活轮次进度 >= 1 &&
-    data._洛书晴激活轮次进度 <= LUO_ACTIVATION_MAX_ROUNDS
-  ) {
+  if (!isSkipPhaseGuide() && data._洛书晴激活轮次进度 >= 1 && data._洛书晴激活轮次进度 <= LUO_ACTIVATION_MAX_ROUNDS) {
     const round = data._洛书晴激活轮次进度;
     const guide = getLuoActivationRoundGuidance(round);
     if (guide) {
@@ -3284,10 +3280,7 @@ export function buildStatusSnapshot(data: SchemaType): string {
   // 轮次公式与 index.ts Phase 1.9 保持一致：(cf - sf - delay) / 2 + 1（每 2 楼 = 1 轮）
   if (!isSkipPhaseGuide() && data._特殊场景.进行中 === '洛书晴现实初遇') {
     const currentFloor = (globalThis as any).SillyTavern?.chat?.length ?? 0;
-    const round = Math.max(
-      1,
-      Math.floor((currentFloor - data._特殊场景开始楼层 - data._特殊场景引导延后楼数) / 2) + 1,
-    );
+    const round = Math.max(1, Math.floor((currentFloor - data._特殊场景开始楼层 - data._特殊场景引导延后楼数) / 2) + 1);
     const guide = getLuoFirstMeetRoundGuidance(Math.min(round, LUO_FIRST_MEET_MAX_ROUNDS));
     if (guide) {
       return `\n[洛书晴现实初遇·第${Math.min(round, LUO_FIRST_MEET_MAX_ROUNDS)}/${LUO_FIRST_MEET_MAX_ROUNDS}轮]\n${guide}\n`;
