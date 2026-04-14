@@ -220,6 +220,118 @@
         color: var(--frost);
       }
 
+      /* ============ Notice · 使用前必读 ============ */
+      section.notice {
+        position: relative;
+        padding: 16px 20px 16px 26px;
+        border-color: rgba(192, 48, 80, 0.45);
+        background: linear-gradient(180deg, rgba(192, 48, 80, 0.09) 0%, rgba(192, 48, 80, 0.02) 100%);
+        box-shadow:
+          0 4px 24px rgba(0, 0, 0, 0.4),
+          0 0 24px rgba(192, 48, 80, 0.12),
+          inset 0 1px 0 rgba(255, 208, 216, 0.08);
+      }
+
+      section.notice::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, var(--acc) 0%, var(--ice) 50%, var(--ice-dim) 100%);
+        border-radius: 10px 0 0 10px;
+        box-shadow: 0 0 12px rgba(255, 96, 128, 0.35);
+      }
+
+      section.notice h2 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        letter-spacing: 2px;
+        color: var(--acc);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* 覆盖掉父级 section h2 的横向分割伪元素 */
+      section.notice h2::before,
+      section.notice h2::after {
+        content: none;
+      }
+
+      .notice-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .notice-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 12px;
+        background: rgba(0, 0, 0, 0.28);
+        border: 1px solid rgba(192, 48, 80, 0.2);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      .notice-icon {
+        flex: 0 0 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 5px;
+      }
+
+      .notice-item.must-off .notice-icon {
+        color: #ff5a6a;
+        background: rgba(255, 74, 90, 0.14);
+        border: 1px solid rgba(255, 74, 90, 0.45);
+        text-shadow: 0 0 6px rgba(255, 74, 90, 0.5);
+      }
+
+      .notice-item.must-on .notice-icon {
+        color: var(--good);
+        background: rgba(64, 200, 128, 0.12);
+        border: 1px solid rgba(64, 200, 128, 0.45);
+        text-shadow: 0 0 6px rgba(64, 200, 128, 0.4);
+      }
+
+      .notice-item.recommend .notice-icon {
+        color: var(--gold);
+        background: rgba(232, 190, 88, 0.12);
+        border: 1px solid rgba(232, 190, 88, 0.45);
+        text-shadow: 0 0 6px rgba(232, 190, 88, 0.4);
+      }
+
+      .notice-item.recommend {
+        border-color: rgba(232, 190, 88, 0.2);
+        background: linear-gradient(135deg, rgba(232, 190, 88, 0.05) 0%, rgba(0, 0, 0, 0.28) 100%);
+      }
+
+      .notice-key {
+        color: var(--frost);
+        font-weight: 600;
+        margin: 0 1px;
+      }
+
+      .notice-item.recommend .notice-key {
+        color: var(--gold);
+      }
+
+      .notice-hint {
+        color: var(--sub);
+        font-size: 12px;
+        margin-left: 4px;
+      }
+
       /* ============ Entry Cards ============ */
       .entry-grid {
         display: flex;
@@ -446,6 +558,35 @@
         .entry-desc {
           font-size: 12px;
         }
+
+        /* 使用前必读 · 手机端适配 */
+        section.notice {
+          padding: 14px 14px 14px 20px;
+        }
+        section.notice::before {
+          width: 3px;
+        }
+        section.notice h2 {
+          font-size: 13px;
+          letter-spacing: 1.5px;
+          margin-bottom: 10px;
+        }
+        .notice-item {
+          padding: 8px 10px;
+          gap: 10px;
+          font-size: 12px;
+          line-height: 1.5;
+          align-items: flex-start;
+        }
+        .notice-icon {
+          flex: 0 0 20px;
+          height: 20px;
+          font-size: 11px;
+          margin-top: 1px;
+        }
+        .notice-hint {
+          font-size: 11px;
+        }
       }
     </style>
   </head>
@@ -454,7 +595,7 @@
       <header>
         <h1>云霜凝</h1>
         <p class="subtitle">寒霜羽化 · 神魂相伴</p>
-        <p class="version">v 2.0.18</p>
+        <p class="version">v 2.0.19</p>
       </header>
 
       <section class="intro">
@@ -485,6 +626,28 @@
             <span class="info-value"
               >苗广绿帽值触发方式：苗广心态进入「察觉」时，先在前一楼层使用「隔音灵阵」，再在后续楼层使用「蚀心露」即可触发屈辱→默许的转换。注意：隔音灵阵必须先单独使用，不能与蚀心露在同一楼层同时使用。</span
             >
+          </div>
+        </div>
+      </section>
+
+      <section class="notice">
+        <h2>🔴 使用前必读</h2>
+        <div class="notice-list">
+          <div class="notice-item must-off">
+            <span class="notice-icon">✕</span>
+            <span>必须关闭 <span class="notice-key">【小白X】</span> 插件<span class="notice-hint">（如果有的话）</span></span>
+          </div>
+          <div class="notice-item must-on">
+            <span class="notice-icon">✓</span>
+            <span>必须安装并启用 <span class="notice-key">【提示词模板】</span> 插件</span>
+          </div>
+          <div class="notice-item must-on">
+            <span class="notice-icon">✓</span>
+            <span>必须安装并更新 <span class="notice-key">【酒馆助手】</span> 至最新版</span>
+          </div>
+          <div class="notice-item recommend">
+            <span class="notice-icon">★</span>
+            <span>推荐安装 <span class="notice-key">【数据库插件】</span><span class="notice-hint">（更好的剧情记忆与查询体验）</span></span>
           </div>
         </div>
       </section>

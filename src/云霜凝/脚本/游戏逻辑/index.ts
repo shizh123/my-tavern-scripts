@@ -76,13 +76,29 @@ let _isInAiCycle = false;
 
 $(() => {
   (async () => {
-    await waitGlobalInitialized('Mvu');
-    registerMvuSchema(Schema);
-    reloadOnChatChange();
-    sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
     const _top = (window.parent ?? window) as any;
-    _top.toastr?.success?.('游戏逻辑脚本加载正常', '云霜凝');
-    console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
+    try {
+      const mvuInitTimeout = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('等待 Mvu 初始化超时（>10s），请检查 MVU 插件是否启用')),
+          10000,
+        ),
+      );
+      await Promise.race([waitGlobalInitialized('Mvu'), mvuInitTimeout]);
+      registerMvuSchema(Schema);
+      reloadOnChatChange();
+      sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
+      _top.toastr?.success?.('游戏逻辑脚本加载正常', '云霜凝');
+      console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
+    } catch (err) {
+      console.error('[云霜凝] 游戏逻辑脚本加载失败:', err);
+      _top.toastr?.error?.(
+        `游戏逻辑脚本加载失败：${(err as Error)?.message ?? String(err)}\n请 F12 查看控制台`,
+        '云霜凝',
+        { timeOut: 0, extendedTimeOut: 0 },
+      );
+      return;
+    }
 
     // ────────────────────────────────────────────────────
     // 事件1：AI生成前 → 注入状态快照 + 附加道具事件到玩家消息
