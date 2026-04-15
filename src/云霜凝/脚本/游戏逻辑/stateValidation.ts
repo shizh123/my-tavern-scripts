@@ -625,17 +625,17 @@ export function validateAndRecalcState(
     }
   }
   {
-    // 身体开发每部位 +10/-5
+    // 身体开发每部位 ±3 (2.0.25: 原 +10/-5 和信任/防线 ±2 节奏错配,收到 ±3)
     const bodyParts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
     for (const part of bodyParts) {
       const oldVal = 旧变量.云霜凝.身体开发[part];
       const bodyDelta = 新变量.云霜凝.身体开发[part] - oldVal;
-      if (bodyDelta > 10) {
-        新变量.云霜凝.身体开发[part] = oldVal + 10;
-        console.warn(`[delta cap] 身体开发.${part} 增幅 +${bodyDelta} → +10`);
-      } else if (bodyDelta < -5) {
-        新变量.云霜凝.身体开发[part] = oldVal - 5;
-        console.warn(`[delta cap] 身体开发.${part} 降幅 ${bodyDelta} → -5`);
+      if (bodyDelta > 3) {
+        新变量.云霜凝.身体开发[part] = oldVal + 3;
+        console.warn(`[delta cap] 身体开发.${part} 增幅 +${bodyDelta} → +3`);
+      } else if (bodyDelta < -3) {
+        新变量.云霜凝.身体开发[part] = oldVal - 3;
+        console.warn(`[delta cap] 身体开发.${part} 降幅 ${bodyDelta} → -3`);
       }
     }
   }
@@ -949,16 +949,20 @@ export function validateAndRecalcState(
       }
     }
 
-    // (5) 身体开发 单轮单部位 +8 硬限制
+    // (5) 身体开发 单轮单部位 ±4 硬限制 (2.0.25: 原 +8 对齐洛其他数值 ±4)
     {
-      const MAX = 8;
+      const MAX = 4;
       const parts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
       for (const part of parts) {
         const oldVal = 旧变量.洛书晴.身体开发[part];
         const newVal = 新变量.洛书晴.身体开发[part];
-        if (newVal - oldVal > MAX) {
+        const delta = newVal - oldVal;
+        if (delta > MAX) {
           新变量.洛书晴.身体开发[part] = oldVal + MAX;
-          console.warn(`[状态验证] 洛书晴身体开发.${part} 增幅过大，限制至 +${MAX}`);
+          console.warn(`[状态验证] 洛书晴身体开发.${part} 增幅过大,限制至 +${MAX}`);
+        } else if (delta < -MAX) {
+          新变量.洛书晴.身体开发[part] = oldVal - MAX;
+          console.warn(`[状态验证] 洛书晴身体开发.${part} 降幅过大,限制至 -${MAX}`);
         }
       }
     }
