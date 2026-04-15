@@ -16,6 +16,7 @@
       - 离场: 当叙事中 X 离开场景时 → replace /_当前场景角色/X 为 false
       - 该字段驱动状态快照注入：不在场的角色其大块数据（身体开发/肉体改造/服装）会被整块跳过，不要让错误的在场状态导致 AI 看不到你需要的背景信息
     - 时间.玄霜历 should be updated by AI via SET command when days/months pass in narrative (e.g. "几日后", season change). Use month names from 月份词库: 霜降月/小雪月/大雪月/凛冬月/冰封月/玄霜月/霜解月/初春月/暖阳月/长夏月/金秋月/白霜月. Advance one month every 5-10 floors of daily interaction; special scenes may skip ahead. Year rarely changes.
+    - 【数值推进总则】所有数值字段都是活的,每轮根据当前剧情进展主动写 delta,即使变化微小(±1)也要写。不要因为数值长期稳定不变就认为"这是脚本管理的不该动"——脚本只兜底 cap(硬截过大波动),具体涨速完全由 AI 根据剧情判断。数值稳定 = 你没推进,不是数值被冻结。
     - AI should update character states based on interactions:
       - 云霜凝.信任度: increase when 云霜凝 experiences warmth or meaningful interaction (script delta cap ±2/turn)
       - 云霜凝.心理防线: decrease when 云霜凝 accepts intimate/taboo behavior (script delta cap ±2/turn)
