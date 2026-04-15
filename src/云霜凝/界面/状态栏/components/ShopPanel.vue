@@ -1300,6 +1300,10 @@ const CLOTHING_NAMES = new Set(Object.keys(CLOTHING_SLOT));
 // 共用道具（洛书晴激活后可选择作用目标）
 const EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
 const LUO_CONSUMABLES = new Set(['安抚符', '真心符', '神魂共鸣石', '安神香']);
+// 静默装备：数据生效 + 状态栏更新,但不触发 AI 叙事(被动效果,频繁触发叙事会喧宾夺主)
+// - 锚神钉:神魂空间锁定(状态快照已标),属设计环境类被动
+// - 暖玉佩:信任度每轮+1(被动数值加速),用户反馈"不该有剧情"
+const SILENT_EQUIPMENT = new Set(['锚神钉', '暖玉佩']);
 function isSharedItem(name: string): boolean {
   if (CLOTHING_NAMES.has(name)) return true;
   if (EQUIPMENT_NAMES.has(name)) return true;
@@ -1988,8 +1992,10 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       store.data.系统.道具状态[name] = '使用中';
       // 前端处理互斥（store.flush不触发VARIABLE_UPDATE_ENDED，后端会跳过）
       enforceExclusiveGroup(name, store.data as any);
-      // 锚神钉是被动装备（状态快照已提示AI），无需触发AI事件
-      if (name !== '锚神钉') {
+      // 静默装备（锚神钉/暖玉佩）：状态快照/每轮被动已生效,无需触发 AI 叙事
+      // 非静默环境装备（影绰纱帘/透灵幔/净灵铃等）push event 但不设 needTriggerAI,
+      // 延迟到玩家下次 msg 的 PROMPT_READY 消费,避免立即触发一次 AI 回复
+      if (!SILENT_EQUIPMENT.has(name)) {
         eventNames.push(name);
       }
     }
@@ -2247,10 +2253,10 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
       if (target === '云霜凝') {
         store.data.系统.道具状态[name] = '使用中';
         enforceExclusiveGroup(name, store.data as any);
-        if (name !== '锚神钉') eventNames.push(name);
+        if (!SILENT_EQUIPMENT.has(name)) eventNames.push(name);
       } else {
         store.data._洛书晴道具状态[name] = '使用中';
-        if (name !== '锚神钉') eventNames.push(`洛书晴·${name}`);
+        if (!SILENT_EQUIPMENT.has(name)) eventNames.push(`洛书晴·${name}`);
       }
     }
   } else if (item.type === '体改') {
@@ -2306,6 +2312,15 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
     const pending = store.data._待发送道具事件;
     store.data._待发送道具事件 = pending ? pending + '|||' + eventNames.join('|||') : eventNames.join('|||');
   }
+
+  // 静默装备（锚神钉/暖玉佩）:数据生效 + 状态栏更新,不 triggerSlash 不 send 道具名给 AI
+  // 避免 AI 看到"对X使用了锚神钉/暖玉佩"后自主编剧情,和多选路径(needTriggerAI=false)对齐
+  if (SILENT_EQUIPMENT.has(name)) {
+    store.flush();
+    showToast(`已对${target}装备「${name}」`, 'ok');
+    return;
+  }
+
   store.data._系统操作中 = true;
   store.flush();
   triggerSlash(`/send （对${target}使用了${name}）|/trigger`);
