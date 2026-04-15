@@ -607,11 +607,11 @@ export function validateAndRecalcState(
     }
   }
   {
-    // 治疗完成度 +5/-3
+    // 治疗完成度 ±3 (2.0.25: 原 +5/-3 和信任/防线 ±2 节奏错配,收到 ±3)
     const compDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
-    if (compDelta > 5) {
-      新变量.治疗.完成度 = 旧变量.治疗.完成度 + 5;
-      console.warn(`[delta cap] 完成度增幅 +${compDelta} → +5`);
+    if (compDelta > 3) {
+      新变量.治疗.完成度 = 旧变量.治疗.完成度 + 3;
+      console.warn(`[delta cap] 完成度增幅 +${compDelta} → +3`);
     } else if (compDelta < -3) {
       新变量.治疗.完成度 = 旧变量.治疗.完成度 - 3;
       console.warn(`[delta cap] 完成度降幅 ${compDelta} → -3`);

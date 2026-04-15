@@ -46,7 +46,7 @@
       { "op": "delta", "path": "/云霜凝/身体开发/小嘴", "value": 8 },
       { "op": "replace", "path": "/云霜凝/心理活动", "value": "他的话语令我不由心神动荡……" },
       { "op": "replace", "path": "/苗广/心理活动", "value": "里面没有动静，应该是在正常施术……" },
-      { "op": "delta", "path": "/治疗/完成度", "value": 5 },
+      { "op": "delta", "path": "/治疗/完成度", "value": 2 },
       { "op": "replace", "path": "/时间/玄霜历", "value": "玄霜历九百七十三年·大雪月" },
       ...
     ]
@@ -59,7 +59,7 @@
       { "op": "replace", "path": "/云霜凝/心理活动", "value": "他竟然能进入此处……我需要弄清楚他的来意" }
 
     双修行为（治疗推进）: |
-      { "op": "delta", "path": "/治疗/完成度", "value": 5 }
+      { "op": "delta", "path": "/治疗/完成度", "value": 3 }
       { "op": "delta", "path": "/云霜凝/心理防线", "value": -2 }
       { "op": "delta", "path": "/云霜凝/身体开发/胸部", "value": 10 }
 
