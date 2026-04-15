@@ -228,22 +228,33 @@ $(() => {
             console.info('[云霜凝] 神魂空间引导：模式已切换为神魂空间');
           }
 
-          // 标记神魂空间已进入过（在快照构建前更新，确保快照使用正确状态）
-          if (items.includes('__神魂空间入口__')) {
+          // 标记神魂空间已进入过（自动引导/手动入口都算"进入过",防止卡在首次引导循环）
+          // 2.0.23 修: 原来只对 __神魂空间入口__(手动按钮)设 _神魂空间已进入过=true,
+          // 入口一玩到第 5 楼 stateValidation 自动 push __神魂空间引导__,模式虽切换但
+          // 标志不更新 → buildStatusSnapshot 永远走"首次引导"分支 → 玩家每轮看到"请详细
+          // 描写首次进入感官体验",卡在循环。
+          // 修复:hasEntry(任一入口 event)都标记进入过。selectSoulMemory 仍只对手动按钮
+          // 触发(阶段 3+ 才有记忆场景,自动引导是阶段 1 不需要选记忆)。
+          if (hasEntry) {
+            let memoryUpdated = false;
             if (!data._神魂空间已进入过) {
               data._神魂空间已进入过 = true;
               _.set(raw, 'stat_data._神魂空间已进入过', true);
+              memoryUpdated = true;
               console.info('[云霜凝] 首次进入神魂空间，已标记');
             }
-            // 选择记忆场景（阶段3+时生效）
-            selectSoulMemory(data);
-            _.set(raw, 'stat_data._神魂记忆场景', data._神魂记忆场景);
-            _.set(raw, 'stat_data._新婚夜已触发', data._新婚夜已触发);
-            _.set(raw, 'stat_data._记忆进入次数', data._记忆进入次数);
-            if (data._神魂记忆场景) {
-              console.info(`[云霜凝] 神魂记忆场景：${data._神魂记忆场景}`);
+            if (items.includes('__神魂空间入口__')) {
+              // 选择记忆场景（阶段3+时生效,手动按钮才需要）
+              selectSoulMemory(data);
+              _.set(raw, 'stat_data._神魂记忆场景', data._神魂记忆场景);
+              _.set(raw, 'stat_data._新婚夜已触发', data._新婚夜已触发);
+              _.set(raw, 'stat_data._记忆进入次数', data._记忆进入次数);
+              if (data._神魂记忆场景) {
+                console.info(`[云霜凝] 神魂记忆场景：${data._神魂记忆场景}`);
+              }
+              memoryUpdated = true;
             }
-            Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+            if (memoryUpdated) Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
           }
         }
 
