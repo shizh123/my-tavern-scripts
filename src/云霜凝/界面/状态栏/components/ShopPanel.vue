@@ -1300,10 +1300,14 @@ const CLOTHING_NAMES = new Set(Object.keys(CLOTHING_SLOT));
 // 共用道具（洛书晴激活后可选择作用目标）
 const EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
 const LUO_CONSUMABLES = new Set(['安抚符', '真心符', '神魂共鸣石', '安神香']);
-// 静默装备：数据生效 + 状态栏更新,但不触发 AI 叙事(被动效果,频繁触发叙事会喧宾夺主)
-// - 锚神钉:神魂空间锁定(状态快照已标),属设计环境类被动
-// - 暖玉佩:信任度每轮+1(被动数值加速),用户反馈"不该有剧情"
-const SILENT_EQUIPMENT = new Set(['锚神钉', '暖玉佩']);
+// 静默装备：数据生效 + 状态栏更新,但不触发 AI 叙事(被动效果,状态快照已注入)
+// 和三把锁(已删)/洛书晴消耗品(安抚符/真心符/安神香/神魂共鸣石)/性癖再次装载 同风格。
+// 装备/卸下 都不 push event 不 triggerSlash,AI 每轮通过状态快照 tone modifier 感知激活中
+// - 锚神钉:神魂空间锁定(74b76a3 定下完全静默,和三把锁同组)
+// - 暖玉佩:信任度每轮+1(被动数值加速)
+// - 影绰纱帘/透灵幔/隔音灵阵:苗广外部感知环境道具,状态快照已标注于"当前激活效果"
+// 净灵铃 不在此列:它有独立的"摇铃"打断 event(__净灵铃__),不是被动
+const SILENT_EQUIPMENT = new Set(['锚神钉', '暖玉佩', '影绰纱帘', '透灵幔', '隔音灵阵']);
 function isSharedItem(name: string): boolean {
   if (CLOTHING_NAMES.has(name)) return true;
   if (EQUIPMENT_NAMES.has(name)) return true;
@@ -1770,10 +1774,12 @@ function handleClick(item: ItemDef) {
         store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
       } else {
         store.data.系统.道具状态[item.name] = '已购买';
-        // 装备卸下事件：通知AI装备被移除
-        const event = `卸下:${item.name}`;
-        const existing = store.data._待发送道具事件;
-        store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
+        // 静默装备卸下也静默,其余装备卸下事件通知 AI
+        if (!SILENT_EQUIPMENT.has(item.name)) {
+          const event = `卸下:${item.name}`;
+          const existing = store.data._待发送道具事件;
+          store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
+        }
       }
       store.flush();
       showToast(`已卸下「${item.name}」`, 'info');
@@ -2367,10 +2373,11 @@ function executeImmediateUnequip(item: ItemDef, target: '云霜凝' | '洛书晴
       // 身体器具/环境
       if (target === '云霜凝') {
         store.data.系统.道具状态[name] = '已购买';
-        eventNames.push(`卸下:${name}`);
+        // 静默装备卸下也静默
+        if (!SILENT_EQUIPMENT.has(name)) eventNames.push(`卸下:${name}`);
       } else {
         delete store.data._洛书晴道具状态[name];
-        eventNames.push(`洛书晴·卸下:${name}`);
+        if (!SILENT_EQUIPMENT.has(name)) eventNames.push(`洛书晴·卸下:${name}`);
       }
     }
   } else if (item.type === '体改') {
@@ -2402,6 +2409,14 @@ function executeImmediateUnequip(item: ItemDef, target: '云霜凝' | '洛书晴
     const pending = store.data._待发送道具事件;
     store.data._待发送道具事件 = pending ? pending + '|||' + eventNames.join('|||') : eventNames.join('|||');
   }
+
+  // 静默装备卸下:不 triggerSlash,避免 slash 文本带道具名让 AI 编叙事
+  if (SILENT_EQUIPMENT.has(name)) {
+    store.flush();
+    showToast(`已从${target}卸下「${name}」`, 'info');
+    return;
+  }
+
   store.data._系统操作中 = true;
   store.flush();
   triggerSlash(`/send （从${target}卸下了${name}）|/trigger`);
