@@ -29,6 +29,7 @@ import {
   getQianjingMaxRounds,
   getSpecialSceneMaxRounds,
   getSpecialSceneRoundGuidance,
+  LUO_FIRST_MEET_MAX_ROUNDS,
   XIAOJING_MAX_ROUNDS,
   getXiaojingEntryTrigger,
   getXiaojingRoundGuidance,
@@ -611,12 +612,17 @@ $(() => {
         }
 
         // ── Phase 1.9: 特殊场景轮次追踪与自动退出（类似千晶幻术 Phase 1.7）──
+        // 2.0.22 Finding X 修复: 只处理 SPECIAL_SCENE_GUIDES 里注册的场景(maxRounds > 0)。
+        // '洛书晴现实初遇' 不在 SPECIAL_SCENE_GUIDES(走独立 buildStatusSnapshot 分支 + Phase 1.9b 清场),
+        // 原判定 `sceneName && sceneStartFloor > 0` 会让它进入,拿 maxRounds=0 的 fallback
+        // 让 nominalRound=1 满足 isOvershoot,场景第 1 轮就被清场,session 9 a44d142 的 4 轮
+        // beat guide 永不生效。
         {
           const currentFloor = SillyTavern.chat?.length ?? 0;
           const sceneName = data._特殊场景.进行中;
           const sceneStartFloor = data._特殊场景开始楼层;
 
-          if (sceneName && sceneStartFloor > 0) {
+          if (sceneName && sceneStartFloor > 0 && getSpecialSceneMaxRounds(sceneName) > 0) {
             const maxRounds = getSpecialSceneMaxRounds(sceneName);
             const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
             const actualRound = Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1;
@@ -675,6 +681,29 @@ $(() => {
                 }
                 console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮 rewriteBeat 已注入`);
               }
+            }
+          }
+        }
+
+        // ── Phase 1.9b: 洛书晴现实初遇专用清场 ──
+        // 本场景不在 SPECIAL_SCENE_GUIDES,由 buildStatusSnapshot 独立 4 轮 beat 引导路径处理,
+        // Phase 1.9 已经 skip 它。此处在 nominalRound > LUO_FIRST_MEET_MAX_ROUNDS(4)时自动清场,
+        // 避免 _特殊场景.进行中 永久卡住。
+        {
+          const currentFloor = SillyTavern.chat?.length ?? 0;
+          if (data._特殊场景.进行中 === '洛书晴现实初遇' && data._特殊场景开始楼层 > 0) {
+            const sceneStartFloor = data._特殊场景开始楼层;
+            const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
+            if (nominalRound > LUO_FIRST_MEET_MAX_ROUNDS) {
+              data._已完成特殊场景['洛书晴现实初遇'] = true;
+              data._特殊场景.进行中 = '';
+              data._特殊场景开始楼层 = 0;
+              _.set(raw, 'stat_data._已完成特殊场景', data._已完成特殊场景);
+              _.set(raw, 'stat_data._特殊场景.进行中', '');
+              _.set(raw, 'stat_data._特殊场景开始楼层', 0);
+              Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
+              resetSceneDelayCount('特殊场景', data, raw);
+              console.info(`[云霜凝] 洛书晴现实初遇·第${LUO_FIRST_MEET_MAX_ROUNDS}轮完成,自动清场`);
             }
           }
         }
