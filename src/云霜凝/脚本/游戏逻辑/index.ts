@@ -575,9 +575,7 @@ $(() => {
                 _.set(raw, 'stat_data._苗喧反抗限制中', false);
                 _.set(raw, 'stat_data._苗喧反抗限制触发楼层', 0);
                 _.set(raw, 'stat_data._扰动冷却结束楼层', currentFloor + 15);
-                console.info(
-                  '[云霜凝] 孝敬师父反抗类基调完成，_苗喧反抗限制中 → false，_扰动冷却结束楼层 → +15',
-                );
+                console.info('[云霜凝] 孝敬师父反抗类基调完成，_苗喧反抗限制中 → false，_扰动冷却结束楼层 → +15');
               }
 
               _.set(raw, 'stat_data.苗广.孝敬师父.激活中', false);

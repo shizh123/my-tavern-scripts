@@ -380,9 +380,7 @@ export function validateAndRecalcState(
       const existing = 新变量._待发送道具事件;
       const event = '__苗喧前期反抗_1__';
       新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
-      console.warn(
-        `[状态验证] 自愈触发: 苗喧前期反抗#1（治疗阶段=${新变量.治疗.阶段} 已过3完成点但未触发,补触发）`,
-      );
+      console.warn(`[状态验证] 自愈触发: 苗喧前期反抗#1（治疗阶段=${新变量.治疗.阶段} 已过3完成点但未触发,补触发）`);
     } else if (新变量.治疗.阶段 >= 6 && 新变量._苗喧前期反抗已触发 < 2) {
       新变量._苗喧前期反抗已触发 = 2;
       新变量._苗喧反抗限制中 = true;
@@ -390,9 +388,7 @@ export function validateAndRecalcState(
       const existing = 新变量._待发送道具事件;
       const event = '__苗喧前期反抗_2__';
       新变量._待发送道具事件 = existing ? existing + '|||' + event : event;
-      console.warn(
-        `[状态验证] 自愈触发: 苗喧前期反抗#2（治疗阶段=${新变量.治疗.阶段} 已过5完成点但未触发,补触发）`,
-      );
+      console.warn(`[状态验证] 自愈触发: 苗喧前期反抗#2（治疗阶段=${新变量.治疗.阶段} 已过5完成点但未触发,补触发）`);
     }
   }
 
@@ -1152,8 +1148,7 @@ export function validateAndRecalcState(
       } else {
         // 只在 AI 没有把另一位设置为 true 时才锁定（允许 AI 进入双人模式）
         const aiAddedCompanion =
-          (target === '云霜凝' && 新变量._当前场景角色.洛书晴) ||
-          (target === '洛书晴' && 新变量._当前场景角色.云霜凝);
+          (target === '云霜凝' && 新变量._当前场景角色.洛书晴) || (target === '洛书晴' && 新变量._当前场景角色.云霜凝);
         if (!aiAddedCompanion) {
           新变量._当前场景角色 = expected;
         }
