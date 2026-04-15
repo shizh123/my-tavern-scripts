@@ -844,6 +844,13 @@ export function processNewlyActivatedLuoItems(newData: SchemaType, oldData: Sche
       if (activeKinkCount > 3) {
         newData._洛书晴道具状态[itemName] = '已购买';
         console.warn(`[商店] 洛书晴性癖槽位已满`);
+      } else {
+        // 2.0.22 修复: 兜底同步到 data.洛书晴.性癖列表(ShopPanel 已在前端立即写,
+        // 此处保护 AI JSONPatch 或其他路径装载的情况)
+        const kinkDef = KINK_ITEM_MAP[itemName];
+        if (kinkDef && !newData.洛书晴.性癖列表[kinkDef.name]) {
+          newData.洛书晴.性癖列表[kinkDef.name] = kinkDef.tag;
+        }
       }
       continue;
     }

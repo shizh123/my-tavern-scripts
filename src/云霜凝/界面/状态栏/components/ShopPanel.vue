@@ -1885,7 +1885,11 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
           // 静默激活
         } else if (KINK_EFFECTS[name]) {
           // 2.0.20 性癖：只在第一次觉醒时 push 事件，再次装载静默
-          const kinkName = KINK_EFFECTS[name].name;
+          const { name: kinkName, tag } = KINK_EFFECTS[name];
+          // 2.0.22 修复: 立即同步到 data.洛书晴.性癖列表,让 LuoPanel 即时显示性癖 panel
+          // + buildLuoKinkDirectives 读该字段注入 AI 指令(原来只写 _洛书晴道具状态,
+          //   数据表字段始终为空,LuoPanel v-if 条件永不成立,AI 也收不到性癖 tone modifier)
+          store.data.洛书晴.性癖列表[kinkName] = tag;
           const awakenKey = `洛书晴:${kinkName}`;
           if (!store.data._已觉醒性癖[awakenKey]) {
             store.data._已觉醒性癖[awakenKey] = true;
