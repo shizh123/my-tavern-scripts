@@ -962,6 +962,10 @@ export function tickEquipmentEffects(data: SchemaType): void {
       data.云霜凝.心理防线 = Math.max(0, data.云霜凝.心理防线 + defenseDelta);
     }
 
+    // 2.0.24: 暖玉佩阶段≥5 进入鸡肋期,tick 数值效果全部停止(和 AI 视角"鸡肋"一致,
+    // 避免玩家看到"暖玉佩使用中"但 AI 看不见,数值还在偷偷涨的认知割裂)
+    if (itemName === '暖玉佩' && data.治疗.阶段 >= 5) continue;
+
     // 信任度增加
     const trustDelta = EQUIPMENT_PER_TURN_TRUST[itemName];
     if (trustDelta) {
