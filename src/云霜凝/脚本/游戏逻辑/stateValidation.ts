@@ -584,37 +584,36 @@ export function validateAndRecalcState(
   // yaml 规则告诉 AI "每轮 +N"，这里给 1.5~2 倍 buffer 作为硬兜底
   // 正常 AI 输出不会撞 cap，玩家感觉不到；AI 乱输出 +15 会被截回
   {
-    // 信任度 ±2 (2.0.24: 原 ±8 涨速过快——玩家 30 楼就撞 100 cap,降到 ±2 控制节奏)
-    // 30 楼 = 15 轮 AI 回复,AI 每轮 +2 + 暖玉佩 +1 ≈ +45,初始 5 = 50,合理
+    // 信任度 推进 +2 / 衰退 -1 (2.0.25: 衰退 cap 比推进更严,避免 AI 日常小扣累积成衰退)
     const trustDelta = 新变量.云霜凝.信任度 - 旧变量.云霜凝.信任度;
     if (trustDelta > 2) {
       新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 + 2;
       console.warn(`[delta cap] 信任度增幅 +${trustDelta} → +2`);
-    } else if (trustDelta < -2) {
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - 2;
-      console.warn(`[delta cap] 信任度降幅 ${trustDelta} → -2`);
+    } else if (trustDelta < -1) {
+      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - 1;
+      console.warn(`[delta cap] 信任度降幅 ${trustDelta} → -1`);
     }
   }
   {
-    // 心理防线 ±2 (2.0.24: 原 ±8 涨速过快,对齐信任度 cap)
+    // 心理防线 推进 -2(降) / 衰退 +1(升) (2.0.25: 筑墙回升 cap 比接受亲密更严)
     const defDelta = 新变量.云霜凝.心理防线 - 旧变量.云霜凝.心理防线;
-    if (defDelta > 2) {
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + 2;
-      console.warn(`[delta cap] 心理防线增幅 +${defDelta} → +2`);
+    if (defDelta > 1) {
+      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + 1;
+      console.warn(`[delta cap] 心理防线增幅(回升) +${defDelta} → +1`);
     } else if (defDelta < -2) {
       新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 - 2;
-      console.warn(`[delta cap] 心理防线降幅 ${defDelta} → -2`);
+      console.warn(`[delta cap] 心理防线降幅(推进) ${defDelta} → -2`);
     }
   }
   {
-    // 治疗完成度 ±3 (2.0.25: 原 +5/-3 和信任/防线 ±2 节奏错配,收到 ±3)
+    // 治疗完成度 推进 +3 / 衰退 -1 (2.0.25: 衰退 cap 收紧,防 AI 日常小扣累积)
     const compDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
     if (compDelta > 3) {
       新变量.治疗.完成度 = 旧变量.治疗.完成度 + 3;
       console.warn(`[delta cap] 完成度增幅 +${compDelta} → +3`);
-    } else if (compDelta < -3) {
-      新变量.治疗.完成度 = 旧变量.治疗.完成度 - 3;
-      console.warn(`[delta cap] 完成度降幅 ${compDelta} → -3`);
+    } else if (compDelta < -1) {
+      新变量.治疗.完成度 = 旧变量.治疗.完成度 - 1;
+      console.warn(`[delta cap] 完成度降幅 ${compDelta} → -1`);
     }
     // 苗喧反抗限制中：治疗推进 ×0.4（设计文档 line 108）
     const afterCapDelta = 新变量.治疗.完成度 - 旧变量.治疗.完成度;
@@ -625,7 +624,7 @@ export function validateAndRecalcState(
     }
   }
   {
-    // 身体开发每部位 ±3 (2.0.25: 原 +10/-5 和信任/防线 ±2 节奏错配,收到 ±3)
+    // 身体开发每部位 推进 +3 / 不可衰退 (2.0.25: 身体开发是累积状态,无衰退机制)
     const bodyParts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
     for (const part of bodyParts) {
       const oldVal = 旧变量.云霜凝.身体开发[part];
@@ -633,9 +632,9 @@ export function validateAndRecalcState(
       if (bodyDelta > 3) {
         新变量.云霜凝.身体开发[part] = oldVal + 3;
         console.warn(`[delta cap] 身体开发.${part} 增幅 +${bodyDelta} → +3`);
-      } else if (bodyDelta < -3) {
-        新变量.云霜凝.身体开发[part] = oldVal - 3;
-        console.warn(`[delta cap] 身体开发.${part} 降幅 ${bodyDelta} → -3`);
+      } else if (bodyDelta < 0) {
+        新变量.云霜凝.身体开发[part] = oldVal;
+        console.warn(`[delta cap] 身体开发.${part} 不可衰退,回滚负 delta ${bodyDelta}`);
       }
     }
   }
@@ -923,46 +922,43 @@ export function validateAndRecalcState(
     新变量.洛书晴.肉体改造 = { ...旧变量.洛书晴.肉体改造, 淫纹: { ...旧变量.洛书晴.肉体改造.淫纹 } };
     新变量.洛书晴.性癖列表 = { ...旧变量.洛书晴.性癖列表 };
 
-    // (3) 心理防线 单轮 ±4 硬限制 (2.0.24: 原 ±15 收紧;洛比云更易推 → 云 ±2 / 洛 ±4)
+    // (3) 心理防线 推进 -4(降) / 衰退 +1(升) (2.0.25: 衰退 cap 收紧)
     {
       const delta = 新变量.洛书晴.心理防线 - 旧变量.洛书晴.心理防线;
-      const MAX = 4;
-      if (delta > MAX) {
-        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 + MAX;
-        console.warn(`[状态验证] 洛书晴心理防线增幅过大(+${delta})，限制至 +${MAX}`);
-      } else if (delta < -MAX) {
-        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 - MAX;
-        console.warn(`[状态验证] 洛书晴心理防线降幅过大(${delta})，限制至 -${MAX}`);
+      if (delta > 1) {
+        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 + 1;
+        console.warn(`[状态验证] 洛书晴心理防线回升过大(+${delta}),限制至 +1`);
+      } else if (delta < -4) {
+        新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 - 4;
+        console.warn(`[状态验证] 洛书晴心理防线降幅过大(${delta}),限制至 -4`);
       }
     }
 
-    // (4) 顺从度 单轮 ±4 硬限制 (2.0.24: 原 ±10 收紧;洛比云更易推 → 云 ±2 / 洛 ±4)
+    // (4) 顺从度 推进 +4 / 衰退 -1 (2.0.25: 衰退 cap 收紧)
     {
       const delta = 新变量.洛书晴.顺从度 - 旧变量.洛书晴.顺从度;
-      const MAX = 4;
-      if (delta > MAX) {
-        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 + MAX;
-        console.warn(`[状态验证] 洛书晴顺从度增幅过大(+${delta})，限制至 +${MAX}`);
-      } else if (delta < -MAX) {
-        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 - MAX;
-        console.warn(`[状态验证] 洛书晴顺从度降幅过大(${delta})，限制至 -${MAX}`);
+      if (delta > 4) {
+        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 + 4;
+        console.warn(`[状态验证] 洛书晴顺从度增幅过大(+${delta}),限制至 +4`);
+      } else if (delta < -1) {
+        新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 - 1;
+        console.warn(`[状态验证] 洛书晴顺从度降幅过大(${delta}),限制至 -1`);
       }
     }
 
-    // (5) 身体开发 单轮单部位 ±4 硬限制 (2.0.25: 原 +8 对齐洛其他数值 ±4)
+    // (5) 身体开发 单轮单部位 推进 +4 / 不可衰退 (2.0.25: 身体开发无衰退机制)
     {
-      const MAX = 4;
       const parts = ['小嘴', '胸部', '小屄', '屁穴'] as const;
       for (const part of parts) {
         const oldVal = 旧变量.洛书晴.身体开发[part];
         const newVal = 新变量.洛书晴.身体开发[part];
         const delta = newVal - oldVal;
-        if (delta > MAX) {
-          新变量.洛书晴.身体开发[part] = oldVal + MAX;
-          console.warn(`[状态验证] 洛书晴身体开发.${part} 增幅过大,限制至 +${MAX}`);
-        } else if (delta < -MAX) {
-          新变量.洛书晴.身体开发[part] = oldVal - MAX;
-          console.warn(`[状态验证] 洛书晴身体开发.${part} 降幅过大,限制至 -${MAX}`);
+        if (delta > 4) {
+          新变量.洛书晴.身体开发[part] = oldVal + 4;
+          console.warn(`[状态验证] 洛书晴身体开发.${part} 增幅过大,限制至 +4`);
+        } else if (delta < 0) {
+          新变量.洛书晴.身体开发[part] = oldVal;
+          console.warn(`[状态验证] 洛书晴身体开发.${part} 不可衰退,回滚负 delta ${delta}`);
         }
       }
     }
