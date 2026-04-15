@@ -834,6 +834,9 @@
     "_扰动冷却结束楼层": {
       "type": "number"
     },
+    "_打断自神魂空间": {
+      "type": "boolean"
+    },
     "_当前神魂空间角色": {
       "default": "云霜凝",
       "type": "string",

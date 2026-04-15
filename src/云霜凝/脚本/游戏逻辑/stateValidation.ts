@@ -703,9 +703,12 @@ export function validateAndRecalcState(
           新变量._当前互动模式 = '日常';
           新变量._神魂空间激活中 = false;
           events = '__打断治疗_神魂__';
+          // 2.0.22 · 记录本次打断自神魂空间触发，供 N+4 楼 push __打断结束__ event 时 dispatch 分版文本
+          新变量._打断自神魂空间 = true;
           console.warn(`[状态验证] ⚡ 神魂空间中被打断！已强制退出 + 打断治疗`);
         } else {
           events = '__打断治疗__';
+          新变量._打断自神魂空间 = false;
         }
         const existing = 新变量._待发送道具事件;
         新变量._待发送道具事件 = existing ? existing + '|||' + events : events;
@@ -818,6 +821,17 @@ export function validateAndRecalcState(
         // 无基线（边界情况：页面刷新后冻结仍在生效）→ 仅阻止AI推进，不回滚
         console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），无基线，跳过回滚`);
       }
+      // 2.0.22 · 场景引擎 v2 · 打断结束 event 注入（冻结最后一楼判定）
+      // 判定用 `floor === _打断冻结至楼层 - 1`（冻结最后一楼）而非"跨边界"，
+      // 保证玩家主动解冻（MiaoPanel.startXiaojing 把 _打断冻结至楼层 设为 currentFloor）时
+      // 不会误触发 — 那时 floor === _打断冻结至楼层 走 else if 分支，不走 if。
+      // event 内容让 AI 在下一楼（玩家消费 event 后）写"苗广找借口自然离开"，气氛缓和。
+      if (floor === 新变量._打断冻结至楼层 - 1) {
+        const existing = 新变量._待发送道具事件;
+        const endEvent = '__打断结束__';
+        新变量._待发送道具事件 = existing ? existing + '|||' + endEvent : endEvent;
+        console.info(`[状态验证] 打断冻结最后一楼 → push ${endEvent} event（自神魂=${新变量._打断自神魂空间}）`);
+      }
     } else if (
       新变量._打断冻结至楼层 > 0 &&
       floor > 0 &&
@@ -842,6 +856,10 @@ export function validateAndRecalcState(
       // 双向扰动冷却: 设 15 楼冷却(同时兼作下次进此分支的 guard 值)
       新变量._扰动冷却结束楼层 = floor + 15;
       console.info(`[状态验证] 打断冻结结束 → 扰动冷却至 ${floor + 15} 楼`);
+      // 2.0.22 · 清 _打断自神魂空间 字段（本次打断周期结束，字段使命完成）
+      // __打断结束__ event 若已 push（N+4 楼）此时已带着正确的字段值消费完毕；
+      // 若玩家主动解冻(走此 else if 但 floor === _打断冻结至楼层,event 没 push),字段清了也无影响
+      新变量._打断自神魂空间 = false;
     }
   }
 

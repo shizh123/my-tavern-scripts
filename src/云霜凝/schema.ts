@@ -576,6 +576,11 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
+  // 2.0.22: 本次打断是否自神魂空间触发（打断触发时设 true / false，打断结束 event 消费后清 false）
+  // 用途：让 __打断结束__ event 的 dispatch 能识别"刚才的打断是现实版还是神魂版"，
+  // 从而选择正确的叙事文本。_当前互动模式 在神魂版打断时被强制改为'日常'后，
+  // 现实版/神魂版打断在状态上已无法区分，必须用此字段显式记录。
+  _打断自神魂空间: z.coerce.boolean().prefault(false),
   // 当前神魂空间角色（按钮点击后的遮罩层选择结果）
   _当前神魂空间角色: z.enum(['云霜凝', '洛书晴']).prefault('云霜凝'),
   // 洛书晴独立的道具状态表（与系统.道具状态分开，共用道具各买各的）
