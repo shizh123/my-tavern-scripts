@@ -566,6 +566,16 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
+  // 2.0.22: 后期反抗按钮 8 楼冷却结束楼层（绝望值 ≥ 40 才可重新点击）
+  _反抗冷却结束楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
+  // 2.0.22: 双向扰动冷却结束楼层（打断冻结结束 / 孝敬师父反抗类清场时设 = currentFloor + 15）
+  _扰动冷却结束楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
   // 当前神魂空间角色（按钮点击后的遮罩层选择结果）
   _当前神魂空间角色: z.enum(['云霜凝', '洛书晴']).prefault('云霜凝'),
   // 洛书晴独立的道具状态表（与系统.道具状态分开，共用道具各买各的）
