@@ -581,6 +581,15 @@ export const Schema = z.object({
   // 从而选择正确的叙事文本。_当前互动模式 在神魂版打断时被强制改为'日常'后，
   // 现实版/神魂版打断在状态上已无法区分，必须用此字段显式记录。
   _打断自神魂空间: z.coerce.boolean().prefault(false),
+  // 2.0.22 场景引擎 v2: 上次后期反抗快照（供下次反抗的 data card 参考 + 倾诉判断近期反抗）
+  // 结构：{ 楼层, 焦点简述 }；焦点简述可为 null（AI 未回写或从 chat history 自主推断）
+  _上次反抗快照: z
+    .object({
+      楼层: z.coerce.number().prefault(0),
+      焦点简述: z.string().nullable().prefault(null),
+    })
+    .nullable()
+    .prefault(null),
   // 当前神魂空间角色（按钮点击后的遮罩层选择结果）
   _当前神魂空间角色: z.enum(['云霜凝', '洛书晴']).prefault('云霜凝'),
   // 洛书晴独立的道具状态表（与系统.道具状态分开，共用道具各买各的）

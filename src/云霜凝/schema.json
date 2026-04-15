@@ -837,6 +837,13 @@
     "_打断自神魂空间": {
       "type": "boolean"
     },
+    "_上次反抗快照": {
+      "type": ["object", "null"],
+      "properties": {
+        "楼层": { "type": "number" },
+        "焦点简述": { "type": ["string", "null"] }
+      }
+    },
     "_当前神魂空间角色": {
       "default": "云霜凝",
       "type": "string",
