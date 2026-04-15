@@ -818,7 +818,19 @@ export function validateAndRecalcState(
         // 无基线（边界情况：页面刷新后冻结仍在生效）→ 仅阻止AI推进，不回滚
         console.warn(`[状态验证] 打断冻结中（剩余${新变量._打断冻结至楼层 - floor}楼），无基线，跳过回滚`);
       }
-    } else if (新变量._打断冻结至楼层 > 0 && floor > 0 && floor >= 新变量._打断冻结至楼层 && !_freezeRewardGiven) {
+    } else if (
+      新变量._打断冻结至楼层 > 0 &&
+      floor > 0 &&
+      floor >= 新变量._打断冻结至楼层 &&
+      !_freezeRewardGiven &&
+      // 2.0.22 · 跨 iframe reload 幂等 guard: "冷却楼 < 打断楼" = "本次冻结还没处理过结束那一帧"
+      // _freezeRewardGiven 是 module 变量,iframe reload(切聊天/F5)后重置为 false,
+      // 会让此分支重跑,导致 (a) 疑心值 -3 奖励重复发放 (b) 扰动冷却重复延长 15 楼。
+      // _扰动冷却结束楼层 是 schema 字段(存 chat variables 里,reload 保留),
+      // 第一次进入此分支时被设为 floor+15(必然 > 打断楼),之后 reload 重跑此 guard
+      // 会 false 跳过整个分支。两道 guard = 双保险(module 变量同 tick 防重 + schema 字段跨 reload 防重)
+      新变量._扰动冷却结束楼层 < 新变量._打断冻结至楼层
+    ) {
       // 冻结刚结束：全程无治疗尝试 → 疑心值 -3 奖励
       _freezeRewardGiven = true;
       if (!_freezeHadTreatmentAttempt) {
@@ -827,12 +839,9 @@ export function validateAndRecalcState(
       } else {
         console.info('[状态验证] 打断冻结结束：冻结期间有治疗尝试，无奖励');
       }
-      // 2.0.22 · 双向扰动冷却: 冻结刚结束那一帧设扰动冷却 15 楼,gate 前期反抗后续触发
-      // 幂等 guard(_扰动冷却结束楼层 <= floor 防止玩家 reload 后重复推迟冷却)
-      if (新变量._扰动冷却结束楼层 <= floor) {
-        新变量._扰动冷却结束楼层 = floor + 15;
-        console.info(`[状态验证] 打断冻结结束 → 扰动冷却至 ${floor + 15} 楼`);
-      }
+      // 双向扰动冷却: 设 15 楼冷却(同时兼作下次进此分支的 guard 值)
+      新变量._扰动冷却结束楼层 = floor + 15;
+      console.info(`[状态验证] 打断冻结结束 → 扰动冷却至 ${floor + 15} 楼`);
     }
   }
 
