@@ -1742,9 +1742,12 @@ function handleClick(item: ItemDef) {
       checkedItems.delete(item.name);
     } else {
       // 性癖槽位检查：已激活 + 已勾选中的性癖不能超过上限
+      // 2.0.22 修复: 多选目标为洛书晴时,要按洛书晴性癖计数,不是云霜凝
       if (KINK_EFFECTS[item.name]) {
         const pendingKinks = [...checkedItems].filter(n => !!KINK_EFFECTS[n]).length;
-        if (activeKinkCount() + pendingKinks >= MAX_KINKS) {
+        const isLuoTarget = multiSelectMode.value && multiSelectTarget.value === '洛书晴';
+        const currentKinkCount = isLuoTarget ? activeLuoKinkCount() : activeKinkCount();
+        if (currentKinkCount + pendingKinks >= MAX_KINKS) {
           showToast(`性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}）`, 'err');
           return;
         }
@@ -1861,6 +1864,11 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
         yinwenPos.value = '';
         yinwenText.value = '';
       } else {
+        // 2.0.22 修复：洛书晴性癖装载前检查槽位（防御性，勾选阶段已修）
+        if (KINK_EFFECTS[name] && activeLuoKinkCount() >= MAX_KINKS) {
+          showToast(`洛书晴性癖槽位已满（${MAX_KINKS}/${MAX_KINKS}），「${name}」未激活`, 'err');
+          continue;
+        }
         // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
         store.data._洛书晴道具状态[name] = '使用中';
         // 【修复 2.0.20】：装备/体改/性癖 不删除 系统.道具状态（云洛可共存装载）；

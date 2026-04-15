@@ -115,9 +115,39 @@ $(() => {
       );
       await Promise.race([waitGlobalInitialized('Mvu'), mvuInitTimeout]);
       registerMvuSchema(Schema);
+
+      // 2.0.22 根因修复: 清理旧 listener 防止累积爆炸
+      //
+      // 问题: reloadOnChatChange() 的实现是 `window.location.reload()`——这是 iframe 内的
+      // navigation,不触发酒馆助手的"脚本关闭自动卸载"钩子。结果每次切聊天后:
+      //   1. iframe document 重新加载,脚本重新执行
+      //   2. eventOn 传的是新的 arrow function 对象,酒馆助手按 reference 去重不识别
+      //   3. 旧 listener 依然留在事件总线上继续跑
+      //   4. 新 listener 加入一起跑
+      // 每切一次聊天累积一个。玩家反馈一次 AI 请求状态快照重复 9 次 = 9 个 listener。
+      // 此外 VARIABLE_UPDATE_ENDED / MESSAGE_RECEIVED 也会累积,可能导致数值回滚跑 N 次/
+      // 时间推进 N 次等副作用。reloadOnChatChange 自身的 CHAT_CHANGED listener 也会累积——
+      // 累积后每切聊天会 reload N 次,复合爆炸。
+      //
+      // 修法: 初始化开头先 eventClearEvent 清掉"本 iframe 中"所有相关事件的 listener。
+      // 只要 reload 后的 iframe 仍被酒馆助手识别为同一个 iframe (从症状看是的,
+      // 否则旧 listener 应该自动卸载),此清理能精确干掉累积的旧 listener,不影响其他脚本。
+      eventClearEvent(tavern_events.CHAT_COMPLETION_PROMPT_READY);
+      eventClearEvent(tavern_events.MESSAGE_RECEIVED);
+      eventClearEvent(tavern_events.CHAT_CHANGED);
+      eventClearEvent(Mvu.events.VARIABLE_UPDATE_ENDED);
+      eventClearEvent(Mvu.events.COMMAND_PARSED);
+
       reloadOnChatChange();
+      // 2.0.22: toast dedup —— 用 sessionStorage gate 防止切换聊天/手动重载时反复弹出。
+      // sessionStorage 在 window.location.reload() 后保留,但浏览器关闭后清空,
+      // 所以"切聊天 reload"不会重弹,"重启浏览器/刷新酒馆页面"会重弹一次(玩家想确认脚本正常)。
+      const ALREADY_TOASTED_KEY = '云霜凝_脚本toast已弹';
+      if (!sessionStorage.getItem(ALREADY_TOASTED_KEY)) {
+        _top.toastr?.success?.('游戏逻辑脚本加载正常', '云霜凝');
+        sessionStorage.setItem(ALREADY_TOASTED_KEY, '1');
+      }
       sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
-      _top.toastr?.success?.('游戏逻辑脚本加载正常', '云霜凝');
       console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
     } catch (err) {
       console.error('[云霜凝] 游戏逻辑脚本加载失败:', err);
@@ -179,10 +209,15 @@ $(() => {
             // 退出优先级最高：即使引导事件也存在，用户已明确退出
             data._当前互动模式 = '日常';
             data._神魂空间激活中 = false;
+            // 2.0.22 Bug 1 修复: 退出时清空 _神魂记忆场景,防止云霜凝的记忆场景泄漏到下次进入
+            // (尤其是泄漏到洛书晴神魂空间——洛书晴空间不应该有 _神魂记忆场景)
+            // 云霜凝入口再次触发时会重新 selectSoulMemory 决定记忆场景
+            data._神魂记忆场景 = '';
             _.set(raw, 'stat_data._当前互动模式', '日常');
             _.set(raw, 'stat_data._神魂空间激活中', false);
+            _.set(raw, 'stat_data._神魂记忆场景', '');
             Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
-            console.info('[云霜凝] 退出神魂空间：模式已切换为日常');
+            console.info('[云霜凝] 退出神魂空间：模式已切换为日常，记忆场景已清空');
           } else if (hasEntry) {
             data._当前互动模式 = '神魂空间';
             data._神魂空间激活中 = true;
@@ -749,14 +784,28 @@ $(() => {
         // 恢复 232a8b5 的注入策略（已验证 Gemini 生效）：
         //   - 有 prefill（Gemini）→ chat 末尾是 assistant，splice 到它之前
         //   - 无 prefill（Claude）→ push 到末尾
+        //
+        // 2.0.22: 幂等注入修复——先清理 chat 里所有旧的状态快照 system messages,再 push 新的。
+        // 根因: event_data.chat 或 listener 泄漏导致 snapshot 累积(玩家反馈一条消息里看到 9
+        // 份孝敬师父快照重复)。无论根因是 chat 是 SillyTavern.chat 的引用(上次 push 留在
+        // history 下次请求又带进来) 还是 CHAT_COMPLETION_PROMPT_READY listener 泄漏
+        // (多个 listener 每次 AI 请求都各 push 一次),清理+push 都能做到幂等注入。
         if (snapshot) {
+          // 清理所有旧状态快照 system messages(按 SNAPSHOT_MARKER 识别)
+          const SNAPSHOT_MARKER = '[当前游戏状态快照';
+          for (let i = chat.length - 1; i >= 0; i--) {
+            const msg = chat[i];
+            if (msg?.role === 'system' && typeof msg.content === 'string' && msg.content.includes(SNAPSHOT_MARKER)) {
+              chat.splice(i, 1);
+            }
+          }
           const lastMsg = chat[chat.length - 1];
           if (lastMsg && lastMsg.role === 'assistant') {
             chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: 插入到 prefill 之前');
+            console.info('[云霜凝] 状态快照: 插入到 prefill 之前（清理后）');
           } else {
             chat.push({ role: 'system', content: snapshot });
-            console.info('[云霜凝] 状态快照: push 到末尾');
+            console.info('[云霜凝] 状态快照: push 到末尾（清理后）');
           }
         }
 

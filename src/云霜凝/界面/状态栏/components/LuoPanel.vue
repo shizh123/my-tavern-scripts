@@ -66,6 +66,10 @@
           <span class="a-slot">特殊配饰</span>
           <span class="a-val">{{ accessoryDisplay || '无' }}</span>
         </div>
+        <div class="attire-item">
+          <span class="a-slot">性具</span>
+          <span class="a-val">{{ activeSexToys.length > 0 ? activeSexToys.join('、') : '空' }}</span>
+        </div>
       </div>
     </div>
 
@@ -157,6 +161,16 @@ const yinwenDisplay = computed(() => {
   if (yw.臀部) parts.push(`臀部·${yw.臀部}`);
   return parts.join('、');
 });
+
+// 2.0.22 修复 Bug 1: LuoPanel 之前没显示洛书晴激活的身体器具
+// 数据从 _洛书晴道具状态 读 '使用中' + SEX_TOY_NAMES 列表
+const SEX_TOY_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩']);
+
+const activeSexToys = computed(() =>
+  Object.entries(store.data._洛书晴道具状态)
+    .filter(([name, state]) => state === '使用中' && SEX_TOY_NAMES.has(name))
+    .map(([name]) => name),
+);
 
 const hasBodyMods = computed(() => {
   const mod = store.data.洛书晴.肉体改造;
