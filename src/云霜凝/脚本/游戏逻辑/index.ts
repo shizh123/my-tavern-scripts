@@ -463,13 +463,14 @@ $(() => {
 
             if (isFinalRound || isOvershoot) {
               // ── 注入最后一轮引导（仅 isFinalRound 情况，且当前未越界）──
+              // v2(2.0.22): rewriteBeat 空格拼接,融入玩家口吻
               if (isFinalRound && !isOvershoot) {
-                const guidance = getQianjingRoundGuidance(已使用次数, maxRounds);
-                if (guidance) {
+                const beat = getQianjingRoundGuidance(已使用次数, maxRounds);
+                if (beat) {
                   for (let i = chat.length - 1; i >= 0; i--) {
                     if (chat[i].role === 'user') {
                       const content = chat[i].content;
-                      chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                      chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
                       break;
                     }
                   }
@@ -500,17 +501,18 @@ $(() => {
                 );
               }
             } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
-              // ── 中间轮：注入逐轮引导（actualRound 扣延后楼数）──
-              const guidance = getQianjingRoundGuidance(已使用次数, actualRound);
-              if (guidance) {
+              // ── 中间轮：注入逐轮 rewriteBeat（actualRound 扣延后楼数）──
+              // v2: 空格拼接融入玩家口吻
+              const beat = getQianjingRoundGuidance(已使用次数, actualRound);
+              if (beat) {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
                     const content = chat[i].content;
-                    chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                    chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
                     break;
                   }
                 }
-                console.info(`[云霜凝] 千晶幻术第${已使用次数}次·第${actualRound}/${maxRounds}轮引导已注入`);
+                console.info(`[云霜凝] 千晶幻术第${已使用次数}次·第${actualRound}/${maxRounds}轮 rewriteBeat 已注入`);
               }
             }
           }
@@ -563,13 +565,18 @@ $(() => {
                 console.info(`[云霜凝] 孝敬师父完成，疑心值 -${reduction}（${oldSus} → ${data.苗广.疑心值}）`);
               }
 
-              // 反抗类场景（斥责苗喧 / 复合）完成后解除苗喧反抗限制
+              // v2(2.0.22) · 反抗类基调(scenarioIdx 复用为基调编号,1 不是反抗,2-6 都是)清场:
+              //   清 _苗喧反抗限制中 + 设 _扰动冷却结束楼层 = currentFloor + 15(双向扰动冷却机制)
               if (isXiaojingRebellionScene(scenarioIdx)) {
                 data._苗喧反抗限制中 = false;
                 data._苗喧反抗限制触发楼层 = 0;
+                data._扰动冷却结束楼层 = currentFloor + 15;
                 _.set(raw, 'stat_data._苗喧反抗限制中', false);
                 _.set(raw, 'stat_data._苗喧反抗限制触发楼层', 0);
-                console.info('[云霜凝] 孝敬师父反抗类场景完成，_苗喧反抗限制中 → false');
+                _.set(raw, 'stat_data._扰动冷却结束楼层', currentFloor + 15);
+                console.info(
+                  '[云霜凝] 孝敬师父反抗类基调完成，_苗喧反抗限制中 → false，_扰动冷却结束楼层 → +15',
+                );
               }
 
               _.set(raw, 'stat_data.苗广.孝敬师父.激活中', false);
@@ -620,13 +627,14 @@ $(() => {
 
             if (isFinalRound || isOvershoot) {
               // ── 注入最后一轮引导（仅 isFinalRound 情况，且未越界）──
+              // v2(2.0.22): rewriteBeat 是玩家口吻"——主题+anchor",空格拼接融入玩家输入
               if (isFinalRound && !isOvershoot) {
-                const guidance = getSpecialSceneRoundGuidance(sceneName, maxRounds);
-                if (guidance) {
+                const beat = getSpecialSceneRoundGuidance(sceneName, maxRounds);
+                if (beat) {
                   for (let i = chat.length - 1; i >= 0; i--) {
                     if (chat[i].role === 'user') {
                       const content = chat[i].content;
-                      chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                      chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
                       break;
                     }
                   }
@@ -654,17 +662,18 @@ $(() => {
                 );
               }
             } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
-              // ── 注入逐轮引导到 user 消息（actualRound 扣延后）──
-              const guidance = getSpecialSceneRoundGuidance(sceneName, actualRound);
-              if (guidance) {
+              // ── 注入逐轮 rewriteBeat 到 user 消息末尾（actualRound 扣延后）──
+              // v2: 空格拼接融入玩家口吻(不是 '\n\n' 另起段)
+              const beat = getSpecialSceneRoundGuidance(sceneName, actualRound);
+              if (beat) {
                 for (let i = chat.length - 1; i >= 0; i--) {
                   if (chat[i].role === 'user') {
                     const content = chat[i].content;
-                    chat[i].content = typeof content === 'string' ? content + '\n\n' + guidance : guidance;
+                    chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
                     break;
                   }
                 }
-                console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮引导已注入`);
+                console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮 rewriteBeat 已注入`);
               }
             }
           }
@@ -724,17 +733,22 @@ $(() => {
           }
 
           // 千晶幻术入场触发：替换玩家消息 + 预填指令
+          // v2(2.0.22): 首轮 rewriteBeat[1] 空格拼接到 entryText 末尾(融入玩家口吻)
           if (items.includes('__千晶幻术_进入__')) {
             const qjTrigger = getQianjingEntryTrigger(data.苗广.千晶幻术.已使用次数, data.苗广.千晶幻术.幻境摘要);
+            const beat1 = getQianjingRoundGuidance(data.苗广.千晶幻术.已使用次数, 1);
+            const userMsgWithBeat = beat1 ? qjTrigger.userMessage + ' ' + beat1 : qjTrigger.userMessage;
             const combined =
-              qjTrigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${qjTrigger.prefill}`;
+              userMsgWithBeat + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${qjTrigger.prefill}`;
             for (let i = chat.length - 1; i >= 0; i--) {
               if (chat[i].role === 'user') {
                 chat[i].content = combined;
                 break;
               }
             }
-            console.info(`[云霜凝] 千晶幻术第${data.苗广.千晶幻术.已使用次数}次入场触发`);
+            console.info(
+              `[云霜凝] 千晶幻术第${data.苗广.千晶幻术.已使用次数}次入场触发${beat1 ? ' (含首轮 rewriteBeat)' : ''}`,
+            );
           }
 
           // 孝敬师父入场触发：替换玩家消息 + 预填指令
@@ -753,19 +767,21 @@ $(() => {
           }
 
           // 特殊场景方式3触发：替换玩家消息 + 预填指令
+          // v2(2.0.22): 首轮 rewriteBeat[1] 空格拼接到 entryText 末尾(融入玩家口吻)
           for (const name of items) {
             const trigger = getSpecialSceneTrigger(name);
             if (trigger) {
-              // 将场景触发词 + 预填指令合并到最后一条 user 消息
+              const beat1 = getSpecialSceneRoundGuidance(name, 1);
+              const userMsgWithBeat = beat1 ? trigger.userMessage + ' ' + beat1 : trigger.userMessage;
               const combined =
-                trigger.userMessage + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${trigger.prefill}`;
+                userMsgWithBeat + `\n\n【AI必须以以下内容作为回复开头，然后继续展开】\n${trigger.prefill}`;
               for (let i = chat.length - 1; i >= 0; i--) {
                 if (chat[i].role === 'user') {
                   chat[i].content = combined;
                   break;
                 }
               }
-              console.info(`[云霜凝] 特殊场景方式3触发: ${name}`);
+              console.info(`[云霜凝] 特殊场景方式3触发: ${name}${beat1 ? ' (含首轮 rewriteBeat)' : ''}`);
               break; // 一次只触发一个特殊场景
             }
           }

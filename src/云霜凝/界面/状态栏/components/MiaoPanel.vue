@@ -199,14 +199,11 @@ function startXiaojing() {
   if (!xjCanStart.value || !isLatestMessage()) return;
   store.pull();
 
-  // 根据上下文选场景：仅反抗→斥责苗喧（5）/ 反抗+打断→复合（6）/ 仅打断→通用池（0-4）
-  const scenarioIdx = pickXiaojingByContext(
-    xjIsInterrupted.value,
-    xjIsRebelling.value,
-    store.data.苗广.孝敬师父.上次场景索引,
-  );
+  // v2(2.0.22): 基调路由 · 返回 1-6 基调编号,存入"上次场景索引"字段(字段复用)
+  // 基调 1 警觉·打断善后 / 基调 2 警觉·反抗善后 / 基调 3-6 扭曲·暗示/共谋/千晶后/改嫁后
+  const 基调编号 = pickXiaojingByContext(store.data);
   store.data.苗广.孝敬师父.激活中 = true;
-  store.data.苗广.孝敬师父.上次场景索引 = scenarioIdx;
+  store.data.苗广.孝敬师父.上次场景索引 = 基调编号;
   store.data._孝敬师父开始楼层 = getCurrentFloor();
 
   const existing = store.data._待发送道具事件;
