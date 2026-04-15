@@ -334,16 +334,18 @@ export function validateAndRecalcState(
   // 解除方式：(1) 玩家点击孝敬师父按钮进入副本（MiaoPanel.startXiaojing）
   //           (2) 触发 10 楼后自动软兜底清除（避免玩家卡死）
   //
-  // 2.0.22 门控汇总(4 道门):
+  // 2.0.22 门控汇总(5 道门):
   //   1. 神魂空间: 苗喧告状是"苗喧冲进苗广丹房"的观看框架,和神魂空间沉浸氛围冲突
   //   2. 打断冻结: 苗广刚闯入气氛紧张,反抗事件进来会让家庭剧撞车
   //   3. 洛书晴线已激活: 苗喧是洛书晴的未婚夫,洛线未激活时苗喧不应出场(修复原始 bug)
-  //   4. 阶段跳转瞬间: oldStage < X && newStage >= X (原有条件)
+  //   4. 双向扰动冷却(session 7 定稿 · 2.0.22): 打断冻结或反抗限制刚结束后 15 楼内不触发另一种扰动,避免玩家连续卡扰动
+  //   5. 阶段跳转瞬间: oldStage < X && newStage >= X (原有条件)
   // 任一门控未通过 → 跳过触发,走下方 2b-fix 自愈分支等时机合适时补触发
   const 非神魂空间 = 新变量._当前互动模式 !== '神魂空间';
   const 非打断冻结 = (currentFloor ?? 0) >= 新变量._打断冻结至楼层;
   const 洛已激活 = !!新变量._洛书晴线已激活;
-  const 反抗通用门控 = 非神魂空间 && 非打断冻结 && 洛已激活;
+  const 非扰动冷却 = (currentFloor ?? 0) >= 新变量._扰动冷却结束楼层;
+  const 反抗通用门控 = 非神魂空间 && 非打断冻结 && 洛已激活 && 非扰动冷却;
   if (oldStage < 4 && newStage >= 4 && 新变量._苗喧前期反抗已触发 < 1 && 反抗通用门控) {
     新变量._苗喧前期反抗已触发 = 1;
     新变量._苗喧反抗限制中 = true;
@@ -653,7 +655,10 @@ export function validateAndRecalcState(
       是前半程 &&
       stage >= 2 &&
       !新变量.苗广.孝敬师父.激活中 &&
-      (currentFloor ?? 0) >= 新变量._打断冻结至楼层 + INTERRUPT_COOLDOWN
+      (currentFloor ?? 0) >= 新变量._打断冻结至楼层 + INTERRUPT_COOLDOWN &&
+      // 2.0.22 · 双向扰动冷却 gate: 反抗限制刚解除后 15 楼内不触发打断
+      // INTERRUPT_COOLDOWN(8 楼)已间接 gate 大部分场景,此门控覆盖"反抗限制解除→打断"路径
+      (currentFloor ?? 0) >= 新变量._扰动冷却结束楼层
     ) {
       // 阶段基础概率
       const stageBase: Record<number, number> = { 2: 0.08, 3: 0.15, 4: 0.2, 5: 0.25 };
@@ -821,6 +826,12 @@ export function validateAndRecalcState(
         console.info(`[状态验证] 打断冻结结束奖励：全程无治疗尝试，疑心值 -3 → ${新变量.苗广.疑心值}`);
       } else {
         console.info('[状态验证] 打断冻结结束：冻结期间有治疗尝试，无奖励');
+      }
+      // 2.0.22 · 双向扰动冷却: 冻结刚结束那一帧设扰动冷却 15 楼,gate 前期反抗后续触发
+      // 幂等 guard(_扰动冷却结束楼层 <= floor 防止玩家 reload 后重复推迟冷却)
+      if (新变量._扰动冷却结束楼层 <= floor) {
+        新变量._扰动冷却结束楼层 = floor + 15;
+        console.info(`[状态验证] 打断冻结结束 → 扰动冷却至 ${floor + 15} 楼`);
       }
     }
   }
