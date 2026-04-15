@@ -596,14 +596,14 @@ export function validateAndRecalcState(
     }
   }
   {
-    // 心理防线 ±8
+    // 心理防线 ±2 (2.0.24: 原 ±8 涨速过快,对齐信任度 cap)
     const defDelta = 新变量.云霜凝.心理防线 - 旧变量.云霜凝.心理防线;
-    if (defDelta > 8) {
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + 8;
-      console.warn(`[delta cap] 心理防线增幅 +${defDelta} → +8`);
-    } else if (defDelta < -8) {
-      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 - 8;
-      console.warn(`[delta cap] 心理防线降幅 ${defDelta} → -8`);
+    if (defDelta > 2) {
+      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 + 2;
+      console.warn(`[delta cap] 心理防线增幅 +${defDelta} → +2`);
+    } else if (defDelta < -2) {
+      新变量.云霜凝.心理防线 = 旧变量.云霜凝.心理防线 - 2;
+      console.warn(`[delta cap] 心理防线降幅 ${defDelta} → -2`);
     }
   }
   {
@@ -923,10 +923,10 @@ export function validateAndRecalcState(
     新变量.洛书晴.肉体改造 = { ...旧变量.洛书晴.肉体改造, 淫纹: { ...旧变量.洛书晴.肉体改造.淫纹 } };
     新变量.洛书晴.性癖列表 = { ...旧变量.洛书晴.性癖列表 };
 
-    // (3) 心理防线 单轮 ±15 硬限制
+    // (3) 心理防线 单轮 ±4 硬限制 (2.0.24: 原 ±15 收紧;洛比云更易推 → 云 ±2 / 洛 ±4)
     {
       const delta = 新变量.洛书晴.心理防线 - 旧变量.洛书晴.心理防线;
-      const MAX = 15;
+      const MAX = 4;
       if (delta > MAX) {
         新变量.洛书晴.心理防线 = 旧变量.洛书晴.心理防线 + MAX;
         console.warn(`[状态验证] 洛书晴心理防线增幅过大(+${delta})，限制至 +${MAX}`);
@@ -936,10 +936,10 @@ export function validateAndRecalcState(
       }
     }
 
-    // (4) 顺从度 单轮 ±10 硬限制
+    // (4) 顺从度 单轮 ±4 硬限制 (2.0.24: 原 ±10 收紧;洛比云更易推 → 云 ±2 / 洛 ±4)
     {
       const delta = 新变量.洛书晴.顺从度 - 旧变量.洛书晴.顺从度;
-      const MAX = 10;
+      const MAX = 4;
       if (delta > MAX) {
         新变量.洛书晴.顺从度 = 旧变量.洛书晴.顺从度 + MAX;
         console.warn(`[状态验证] 洛书晴顺从度增幅过大(+${delta})，限制至 +${MAX}`);
