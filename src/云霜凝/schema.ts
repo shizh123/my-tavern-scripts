@@ -559,8 +559,6 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
-  // 后期反抗事件未读：null=无，否则为事件名（如 "千晶后苗喧求父"）
-  _苗喧未读反抗事件: z.string().nullable().prefault(null),
   // 倾诉按钮冷却结束楼层
   _倾诉冷却结束楼层: z.coerce
     .number()

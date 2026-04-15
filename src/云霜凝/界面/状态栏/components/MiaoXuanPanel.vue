@@ -31,12 +31,14 @@
         </button>
       </div>
 
-      <!-- 未读反抗事件红点 -->
-      <div v-if="store.data._苗喧未读反抗事件" class="unread-event">
-        <span class="unread-dot"></span>
-        <span class="unread-label">有新情况</span>
-        <button class="unread-view-btn" :disabled="isBusyInScenario" @click="onViewRebellion">
-          {{ isBusyInScenario ? '其他剧情中' : '查看详情' }}
+      <!-- 2.0.22 场景引擎 v2: 查看反抗按钮 (类倾诉·玩家手动触发·可重复) -->
+      <div class="actions">
+        <button class="action-btn rebel-btn" :disabled="!canRebel" @click="onRebel">
+          <template v-if="rebelCooldown > 0">反抗冷却中（{{ rebelCooldown }}楼）</template>
+          <template v-else-if="store.data.苗喧.绝望值 < 40">绝望不足（{{ store.data.苗喧.绝望值 }}/40）</template>
+          <template v-else-if="store.data._当前互动模式 === '神魂空间'">神魂空间中不可观看</template>
+          <template v-else-if="isBusyInScenario">其他剧情中</template>
+          <template v-else>查看反抗</template>
         </button>
       </div>
     </div>
@@ -95,18 +97,39 @@ function onVent() {
   triggerSlash('/send （听苗喧倾诉）|/trigger');
 }
 
-function onViewRebellion() {
-  const type = store.data._苗喧未读反抗事件;
-  if (!type) return;
-  // 其他多轮剧情进行中时不允许查看反抗事件
-  if (isBusyInScenario.value) return;
+// 2.0.22 场景引擎 v2: 后期反抗类倾诉机制
+const rebelCooldown = computed(() => {
+  const floor = getCurrentFloor();
+  return Math.max(0, store.data._反抗冷却结束楼层 - floor);
+});
+const canRebel = computed(
+  () =>
+    rebelCooldown.value <= 0 &&
+    store.data.苗喧.绝望值 >= 40 &&
+    !isBusyInScenario.value &&
+    store.data._当前互动模式 !== '神魂空间',
+);
+
+function onRebel() {
+  if (!canRebel.value) return;
   store.pull();
-  store.data._苗喧未读反抗事件 = null;
+  const floor = getCurrentFloor();
+  // 触发反抗场景四个副作用(spec 定稿):
+  //   1. 绝望值 -30(不清零 - 反抗失败绝望仍累积,区别于倾诉清零)
+  //   2. _反抗冷却结束楼层 = floor + 8(8 楼冷却,比倾诉 5 楼长:反抗副作用多)
+  //   3. _苗喧反抗限制中 = true(让孝敬师父按钮可点)
+  //   4. _打断冻结至楼层 = floor + 5(5 楼冻结治疗数值)
+  store.data.苗喧.绝望值 = Math.max(0, store.data.苗喧.绝望值 - 30);
+  store.data._反抗冷却结束楼层 = floor + 8;
+  store.data._苗喧反抗限制中 = true;
+  store.data._打断冻结至楼层 = floor + 5;
+  // 更新 _上次反抗快照(供下次反抗的 data card 参考)
+  store.data._上次反抗快照 = { 楼层: floor, 焦点简述: null };
   const existing = store.data._待发送道具事件;
-  const event = `__苗喧反抗_${type}__`;
+  const event = '__苗喧后期反抗__';
   store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
   store.flush();
-  triggerSlash('/send （查看苗喧的情况）|/trigger');
+  triggerSlash('/send （查看苗喧的反抗）|/trigger');
 }
 </script>
 
@@ -202,45 +225,15 @@ $c-sub: #a07080;
   }
 }
 
-.unread-event {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  background: rgba($c-gold, 0.12);
-  border-left: 2px solid $c-gold;
-  border-radius: 3px;
-}
-.unread-dot {
-  width: 8px;
-  height: 8px;
-  background: $c-gold;
-  border-radius: 50%;
-  animation: blink 1.5s infinite;
-}
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
+// 2.0.22 反抗按钮: 比倾诉按钮色调更沉/更暗,视觉上区分(反抗=绝望·失败)
+.rebel-btn {
+  background: rgba($c-red-dim, 0.3);
+  border-color: rgba($c-red, 0.55);
+  color: lighten($c-red, 15%);
+  margin-top: 6px;
+  &:hover:not(:disabled) {
+    background: rgba($c-red, 0.35);
   }
-  50% {
-    opacity: 0.3;
-  }
-}
-.unread-label {
-  color: $c-gold;
-  font-size: 12px;
-  flex: 1;
-}
-.unread-view-btn {
-  background: rgba($c-gold, 0.2);
-  border: 1px solid rgba($c-gold, 0.4);
-  color: $c-gold;
-  padding: 3px 8px;
-  border-radius: 3px;
-  font-size: 11px;
-  cursor: pointer;
 }
 
 .thought {
