@@ -1154,20 +1154,17 @@ export function useJingLingLing(data: SchemaType): { success: boolean; reason: s
 
   data._净灵铃上次使用楼层 = currentFloor;
 
+  // 2.0.22 场景引擎 v2: 统一 event 名 __净灵铃__, dispatch 内部按 d.苗广.心态 自主综合。
+  // 绿帽值 +5 仍按心态分支设置(前半程不加,后半程加),event 名不再按心态分 4 版。
   if (是后半程) {
-    // 后半程：+5绿帽值 + 苗广进入照顾
     data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 5);
-    const event = `__净灵铃_${心态}__`;
-    const existing = data._待发送道具事件;
-    data._待发送道具事件 = existing ? existing + '|||' + event : event;
-    console.info(`[商店] 净灵铃使用（后半程）：绿帽值 +5 → ${data.苗广.疑心值}，事件=${event}`);
+    console.info(`[商店] 净灵铃使用（后半程·${心态}）：绿帽值 +5 → ${data.苗广.疑心值}`);
   } else {
-    // 前半程：苗广正常进门查看，不加绿帽值
-    const event = '__净灵铃_前半程__';
-    const existing = data._待发送道具事件;
-    data._待发送道具事件 = existing ? existing + '|||' + event : event;
-    console.info(`[商店] 净灵铃使用（前半程）：苗广正常查看，不加疑心值`);
+    console.info(`[商店] 净灵铃使用（前半程·${心态}）：不加疑心值`);
   }
+  const event = '__净灵铃__';
+  const existing = data._待发送道具事件;
+  data._待发送道具事件 = existing ? existing + '|||' + event : event;
 
   return { success: true, reason: '' };
 }
