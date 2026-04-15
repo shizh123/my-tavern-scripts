@@ -584,14 +584,15 @@ export function validateAndRecalcState(
   // yaml 规则告诉 AI "每轮 +N"，这里给 1.5~2 倍 buffer 作为硬兜底
   // 正常 AI 输出不会撞 cap，玩家感觉不到；AI 乱输出 +15 会被截回
   {
-    // 信任度 ±8
+    // 信任度 ±2 (2.0.24: 原 ±8 涨速过快——玩家 30 楼就撞 100 cap,降到 ±2 控制节奏)
+    // 30 楼 = 15 轮 AI 回复,AI 每轮 +2 + 暖玉佩 +1 ≈ +45,初始 5 = 50,合理
     const trustDelta = 新变量.云霜凝.信任度 - 旧变量.云霜凝.信任度;
-    if (trustDelta > 8) {
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 + 8;
-      console.warn(`[delta cap] 信任度增幅 +${trustDelta} → +8`);
-    } else if (trustDelta < -8) {
-      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - 8;
-      console.warn(`[delta cap] 信任度降幅 ${trustDelta} → -8`);
+    if (trustDelta > 2) {
+      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 + 2;
+      console.warn(`[delta cap] 信任度增幅 +${trustDelta} → +2`);
+    } else if (trustDelta < -2) {
+      新变量.云霜凝.信任度 = 旧变量.云霜凝.信任度 - 2;
+      console.warn(`[delta cap] 信任度降幅 ${trustDelta} → -2`);
     }
   }
   {
