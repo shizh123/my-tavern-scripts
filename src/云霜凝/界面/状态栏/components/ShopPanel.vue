@@ -670,14 +670,14 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       price: 800,
       type: '特殊场景',
       desc: '5阶段·当面宣告占有',
-      unlockDesc: '阶段≥7，苗广≥默许，需装备透灵幔',
+      unlockDesc: '阶段≥7，苗广≥默许，需装备透灵幔，需完成夫前凌辱',
     },
     {
       name: '绿帽奴调教',
       price: 900,
       type: '特殊场景',
       desc: '6阶段·苗广被进一步调教',
-      unlockDesc: '阶段≥8，苗广=沉溺',
+      unlockDesc: '阶段≥7，苗广=沉溺，需完成寝取宣告，千晶未完成',
     },
     {
       name: '掌门改嫁',
@@ -706,7 +706,7 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       price: 900,
       type: '特殊场景',
       desc: '10阶段·洛书晴见证并参与宣告（增强版寝取宣告）',
-      unlockDesc: '洛书晴线已激活，洛≥6，云≥7，需先完成两人同侍',
+      unlockDesc: '洛书晴线已激活，洛≥6，云≥7，苗广≥默许，需装备透灵幔，需先完成两人同侍',
     },
     {
       name: '门缝春光',
