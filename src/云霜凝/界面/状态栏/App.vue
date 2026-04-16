@@ -89,11 +89,11 @@
           <div v-if="showSoulPicker" class="soul-picker-mask" @click.self="showSoulPicker = false">
             <div class="soul-picker-dialog">
               <div class="soul-picker-title">进入谁的神魂空间？</div>
-              <button class="soul-picker-opt" @click="enterSoulSpaceFor('云霜凝')">
+              <button class="soul-picker-opt" @click="enterSoulSpaceFor('云霜凝', true)">
                 <div class="soul-picker-name">云霜凝</div>
                 <div class="soul-picker-sub">霜雪意识空间</div>
               </button>
-              <button class="soul-picker-opt luo" @click="enterSoulSpaceFor('洛书晴')">
+              <button class="soul-picker-opt luo" @click="enterSoulSpaceFor('洛书晴', true)">
                 <div class="soul-picker-name">洛书晴</div>
                 <div class="soul-picker-sub">闺房意识空间</div>
               </button>
@@ -209,7 +209,11 @@ function handleEnterSoulClick() {
   enterSoulSpaceFor('云霜凝');
 }
 
-function enterSoulSpaceFor(role: '云霜凝' | '洛书晴') {
+// immediate=true: 立即 triggerSlash 发送进入 marker 让 AI 即刻描写(仅浮层点选用)
+// immediate=false: 仅入队事件,等玩家下一次发消息时 AI 才看到(激活前的直接进入)
+// 2.0.27 拆分:洛书晴激活前按钮只能进云霜凝,玩家更习惯自己开话题;
+//             激活后浮层点选是系统动作,需立即触发对称 exitSoulSpace。
+function enterSoulSpaceFor(role: '云霜凝' | '洛书晴', immediate: boolean = false) {
   if (!isLatestMessage()) return;
   showSoulPicker.value = false;
   store.pull();
@@ -231,9 +235,13 @@ function enterSoulSpaceFor(role: '云霜凝' | '洛书晴') {
     }
   }
   store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
-  store.data._系统操作中 = true;
+  if (immediate) {
+    store.data._系统操作中 = true;
+  }
   store.flush();
-  triggerSlash(`/send （进入${role}神魂空间）|/trigger`);
+  if (immediate) {
+    triggerSlash(`/send （进入${role}神魂空间）|/trigger`);
+  }
 }
 
 // 兼容占位：旧名称 enterSoulSpace 已合并进 handleEnterSoulClick
