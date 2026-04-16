@@ -636,14 +636,20 @@ $(() => {
             const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
             const actualRound = Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1;
 
-            // 2.0.20: 最后一轮注入引导后立即清场（同千晶幻术）
-            const isFinalRound = !_本楼跳过分阶段引导 && actualRound >= maxRounds;
+            // 2.0.27 修: 清场条件从 rewriteBeat 注入解耦。
+            // 原逻辑 isFinalRound 要求 !_本楼跳过分阶段引导,导致道具楼永远不触发最终轮清场;
+            // isOvershoot 要求 nominalRound 超过 maxRounds,但 reroll 时 cf 不变,
+            // 若玩家在最终轮卡 reroll(尤其是道具 reroll 重注入),场景永远不清。
+            // 改法: 达到最终轮就清场(强制);道具楼跳过 beat 注入但仍清场。
+            const 达到最终轮 = actualRound >= maxRounds;
             const isOvershoot = nominalRound > maxRounds;
+            const 应清场 = 达到最终轮 || isOvershoot;
+            const 可注入最终 beat = 达到最终轮 && !isOvershoot && !_本楼跳过分阶段引导;
 
-            if (isFinalRound || isOvershoot) {
-              // ── 注入最后一轮引导（仅 isFinalRound 情况，且未越界）──
+            if (应清场) {
+              // ── 注入最后一轮引导（非道具楼 + 未越界时才注入）──
               // v2(2.0.22): rewriteBeat 是玩家口吻"——主题+anchor",空格拼接融入玩家输入
-              if (isFinalRound && !isOvershoot) {
+              if (可注入最终 beat) {
                 const beat = getSpecialSceneRoundGuidance(sceneName, maxRounds);
                 if (beat) {
                   for (let i = chat.length - 1; i >= 0; i--) {
@@ -671,9 +677,13 @@ $(() => {
                 console.warn(
                   `[云霜凝] 特殊场景「${sceneName}」 nominalRound=${nominalRound} 越过 maxRounds=${maxRounds}，强制清场（兜底）`,
                 );
-              } else {
+              } else if (可注入最终 beat) {
                 console.info(
                   `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`,
+                );
+              } else {
+                console.info(
+                  `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮(道具楼)无 beat 注入,仍强制清场`,
                 );
               }
             } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
