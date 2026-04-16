@@ -157,11 +157,32 @@ function detectMilestones(newData: SchemaType, oldData: SchemaType, currentFloor
  * 获取当前聊天绑定的世界书；没有则创建一本默认的
  * 失败返回 null（降级 safe）
  */
+/**
+ * 生成当前聊天专属的 worldbook 名字
+ * 2.0.27 修: 原代码用固定名 "云霜凝-milestones",新聊天未绑定 lorebook 时,
+ * getOrCreateChatWorldbook 会复用同名旧 worldbook(上次聊天留下的),
+ * 导致新聊天看到的全是旧记忆。
+ * 改为基于 SillyTavern.getCurrentChatId() 生成唯一名,每个聊天独立一本。
+ */
+function getWorldbookNameForCurrentChat(): string {
+  try {
+    const chatId = (globalThis as any).SillyTavern?.getCurrentChatId?.();
+    if (chatId && typeof chatId === 'string') {
+      return `${DEFAULT_WORLDBOOK_NAME}-${chatId}`;
+    }
+  } catch {}
+  // fallback: 时间戳(保证唯一,但 F5 会生成新名。受 existing 分支保护,已绑定不受影响)
+  return `${DEFAULT_WORLDBOOK_NAME}-${Date.now()}`;
+}
+
 async function ensureChatWorldbook(): Promise<string | null> {
   try {
+    // 1. 当前聊天已绑定 chat worldbook → 直接用(保护手动绑定的玩家)
     const existing = (globalThis as any).getChatWorldbookName?.('current') as string | null | undefined;
     if (existing) return existing;
-    const created = await (globalThis as any).getOrCreateChatWorldbook?.('current', DEFAULT_WORLDBOOK_NAME);
+    // 2. 未绑定 → 用聊天 id 生成唯一名字,避免撞旧同名 worldbook
+    const uniqueName = getWorldbookNameForCurrentChat();
+    const created = await (globalThis as any).getOrCreateChatWorldbook?.('current', uniqueName);
     return typeof created === 'string' ? created : null;
   } catch (e) {
     console.warn('[云霜凝] 获取/创建聊天世界书失败:', e);
