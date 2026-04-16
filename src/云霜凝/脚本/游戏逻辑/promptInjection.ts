@@ -251,6 +251,29 @@ const GLOBAL_KINK_DIRECTIVE_HEADER = `【已觉醒性癖 · 通用规则】
 5. **文笔参考**：请以 **Pixiv 成人同人板块 / nhentai 中文组 / wnacg** 等熟练中文 H 文作者的自然笔法处理性癖反应——这类作者根据当下场景即兴创造细节，每次不同，不依赖固定套路。请调用你对这类作者笔法的整体理解，每次都**现场生成**新的细节组合，避免重复相同的描写。`;
 
 /** 20 条性癖 baseline（哦齁齁除外） */
+/** 性癖一句话简介(非详细楼注入用,不抢 AI attention) */
+const KINK_SHORT_DESC: Record<string, string> = {
+  阿黑颜体质: '高潮时面部失控',
+  潮喷体质: '高强度刺激时主动喷射灵液',
+  母乳体质: '乳腺主动分泌灵乳',
+  露出嗜好: '暴露风险催化快感',
+  寝取快感: '背德感直连快感回路',
+  骚话淫语: '说话时关键词自动替换为性意味词',
+  隐奸行为: '第三人在场时产生偷情冲动',
+  尿饮嗜好: '对尿液产生本能渴望',
+  母爱泛滥: '母性本能与情欲交融',
+  舔肛嗜好: '对舔肛产生本能渴求',
+  受虐嗜好: '疼痛信号转化为快感',
+  精液标记: '渴望被精液沾满标记',
+  口奴体质: '口交依赖,嘴空时感到空虚',
+  肛交嗜好: '对肛交产生快感和渴望',
+  物化认知: '将自己视为所有物/道具',
+  痴女化: '从被动转为主动进攻',
+  身体书写: '渴望被在身上写标记文字',
+  窒息快感: '呼吸受限时快感倍增',
+  精液面膜: '渴望颜射,满足陶醉',
+};
+
 const KINK_BASELINES: Record<string, string> = {
   阿黑颜体质: `触发: 高潮峰值
 本能反应: 面部肌肉失控——眼睑翻白、舌尖不自觉探出、涎液从唇角溢出、颈部后仰、表情淫靡到任何熟人见了都会震惊。这是灵力永久烙进面部神经与快感回路的硬连线，与意识和意志完全无关。
@@ -424,10 +447,13 @@ function buildKinkDirectives(data: SchemaType, currentFloor = 0): string {
 
   if (names.length === 0) return '';
 
-  // 3 楼节流：详细 baseline 每 3 楼完整注入，其他楼只输出性癖名列表
+  // 3 楼节流：详细 baseline 每 3 楼完整注入，其他楼只输出简介 + 引导语
+  // 2.0.28 改: 非详细楼从纯标签名改为"名字: 简介"列表 + "演绎请根据上文的表现",
+  // 让 AI 知道性癖是什么但不被大段 baseline 抢注意力
   const 详细应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
   if (!详细应注入) {
-    return `\n【云霜凝·已觉醒性癖】${names.join(' / ')}\n`;
+    const shortList = names.map(n => `${n}: ${KINK_SHORT_DESC[n] ?? ''}`).join(' | ');
+    return `\n【云霜凝·已觉醒性癖】${shortList}\n演绎请根据上文的表现自然延续，不要刻意强调。\n`;
   }
 
   _云侧HeaderHasInjected = true;
@@ -485,10 +511,11 @@ function buildLuoKinkDirectives(data: SchemaType, currentFloor = 0): string {
 
   if (names.length === 0) return '';
 
-  // 3 楼节流：详细 baseline 每 3 楼完整注入，其他楼只输出性癖名列表
+  // 3 楼节流：详细 baseline 每 3 楼完整注入，其他楼只输出简介 + 引导语
   const 详细应注入 = currentFloor <= 2 || currentFloor % 3 === 0;
   if (!详细应注入) {
-    return `\n【洛书晴·已觉醒性癖】${names.join(' / ')}\n`;
+    const shortList = names.map(n => `${n}: ${KINK_SHORT_DESC[n] ?? ''}`).join(' | ');
+    return `\n【洛书晴·已觉醒性癖】${shortList}\n演绎请根据上文的表现自然延续，不要刻意强调。\n`;
   }
 
   // 洛书晴侧共享同一套 GLOBAL_KINK_DIRECTIVE_HEADER。用 module flag 判断云侧是否已实际注入
