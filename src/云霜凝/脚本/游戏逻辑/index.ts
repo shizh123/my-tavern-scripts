@@ -644,12 +644,12 @@ $(() => {
             const 达到最终轮 = actualRound >= maxRounds;
             const isOvershoot = nominalRound > maxRounds;
             const 应清场 = 达到最终轮 || isOvershoot;
-            const 可注入最终 beat = 达到最终轮 && !isOvershoot && !_本楼跳过分阶段引导;
+            const 可注入最终beat = 达到最终轮 && !isOvershoot && !_本楼跳过分阶段引导;
 
             if (应清场) {
               // ── 注入最后一轮引导（非道具楼 + 未越界时才注入）──
               // v2(2.0.22): rewriteBeat 是玩家口吻"——主题+anchor",空格拼接融入玩家输入
-              if (可注入最终 beat) {
+              if (可注入最终beat) {
                 const beat = getSpecialSceneRoundGuidance(sceneName, maxRounds);
                 if (beat) {
                   for (let i = chat.length - 1; i >= 0; i--) {
@@ -677,7 +677,7 @@ $(() => {
                 console.warn(
                   `[云霜凝] 特殊场景「${sceneName}」 nominalRound=${nominalRound} 越过 maxRounds=${maxRounds}，强制清场（兜底）`,
                 );
-              } else if (可注入最终 beat) {
+              } else if (可注入最终beat) {
                 console.info(
                   `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`,
                 );
