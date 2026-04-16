@@ -3596,8 +3596,7 @@ ${getQianjingBottomLine()}
     // 2.0.26 修: 按 _当前神魂空间角色 分流 + 双人神魂空间识别
     // (原代码不论云/洛都强制注入云霜凝霜雾环境;且排他声明在双人模式下与 AI JSONPatch
     //  set 的对方 _当前场景角色=true 直接矛盾)
-    const isCompanion =
-      data._当前场景角色.云霜凝 && data._当前场景角色.洛书晴 && data._洛书晴线已激活;
+    const isCompanion = data._当前场景角色.云霜凝 && data._当前场景角色.洛书晴 && data._洛书晴线已激活;
     if (data._当前神魂空间角色 === '洛书晴') {
       const sceneLine = isCompanion
         ? `本场景：洛书晴（空间主人）+ 云霜凝（被邀请进入，作为客人）+ {{user}}。苗广/苗喧均不出场也不知情。云霜凝出现在洛书晴的闺房中，描写两人在此空间内的对话与互动。`

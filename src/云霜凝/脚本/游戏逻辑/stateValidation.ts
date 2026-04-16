@@ -1192,10 +1192,30 @@ export function validateAndRecalcState(
       sentMax = parseInt(sessionStorage.getItem(SS_KEY) ?? '0', 10) || 0;
     } catch {}
     const HINTS: Array<{ threshold: number; level: 'info' | 'warning' | 'error'; title: string; body: string }> = [
-      { threshold: 30, level: 'info', title: '云霜凝·提示', body: '⚠ 苗广疑心值已升至 30。建议尽早谋划，将其疑心转化为绿帽值。' },
-      { threshold: 40, level: 'info', title: '云霜凝·警告', body: '⚠⚠ 苗广疑心值已达 40。转化窗口正在收紧，请尽快行动。' },
-      { threshold: 50, level: 'warning', title: '云霜凝·紧急警告', body: '⚠⚠⚠ 苗广疑心值已突破 50！心态进入"察觉"，立刻寻机将疑心转化为绿帽值！' },
-      { threshold: 60, level: 'error', title: '云霜凝·危急', body: '🚨 苗广疑心值已突破 60！愤怒一触即发，再不转化必致坏结局（70+）！' },
+      {
+        threshold: 30,
+        level: 'info',
+        title: '云霜凝·提示',
+        body: '⚠ 苗广疑心值已升至 30。建议尽早谋划，将其疑心转化为绿帽值。',
+      },
+      {
+        threshold: 40,
+        level: 'info',
+        title: '云霜凝·警告',
+        body: '⚠⚠ 苗广疑心值已达 40。转化窗口正在收紧，请尽快行动。',
+      },
+      {
+        threshold: 50,
+        level: 'warning',
+        title: '云霜凝·紧急警告',
+        body: '⚠⚠⚠ 苗广疑心值已突破 50！心态进入"察觉"，立刻寻机将疑心转化为绿帽值！',
+      },
+      {
+        threshold: 60,
+        level: 'error',
+        title: '云霜凝·危急',
+        body: '🚨 苗广疑心值已突破 60！愤怒一触即发，再不转化必致坏结局（70+）！',
+      },
     ];
     for (const h of HINTS) {
       if (oldSusp < h.threshold && newSusp >= h.threshold && sentMax < h.threshold) {
