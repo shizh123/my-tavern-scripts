@@ -12,6 +12,9 @@ function clearAllPhaseDelays(d: SchemaType): void {
 /** 上次疑心值增长的楼层（防止重新生成时重复叠加） */
 let _lastSuspicionFloor = -1;
 
+/** 上次打断惩罚疑心值涨的楼层（防止打断楼 reroll 累加导致快速 GG） */
+let _lastInterruptFloor = -1;
+
 /** 上次苗喧绝望值被动涨的楼层 */
 let _lastMiaoXuanPassiveFloor = -1;
 /** 上次苗喧压抑值涨的楼层 */
@@ -693,11 +696,18 @@ export function validateAndRecalcState(
         // v2: 清零所有分阶段引导延后字段（进行中的场景被打断治疗强制中断）
         clearAllPhaseDelays(新变量);
         // 疑心值惩罚：察觉心态+8，其他+5
-        const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
-        新变量.苗广.疑心值 += suspicionPenalty;
-        console.warn(
-          `[状态验证] 打断触发疑心值惩罚 +${suspicionPenalty}（心态=${心态}），当前疑心值=${新变量.苗广.疑心值}`,
-        );
+        // 楼层去重：同一打断楼 reroll 时不重复叠加(防止 reroll 多次直接 GG)
+        // 其他打断副作用(冻结至楼层/事件 push/模式切换)幂等,reroll 重设无害,不在此守卫内
+        if (currentFloor !== undefined && currentFloor === _lastInterruptFloor) {
+          console.info(`[状态验证] 打断重 roll：楼层${currentFloor}已加过疑心值，跳过`);
+        } else {
+          if (currentFloor !== undefined) _lastInterruptFloor = currentFloor;
+          const suspicionPenalty = 心态 === '察觉' ? 8 : 5;
+          新变量.苗广.疑心值 += suspicionPenalty;
+          console.warn(
+            `[状态验证] 打断触发疑心值惩罚 +${suspicionPenalty}（心态=${心态}），当前疑心值=${新变量.苗广.疑心值}`,
+          );
+        }
         // 打断触发时捕获治疗数值基线（冻结期间用作回滚基准）
         freezeBaseline = {
           信任度: 新变量.云霜凝.信任度,
@@ -1168,6 +1178,38 @@ export function validateAndRecalcState(
       }
     }
     // 日常 / 现实互动自由模式（!新神魂 && !新场景）：完全放行 AI 的 JSONPatch 修改
+  }
+
+  // ── 12. 绿帽值转换提醒（疑心值跨阈值弹 toast） ────────
+  // 仅前半程(蚀心露屈辱未触发)生效;sessionStorage 去重,纯 UI 提示不入 mvu(避免污染 AI 数据)
+  // 一次只发跨越的最低档,防止疑心值一口气跨多档时弹多个 toast
+  if (!新变量._已触发蚀心露屈辱 && 新变量.苗广.疑心值 > 旧变量.苗广.疑心值) {
+    const oldSusp = 旧变量.苗广.疑心值;
+    const newSusp = 新变量.苗广.疑心值;
+    const SS_KEY = '云霜凝_绿帽提醒最高阈值';
+    let sentMax = 0;
+    try {
+      sentMax = parseInt(sessionStorage.getItem(SS_KEY) ?? '0', 10) || 0;
+    } catch {}
+    const HINTS: Array<{ threshold: number; level: 'info' | 'warning' | 'error'; title: string; body: string }> = [
+      { threshold: 30, level: 'info', title: '云霜凝·提示', body: '⚠ 苗广疑心值已升至 30。建议尽早谋划，将其疑心转化为绿帽值。' },
+      { threshold: 40, level: 'info', title: '云霜凝·警告', body: '⚠⚠ 苗广疑心值已达 40。转化窗口正在收紧，请尽快行动。' },
+      { threshold: 50, level: 'warning', title: '云霜凝·紧急警告', body: '⚠⚠⚠ 苗广疑心值已突破 50！心态进入"察觉"，立刻寻机将疑心转化为绿帽值！' },
+      { threshold: 60, level: 'error', title: '云霜凝·危急', body: '🚨 苗广疑心值已突破 60！愤怒一触即发，再不转化必致坏结局（70+）！' },
+    ];
+    for (const h of HINTS) {
+      if (oldSusp < h.threshold && newSusp >= h.threshold && sentMax < h.threshold) {
+        try {
+          sessionStorage.setItem(SS_KEY, String(h.threshold));
+        } catch {}
+        try {
+          const _top = (window.parent ?? window) as any;
+          _top.toastr?.[h.level]?.(h.body, h.title, { timeOut: 12000, extendedTimeOut: 5000 });
+        } catch {}
+        console.info(`[状态验证] 绿帽值提醒触发: 疑心值跨越 ${h.threshold}`);
+        break;
+      }
+    }
   }
 
   // 返回 freezeBaseline（新创建或透传），由 index.ts 管理生命周期

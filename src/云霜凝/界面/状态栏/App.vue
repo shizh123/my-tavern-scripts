@@ -216,6 +216,9 @@ function enterSoulSpaceFor(role: '云霜凝' | '洛书晴') {
   store.data._当前神魂空间角色 = role;
   store.data._当前互动模式 = '神魂空间';
   store.data._神魂空间激活中 = true;
+  // 显式锁定 _当前场景角色，不依赖 stateValidation 后置兜底
+  // (历史 bug:某些事件链下 stateValidation 未跑/时序错位,actorLine 残留旧值)
+  store.data._当前场景角色 = { 云霜凝: role === '云霜凝', 洛书晴: role === '洛书晴' };
   const existing = store.data._待发送道具事件;
   // 洛书晴首次进入尚未激活线时触发第一次激活剧情
   let event = '__神魂空间入口__';
@@ -228,7 +231,9 @@ function enterSoulSpaceFor(role: '云霜凝' | '洛书晴') {
     }
   }
   store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
+  store.data._系统操作中 = true;
   store.flush();
+  triggerSlash(`/send （进入${role}神魂空间）|/trigger`);
 }
 
 // 兼容占位：旧名称 enterSoulSpace 已合并进 handleEnterSoulClick
