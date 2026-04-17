@@ -1211,9 +1211,24 @@ export function validateAndRecalcState(
       title: string;
       body: string;
     }> = [
-      { threshold: 30, level: 'info', title: '云霜凝·提示', body: '⚠ 苗广开始起疑。建议尽早谋划，设法将其疑心转化为绿帽值。' },
-      { threshold: 40, level: 'info', title: '云霜凝·警告', body: '⚠⚠ 苗广疑心持续累积。转化窗口正在收紧，请尽快行动。' },
-      { threshold: 50, level: 'warning', title: '云霜凝·紧急警告', body: '⚠⚠⚠ 苗广疑心已到关键节点！立刻寻机将疑心转化为绿帽值，错过此时机将极难挽回。' },
+      {
+        threshold: 30,
+        level: 'info',
+        title: '云霜凝·提示',
+        body: '⚠ 苗广开始起疑。建议尽早谋划，设法将其疑心转化为绿帽值。',
+      },
+      {
+        threshold: 40,
+        level: 'info',
+        title: '云霜凝·警告',
+        body: '⚠⚠ 苗广疑心持续累积。转化窗口正在收紧，请尽快行动。',
+      },
+      {
+        threshold: 50,
+        level: 'warning',
+        title: '云霜凝·紧急警告',
+        body: '⚠⚠⚠ 苗广疑心已到关键节点！立刻寻机将疑心转化为绿帽值，错过此时机将极难挽回。',
+      },
       { threshold: 60, level: 'error', title: '云霜凝·危急', body: '🚨 危急！苗广愤怒一触即发，再不转化必致坏结局！' },
     ];
     for (const h of HINTS) {
