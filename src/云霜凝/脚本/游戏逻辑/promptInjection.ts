@@ -4116,8 +4116,15 @@ const itemEventMap: Record<string, (d: SchemaType) => string> = {
   // 洛书晴神魂空间入口（激活后的重复进入——首次进入走 __洛书晴激活剧情_轮1__ 的 5 轮剧情）
   __神魂空间入口_洛书晴__: () => `【进入洛书晴神魂空间】`,
 
-  // 退出神魂空间：极简 marker，AI 按角色和上下文自然描写回归现实
-  __退出神魂空间__: d => (d._当前神魂空间角色 === '洛书晴' ? `【退出洛书晴神魂空间】` : `【退出云霜凝神魂空间】`),
+  // 退出神魂空间：marker + 记忆场景身份隔离声明(双保险,入口端 getSoulMemorySnippet 已声明一次)
+  __退出神魂空间__: d => {
+    const label = d._当前神魂空间角色 === '洛书晴' ? '洛书晴' : '云霜凝';
+    const base = `【退出${label}神魂空间】`;
+    if (d._神魂记忆场景) {
+      return `${base} 记忆场景「${d._神魂记忆场景}」结束。回到现实——记忆中的称呼、身份、时代背景到此为止，${label}恢复为当前时代的身份和自称。`;
+    }
+    return base;
+  },
 
   // ── 地仙境突破 (v2 · 场景引擎 AI-first · 2.0.22) ──
   // 只给约束/原则/禁止,所有具体表达由 AI 按 data card 自主生成。
@@ -4226,7 +4233,10 @@ export function selectSoulMemory(data: SchemaType): void {
 function getSoulMemorySnippet(data: SchemaType): string {
   const memory = data._神魂记忆场景;
   if (!memory || !SOUL_MEMORY_POOL[memory]) return '';
-  return `\n⟨记忆场景⟩ ${SOUL_MEMORY_POOL[memory]}\n`;
+  // 2.0.28: 记忆场景隔离声明,防止记忆中的称呼/身份泄漏到现实
+  // (Prompt Cache 摘要可能永久保留记忆内容,声明会一起被摘要保留)
+  return `\n⟨记忆场景⟩ ${SOUL_MEMORY_POOL[memory]}
+【记忆场景隔离】以上是云霜凝三百年前的记忆片段,仅在当前神魂空间内有效。记忆中的称呼、身份、时代背景仅限本场景,退出神魂空间后云霜凝恢复为当前时代的身份,不得沿用记忆中的自称或称谓。\n`;
 }
 
 // ────────────────────────────────────────────
