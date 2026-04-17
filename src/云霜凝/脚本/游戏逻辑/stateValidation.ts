@@ -1198,36 +1198,18 @@ export function validateAndRecalcState(
     try {
       sentMax = parseInt(sessionStorage.getItem(SS_KEY) ?? '0', 10) || 0;
     } catch {}
+    // 2.0.29 改: 文案去掉具体数值(toast 显示值和游戏 UI 不一致混淆玩家)。
+    // 改为 4 档纯状态描述递进: 起疑 → 累积 → 察觉 → 危急。
     const HINTS: Array<{
       threshold: number;
       level: 'info' | 'warning' | 'error';
       title: string;
-      bodyTpl: (n: number) => string;
+      body: string;
     }> = [
-      {
-        threshold: 30,
-        level: 'info',
-        title: '云霜凝·提示',
-        bodyTpl: n => `⚠ 苗广疑心值跨越 30（当前 ${n}）。建议尽早谋划，将其疑心转化为绿帽值。`,
-      },
-      {
-        threshold: 40,
-        level: 'info',
-        title: '云霜凝·警告',
-        bodyTpl: n => `⚠⚠ 苗广疑心值跨越 40（当前 ${n}）。转化窗口正在收紧，请尽快行动。`,
-      },
-      {
-        threshold: 50,
-        level: 'warning',
-        title: '云霜凝·紧急警告',
-        bodyTpl: n => `⚠⚠⚠ 苗广疑心值跨越 50（当前 ${n}）！心态进入"察觉"，立刻寻机将疑心转化为绿帽值！`,
-      },
-      {
-        threshold: 60,
-        level: 'error',
-        title: '云霜凝·危急',
-        bodyTpl: n => `🚨 苗广疑心值跨越 60（当前 ${n}）！愤怒一触即发，再不转化必致坏结局（70+）！`,
-      },
+      { threshold: 30, level: 'info', title: '云霜凝·提示', body: '⚠ 苗广开始起疑。建议尽早谋划，设法将其疑心转化为绿帽值。' },
+      { threshold: 40, level: 'info', title: '云霜凝·警告', body: '⚠⚠ 苗广疑心持续累积。转化窗口正在收紧，请尽快行动。' },
+      { threshold: 50, level: 'warning', title: '云霜凝·紧急警告', body: '⚠⚠⚠ 苗广疑心已到关键节点！立刻寻机将疑心转化为绿帽值，错过此时机将极难挽回。' },
+      { threshold: 60, level: 'error', title: '云霜凝·危急', body: '🚨 危急！苗广愤怒一触即发，再不转化必致坏结局！' },
     ];
     for (const h of HINTS) {
       if (oldSusp < h.threshold && newSusp >= h.threshold && sentMax < h.threshold) {
@@ -1236,7 +1218,7 @@ export function validateAndRecalcState(
         } catch {}
         try {
           const _top = (window.parent ?? window) as any;
-          _top.toastr?.[h.level]?.(h.bodyTpl(newSusp), h.title, { timeOut: 12000, extendedTimeOut: 5000 });
+          _top.toastr?.[h.level]?.(h.body, h.title, { timeOut: 12000, extendedTimeOut: 5000 });
         } catch {}
         console.info(`[状态验证] 绿帽值提醒触发: 疑心值跨越 ${h.threshold}(${oldSusp}→${newSusp})`);
         break;
