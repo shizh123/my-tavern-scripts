@@ -506,6 +506,11 @@ export function validateAndRecalcState(
           极露: 4,
         };
         increment += exposureBonus[暴露] ?? 0;
+
+        // 后半程阶段系数：屈辱×0.8 / 默许×0.5 / 沉溺×0.2
+        // 进入绿帽值阶段后,羞辱感随心态递减,推进边际递减
+        const 阶段系数 = 心态 === '沉溺' ? 0.2 : 心态 === '默许' ? 0.5 : 0.8;
+        increment = Math.round(increment * 阶段系数);
       } else {
         // ── 前半程：疑心值增长（风险管理）──
         if (有隔音) {
@@ -539,8 +544,9 @@ export function validateAndRecalcState(
         } else {
           if (currentFloor !== undefined) _lastSuspicionFloor = currentFloor;
           新变量.苗广.疑心值 = Math.min(100, 新变量.苗广.疑心值 + increment);
+          const 阶段标记 = 是后半程 ? `(${心态}段)` : '';
           console.info(
-            `[状态验证] 治疗互动 → ${是后半程 ? '绿帽值' : '疑心值'} +${increment}${新变量._当前互动模式 === '神魂空间' ? '(神魂×0.3)' : ''} → ${新变量.苗广.疑心值}`,
+            `[状态验证] 治疗互动 → ${是后半程 ? '绿帽值' : '疑心值'} +${increment}${阶段标记}${新变量._当前互动模式 === '神魂空间' ? '(神魂×0.3)' : ''} → ${新变量.苗广.疑心值}`,
           );
         }
       }
