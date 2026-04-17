@@ -1845,6 +1845,19 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       continue;
     }
 
+    // BUG 2 防绕过: target=洛书晴 时必须通过洛书晴侧 unlock 校验
+    // (isUnlocked 用 "云 || 洛" 合并,云霜凝满足就解锁按钮,选 target=洛书晴 时此处二次校验)
+    if (target === '洛书晴' && !meetsLuoUnlock(name)) {
+      showToast(`洛书晴未满足「${name}」的前置条件`, 'err');
+      continue;
+    }
+
+    // BUG 1 防降级: 体改道具按等级单调递增,不允许降级或重复应用
+    if (item.type === '体改' && name !== '淫纹刻印' && !canApplyBodyMod(name, target)) {
+      showToast(`「${name}」对${target}不适用(已达或超过此等级)`, 'err');
+      continue;
+    }
+
     // 二次检查：冷却 + 神魂空间
     const activation = checkActivate(name);
     if (!activation.allowed) {
@@ -2041,15 +2054,23 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
 // 肉体改造单向不可卸清单（严格物理改造，只能升级/永久生效）
 const IRREVERSIBLE_BODY_MODS = new Set<string>(['丰胸灵乳丹·中', '丰胸灵乳丹·大', '丰胸灵乳丹·极', '丰臀圆玉丹']);
 
-/** 云霜凝是否已拥有（体改/性癖/淫纹） */
+// 胸部等级序列(升级单调,不可降级)
+const BREAST_RANK: Record<string, number> = { 默认: 0, E罩杯: 1, G罩杯: 2, H罩杯: 3 };
+const BODY_MOD_BREAST_RANK: Record<string, number> = {
+  '丰胸灵乳丹·中': 1,
+  '丰胸灵乳丹·大': 2,
+  '丰胸灵乳丹·极': 3,
+};
+
+/** 云霜凝是否已拥有(体改/性癖/淫纹) - 丰胸丹用精确等级判据,只有当前罩杯==该丹效果时标"已有" */
 function isYunOwned(name: string): boolean {
   const d = store.data;
   if (KINK_EFFECTS[name]) return KINK_EFFECTS[name].name in d.云霜凝.性癖列表;
   switch (name) {
     case '丰胸灵乳丹·中':
-      return d.云霜凝.肉体改造.胸部 !== '默认';
+      return d.云霜凝.肉体改造.胸部 === 'E罩杯';
     case '丰胸灵乳丹·大':
-      return ['G罩杯', 'H罩杯'].includes(d.云霜凝.肉体改造.胸部);
+      return d.云霜凝.肉体改造.胸部 === 'G罩杯';
     case '丰胸灵乳丹·极':
       return d.云霜凝.肉体改造.胸部 === 'H罩杯';
     case '丰臀圆玉丹':
@@ -2063,16 +2084,16 @@ function isYunOwned(name: string): boolean {
   }
 }
 
-/** 洛书晴是否已拥有（体改/性癖/淫纹；线未激活视为 false） */
+/** 洛书晴是否已拥有(体改/性癖/淫纹;线未激活视为 false) - 丰胸丹精确判据同云霜凝 */
 function isLuoOwned(name: string): boolean {
   const d = store.data;
   if (!d._洛书晴线已激活) return false;
   if (KINK_EFFECTS[name]) return KINK_EFFECTS[name].name in d.洛书晴.性癖列表;
   switch (name) {
     case '丰胸灵乳丹·中':
-      return d.洛书晴.肉体改造.胸部 !== '默认';
+      return d.洛书晴.肉体改造.胸部 === 'E罩杯';
     case '丰胸灵乳丹·大':
-      return ['G罩杯', 'H罩杯'].includes(d.洛书晴.肉体改造.胸部);
+      return d.洛书晴.肉体改造.胸部 === 'G罩杯';
     case '丰胸灵乳丹·极':
       return d.洛书晴.肉体改造.胸部 === 'H罩杯';
     case '丰臀圆玉丹':
@@ -2084,6 +2105,102 @@ function isLuoOwned(name: string): boolean {
     default:
       return false;
   }
+}
+
+// 服装/特殊配饰 纯阶段门槛表 — 洛书晴解锁按 洛书晴.调教阶段,和 stageGate 里的数字对齐
+const LUO_STAGE_GATE_ONLY: Record<string, number> = {
+  // stage 3
+  素色道袍: 3, 宽领道袍: 3, 百褶长裙: 3, 开叉长裙: 3, 丝绸抹胸: 3, 蕾丝胸衣: 3, 丝绸亵裤: 3, 蕾丝内裤: 3, 脚链铃铛: 3, 红绳: 3,
+  // stage 4
+  轻纱罩衫: 4, 露肩薄衫: 4, 灵纱短裙: 4, 高开叉裙: 4, 半杯胸衣: 4, 情趣胸衣: 4, 蝴蝶结系带裤: 4, 丁字裤: 4, 大腿皮环: 4, 乳环挂饰: 4,
+  // stage 5
+  交领短衫: 5, 肚兜: 5, 灵纱超短裙: 5, 腰链遮片: 5, 镂空胸衣: 5, 乳贴: 5, 珍珠内裤: 5, 开裆内裤: 5, 精液项链: 5, 阴蒂夹坠: 5,
+  // stage 7
+  绑带胸衣: 7, 镂空纱衣: 7, 系带围裙: 7, 透纱长裙: 7, 透明胸纱: 7, 链式乳饰: 7, 系带丁字裤: 7, 透明蕾丝裤: 7, 名字阴环: 7, 精液耳坠: 7,
+  // stage 9
+  乳贴缎带: 9, 锁链胸饰: 9, 腰链吊坠: 9, 灵纱飘带: 9, 乳环吊链: 9, 灵纹乳贴: 9, 链饰丁字裤: 9, 灵纹系带: 9, 子宫纹章: 9, 双穴珠链: 9,
+};
+
+/**
+ * 洛书晴侧 per-item 解锁校验 — 用于 target='洛书晴' 时防"云条件满足但洛书晴阶段不够"绕过。
+ * 现有 isUnlocked 用 (云条件 || 洛条件) 合并判解锁,玩家云霜凝阶段足够就能看到按钮,
+ * 选 target=洛书晴 时没有二次校验 → 洛书晴阶段 1 也能装载阶段 4+ 的道具。
+ * 此函数对所有共用道具单独校验洛书晴分支(内容与 conds 右半部一致)。
+ */
+function meetsLuoUnlock(name: string): boolean {
+  const d = store.data;
+  if (!d._洛书晴线已激活) return false;
+  const s = d.洛书晴.调教阶段;
+  const c = d.洛书晴;
+  // 服装/特殊配饰 纯阶段门槛
+  if (name in LUO_STAGE_GATE_ONLY) return s >= LUO_STAGE_GATE_ONLY[name];
+  switch (name) {
+    // 身体器具(共用)— 洛书晴版用 顺从度 对标云霜凝 信任度
+    case '眼罩': return s >= 3 && c.心理防线 <= 70 && c.顺从度 >= 15;
+    case '乳夹': return c.心理防线 <= 65 && c.身体开发.胸部 >= 40 && c.顺从度 >= 25;
+    case '口枷': return c.心理防线 <= 65 && c.身体开发.小嘴 >= 40 && c.顺从度 >= 25;
+    case '肛塞': return c.心理防线 <= 60 && c.身体开发.屁穴 >= 40 && c.顺从度 >= 20;
+    case '缚灵缎': return c.心理防线 <= 60 && c.顺从度 >= 30;
+    case '震动器': return c.心理防线 <= 50 && c.身体开发.小屄 >= 50 && c.顺从度 >= 35;
+    // 体改(共用)
+    case '丰胸灵乳丹·中': return s >= 3 && c.身体开发.胸部 >= 30;
+    case '丰胸灵乳丹·大': return s >= 4 && c.身体开发.胸部 >= 50;
+    case '丰胸灵乳丹·极': return s >= 6 && c.身体开发.胸部 >= 70;
+    case '丰臀圆玉丹': return s >= 3 && c.身体开发.屁穴 >= 30;
+    case '乳环': return s >= 4 && c.身体开发.胸部 >= 40;
+    case '阴环': return s >= 4 && c.身体开发.小屄 >= 40;
+    case '淫纹刻印': return s >= 4 && c.心理防线 <= 50;
+    case '肉棒口罩': return s >= 5 && c.身体开发.小嘴 >= 40;
+    // 性癖(共用 20 项)
+    case '阿黑颜体质': return s >= 3 && c.心理防线 <= 50;
+    case '潮喷体质': return s >= 4 && c.身体开发.小屄 >= 60;
+    case '母乳体质': return s >= 4 && c.身体开发.胸部 >= 50;
+    case '露出嗜好': return s >= 3 && c.心理防线 <= 50;
+    case '寝取快感': {
+      const 苗广ok = ['察觉', '屈辱', '默许', '沉溺'].includes(d.苗广.心态);
+      return 苗广ok && s >= 5 && c.心理防线 <= 30;
+    }
+    case '哦齁齁体质': return s >= 5 && c.心理防线 <= 20;
+    case '骚话淫语': return s >= 4 && c.心理防线 <= 40;
+    case '隐奸行为': {
+      const 苗广ok = ['察觉', '屈辱', '默许', '沉溺'].includes(d.苗广.心态);
+      return 苗广ok && s >= 4 && c.心理防线 <= 40;
+    }
+    case '尿饮嗜好': return s >= 5 && c.心理防线 <= 20 && c.身体开发.小嘴 >= 40;
+    case '母爱泛滥': return s >= 4 && c.心理防线 <= 30;
+    case '舔肛嗜好': return s >= 4 && c.身体开发.屁穴 >= 40 && c.心理防线 <= 40;
+    case '受虐嗜好': return s >= 4 && c.心理防线 <= 40;
+    case '精液标记': return s >= 4 && c.心理防线 <= 30;
+    case '口奴体质': return s >= 4 && c.身体开发.小嘴 >= 50 && c.心理防线 <= 30;
+    case '肛交嗜好': return s >= 4 && c.身体开发.屁穴 >= 50 && c.心理防线 <= 40;
+    case '物化认知': return s >= 6 && c.心理防线 <= 15;
+    case '痴女化': return s >= 5 && c.心理防线 <= 25;
+    case '身体书写': return s >= 4 && c.心理防线 <= 30;
+    case '窒息快感': return s >= 5 && c.心理防线 <= 30;
+    case '精液面膜': return s >= 4 && c.心理防线 <= 30;
+    // 洛书晴专属消耗品(线已激活 + 阶段<=2)
+    case '安抚符': return s <= 2;
+    case '真心符': return s <= 2;
+    // 云霜凝专属道具(蚀心露/定心符/混沌珠/神魂共鸣石/安神香/锚神钉/影绰纱帘/透灵幔/隔音灵阵/净灵铃)
+    // 不应用于洛书晴,返回 false
+  }
+  return false;
+}
+
+/** 体改丹是否可应用到指定角色 — 防降级/重复应用。丰胸丹按等级单调递增;其他体改若已有则拒绝 */
+function canApplyBodyMod(name: string, target: '云霜凝' | '洛书晴'): boolean {
+  const d = store.data;
+  if (target === '洛书晴' && !d._洛书晴线已激活) return false;
+  const mod = target === '云霜凝' ? d.云霜凝.肉体改造 : d.洛书晴.肉体改造;
+  const breastRank = BODY_MOD_BREAST_RANK[name];
+  if (breastRank !== undefined) {
+    const currentRank = BREAST_RANK[mod.胸部] ?? 0;
+    return breastRank > currentRank; // 只允许升级
+  }
+  if (name === '丰臀圆玉丹') return mod.臀部 === '默认';
+  if (name === '乳环') return !mod.乳环;
+  if (name === '阴环') return !mod.阴环;
+  return true; // 非体改丹或未知,交给其他判据
 }
 
 /** 云霜凝是否正在使用（服装/身体器具/装备类） */
@@ -2168,11 +2285,11 @@ function buildEquipDialogActions(item: ItemDef): EquipDialogAction[] {
     } else {
       actions.push({ label: '装备给云霜凝', target: '云霜凝', action: 'equip' });
     }
-    // 洛书晴：仅共用道具 + 线已激活 才显示
+    // 洛书晴：仅共用道具 + 线已激活 + 洛书晴侧满足前置条件才显示
     if (isShared && luoActive) {
       if (luoU) {
         actions.push({ label: '卸下洛书晴', target: '洛书晴', action: 'unequip' });
-      } else {
+      } else if (meetsLuoUnlock(name)) {
         actions.push({ label: '装备给洛书晴', target: '洛书晴', action: 'equip' });
       }
     }
@@ -2180,17 +2297,20 @@ function buildEquipDialogActions(item: ItemDef): EquipDialogAction[] {
     // 用 owned 状态
     const yunO = isYunOwned(name);
     const luoO = isLuoOwned(name);
+    // 体改单向道具: isYunOwned 已改为"精确当前等级",yunO=false 时也可能因为降级/重复应用而不该 push
+    // → 用 canApplyBodyMod 做防降级过滤;性癖无此问题
+    const isBodyMod = item.type === '体改';
     // 云霜凝
     if (yunO) {
       if (!irreversible) actions.push({ label: '卸下云霜凝', target: '云霜凝', action: 'unequip' });
-    } else {
+    } else if (!isBodyMod || canApplyBodyMod(name, '云霜凝')) {
       actions.push({ label: '应用到云霜凝', target: '云霜凝', action: 'equip' });
     }
     // 洛书晴
     if (isShared && luoActive) {
       if (luoO) {
         if (!irreversible) actions.push({ label: '卸下洛书晴', target: '洛书晴', action: 'unequip' });
-      } else {
+      } else if ((!isBodyMod || canApplyBodyMod(name, '洛书晴')) && meetsLuoUnlock(name)) {
         actions.push({ label: '应用到洛书晴', target: '洛书晴', action: 'equip' });
       }
     }
@@ -2237,6 +2357,18 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
   const activation = checkActivate(name);
   if (!activation.allowed) {
     showToast(`「${name}」${activation.reason}`, 'err');
+    return;
+  }
+
+  // BUG 2 防绕过: target=洛书晴 时二次校验洛书晴侧 unlock
+  if (target === '洛书晴' && !meetsLuoUnlock(name)) {
+    showToast(`洛书晴未满足「${name}」的前置条件`, 'err');
+    return;
+  }
+
+  // BUG 1 防降级: 体改道具按等级单调递增
+  if (item.type === '体改' && name !== '淫纹刻印' && !canApplyBodyMod(name, target)) {
+    showToast(`「${name}」对${target}不适用(已达或超过此等级)`, 'err');
     return;
   }
 
