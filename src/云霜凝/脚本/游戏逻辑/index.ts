@@ -744,6 +744,19 @@ $(() => {
           const isInterruption =
             items.includes('__打断治疗__') || items.includes('__打断治疗_神魂__') || items.includes('__坏结局_愤怒__');
 
+          // 2.0.30: 幂等清理旧的"场景强制切换"system 消息,防止 reroll 时累积
+          // chat 是 SillyTavern.chat 直接引用,splice 会污染 history,reroll 重注入事件会再 splice
+          if (isInterruption) {
+            const SCENE_BREAK_MARKER = '【系统指令：场景强制切换】';
+            for (let i = chat.length - 1; i >= 0; i--) {
+              const msg = chat[i];
+              const content = msg?.content;
+              if (msg?.role === 'system' && typeof content === 'string' && content.includes(SCENE_BREAK_MARKER)) {
+                chat.splice(i, 1);
+              }
+            }
+          }
+
           for (let i = chat.length - 1; i >= 0; i--) {
             if (chat[i].role === 'user') {
               if (isInterruption) {
