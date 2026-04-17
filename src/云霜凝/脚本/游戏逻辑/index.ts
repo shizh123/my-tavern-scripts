@@ -851,11 +851,23 @@ $(() => {
         // history 下次请求又带进来) 还是 CHAT_COMPLETION_PROMPT_READY listener 泄漏
         // (多个 listener 每次 AI 请求都各 push 一次),清理+push 都能做到幂等注入。
         if (snapshot) {
-          // 清理所有旧状态快照 system messages(按 SNAPSHOT_MARKER 识别)
-          const SNAPSHOT_MARKER = '[当前游戏状态快照';
+          // 清理所有旧状态快照 system messages
+          // 主标记: [当前游戏状态快照 (所有新分支都带此前缀)
+          // 兼容标记: [洛书晴激活剧情进行中 / [洛书晴现实初遇·第 — 2.0.29 及之前的残留
+          //          (彼时这俩分支没带主前缀 → 清理器匹配不到 → reroll/删楼回档累积多份)
+          const SNAPSHOT_MARKERS = [
+            '[当前游戏状态快照',
+            '[洛书晴激活剧情进行中',
+            '[洛书晴现实初遇·第',
+          ];
           for (let i = chat.length - 1; i >= 0; i--) {
             const msg = chat[i];
-            if (msg?.role === 'system' && typeof msg.content === 'string' && msg.content.includes(SNAPSHOT_MARKER)) {
+            const content = msg?.content;
+            if (
+              msg?.role === 'system' &&
+              typeof content === 'string' &&
+              SNAPSHOT_MARKERS.some(m => content.includes(m))
+            ) {
               chat.splice(i, 1);
             }
           }

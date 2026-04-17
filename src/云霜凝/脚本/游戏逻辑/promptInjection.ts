@@ -3428,7 +3428,8 @@ ${getQianjingBottomLine()}
     const round = data._洛书晴激活轮次进度;
     const guide = getLuoActivationRoundGuidance(round);
     if (guide) {
-      return `\n[洛书晴激活剧情进行中·第${round}/${LUO_ACTIVATION_MAX_ROUNDS}轮]\n${guide}\n\n[AI必须] 本轮只演绎激活剧情，不要输出任何变量更新命令（除心理活动和必要的云霜凝数值外）。\n`;
+      // 必须带 [当前游戏状态快照 前缀,否则 index.ts 的幂等清理匹配不到 → reroll/删楼回档会累积多份
+      return `\n[当前游戏状态快照·洛书晴激活剧情]\n[洛书晴激活剧情进行中·第${round}/${LUO_ACTIVATION_MAX_ROUNDS}轮]\n${guide}\n\n[AI必须] 本轮只演绎激活剧情，不要输出任何变量更新命令（除心理活动和必要的云霜凝数值外）。\n`;
     }
   }
   // 阶段3现实初遇（4轮）
@@ -3439,7 +3440,8 @@ ${getQianjingBottomLine()}
     const round = Math.max(1, Math.floor((currentFloor - data._特殊场景开始楼层 - data._特殊场景引导延后楼数) / 2) + 1);
     const guide = getLuoFirstMeetRoundGuidance(Math.min(round, LUO_FIRST_MEET_MAX_ROUNDS));
     if (guide) {
-      return `\n[洛书晴现实初遇·第${Math.min(round, LUO_FIRST_MEET_MAX_ROUNDS)}/${LUO_FIRST_MEET_MAX_ROUNDS}轮]\n${guide}\n`;
+      // 必须带 [当前游戏状态快照 前缀,否则 index.ts 的幂等清理匹配不到 → reroll/删楼回档会累积多份
+      return `\n[当前游戏状态快照·洛书晴现实初遇]\n[洛书晴现实初遇·第${Math.min(round, LUO_FIRST_MEET_MAX_ROUNDS)}/${LUO_FIRST_MEET_MAX_ROUNDS}轮]\n${guide}\n`;
     }
   }
 
