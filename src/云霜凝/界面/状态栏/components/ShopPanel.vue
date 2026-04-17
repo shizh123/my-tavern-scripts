@@ -1299,6 +1299,9 @@ const CLOTHING_NAMES = new Set(Object.keys(CLOTHING_SLOT));
 // 共用道具（洛书晴激活后可选择作用目标）
 const EQUIPMENT_NAMES = new Set(['眼罩', '乳夹', '口枷', '肛塞', '缚灵缎', '震动器', '项圈', '肉棒口罩', '锚神钉']);
 const LUO_CONSUMABLES = new Set(['安抚符', '真心符', '神魂共鸣石', '安神香']);
+// 洛书晴专属消耗品:只能给洛书晴,对云霜凝无效果(无 INSTANT_EFFECTS 定义)
+// 必须在 batch/multi 流程阻断 target=云霜凝,否则会误走兜底分支挂成'使用中'但无实际效果
+const LUO_ONLY_CONSUMABLES = new Set(['安抚符', '真心符']);
 // 静默装备：数据生效 + 状态栏更新,但不触发 AI 叙事(被动效果,状态快照已注入)
 // 和三把锁(已删)/洛书晴消耗品(安抚符/真心符/安神香/神魂共鸣石)/性癖再次装载 同风格。
 // 装备/卸下 都不 push event 不 triggerSlash,AI 每轮通过状态快照 tone modifier 感知激活中
@@ -1627,6 +1630,7 @@ function exitMultiSelect() {
 /**
  * 道具对当前多选 target 是否不可用：
  *  - target=洛书晴 但道具不是共用道具 → invalid
+ *  - target=云霜凝 但道具是洛书晴专属(安抚符/真心符) → invalid
  *  - 特殊场景 → 总 invalid（多选不支持特殊场景，决策 8）
  *  - 未解锁 → invalid（rowClass 会先 row-locked，但防御性写一遍）
  */
@@ -1634,6 +1638,7 @@ function isMultiTargetInvalid(item: ItemDef): boolean {
   if (item.type === '特殊场景') return true;
   if (!isUnlocked(item)) return true;
   if (multiSelectTarget.value === '洛书晴' && !isSharedItem(item.name)) return true;
+  if (multiSelectTarget.value === '云霜凝' && LUO_ONLY_CONSUMABLES.has(item.name)) return true;
   return false;
 }
 
@@ -1845,6 +1850,13 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
       continue;
     }
 
+    // 对称保护: target=云霜凝 但道具是洛书晴专属(安抚符/真心符): 跳过
+    // 兜底 else 分支会把它挂成'使用中'但 INSTANT_EFFECTS 无定义 → 玩家看到激活但无效果
+    if (target === '云霜凝' && LUO_ONLY_CONSUMABLES.has(name)) {
+      skippedExclusive.push(name);
+      continue;
+    }
+
     // BUG 2 防绕过: target=洛书晴 时必须通过洛书晴侧 unlock 校验
     // (isUnlocked 用 "云 || 洛" 合并,云霜凝满足就解锁按钮,选 target=洛书晴 时此处二次校验)
     if (target === '洛书晴' && !meetsLuoUnlock(name)) {
@@ -2028,7 +2040,8 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
 
   // target=洛书晴 时跳过的云霜凝专属道具 → 弹 toast 提示（让玩家知道这些没生效）
   if (skippedExclusive.length > 0) {
-    showToast(`已跳过 ${skippedExclusive.length} 件云霜凝专属道具：${skippedExclusive.join('、')}`, 'info');
+    const other = target === '洛书晴' ? '云霜凝' : '洛书晴';
+    showToast(`已跳过 ${skippedExclusive.length} 件${other}专属道具：${skippedExclusive.join('、')}`, 'info');
   }
 
   const appliedCount = names.length - skippedExclusive.length;
