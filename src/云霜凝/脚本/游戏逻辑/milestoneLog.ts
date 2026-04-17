@@ -230,6 +230,15 @@ async function cleanupFutureMilestones(worldbookName: string, currentFloor: numb
 }
 
 /**
+ * 正在写入中的 milestone type 集合(防并发重复写入)
+ * detectAndWriteMilestones 是 fire-and-forget(index.ts:960 没 await),
+ * 同楼 VARIABLE_UPDATE_ENDED 多次触发(reroll/多次 MVU 更新)时,读 existingTypes 和
+ * 写 createWorldbookEntries 之间存在窗口,任务 A 还没写完任务 B 读到"不存在"也去写 → 重复。
+ * 此 set 在读 existingTypes 之后立即记录"即将写入"的 type,任务 B 的过滤会跳过。
+ */
+const _inFlightTypes = new Set<string>();
+
+/**
  * 把 milestone 列表转成世界书条目结构并批量写入
  */
 async function writeMilestonesToWorldbook(
@@ -237,9 +246,12 @@ async function writeMilestonesToWorldbook(
   milestones: Milestone[],
   existingTypes: Set<string>,
 ): Promise<void> {
-  // dedupe：已存在的 type 跳过
-  const toWrite = milestones.filter(m => !existingTypes.has(m.type));
+  // dedupe：已存在的 type 跳过 + 正在写入中的 type 跳过(防并发重复)
+  const toWrite = milestones.filter(m => !existingTypes.has(m.type) && !_inFlightTypes.has(m.type));
   if (toWrite.length === 0) return;
+
+  // 立即标记 in-flight,下一个并发任务读 existingTypes 时即便 DB 还没刷新也会被此 set 拦下
+  for (const m of toWrite) _inFlightTypes.add(m.type);
 
   const entries = toWrite.map(m => ({
     name: m.title,
@@ -270,6 +282,9 @@ async function writeMilestonesToWorldbook(
     console.info(`[云霜凝] milestone 已写入 ${toWrite.length} 条 → ${worldbookName}`);
   } catch (e) {
     console.warn('[云霜凝] 写入 milestone 失败（非致命）:', e);
+  } finally {
+    // 写完清除 in-flight 标记(成功失败都清)
+    for (const m of toWrite) _inFlightTypes.delete(m.type);
   }
 }
 
