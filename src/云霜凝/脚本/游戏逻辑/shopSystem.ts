@@ -1173,10 +1173,10 @@ export function useJingLingLing(data: SchemaType): { success: boolean; reason: s
   data._净灵铃上次使用楼层 = currentFloor;
 
   // 2.0.22 场景引擎 v2: 统一 event 名 __净灵铃__, dispatch 内部按 d.苗广.心态 自主综合。
-  // 绿帽值 +5 仍按心态分支设置(前半程不加,后半程加),event 名不再按心态分 4 版。
+  // 2.0.29: 绿帽值增量 +5→+1(×0.2),配合冷却整体减速后半程推进。
   if (是后半程) {
-    data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 5);
-    console.info(`[商店] 净灵铃使用（后半程·${心态}）：绿帽值 +5 → ${data.苗广.疑心值}`);
+    data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 1);
+    console.info(`[商店] 净灵铃使用（后半程·${心态}）：绿帽值 +1 → ${data.苗广.疑心值}`);
   } else {
     console.info(`[商店] 净灵铃使用（前半程·${心态}）：不加疑心值`);
   }
