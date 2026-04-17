@@ -54,14 +54,14 @@
           ⚠ 苗广监视中 · 治疗冻结（剩余 {{ freeze_remaining }} 楼）
         </div>
 
-        <!-- 治疗进度 -->
-        <section class="healing-section">
+        <!-- 进度(根据 active_tab 切换: 云霜凝=治疗完成度 / 洛书晴=顺从度) -->
+        <section class="healing-section" :class="{ 'hs-luo': header_target === '洛书晴' }">
           <div class="healing-meta">
-            <span class="heal-stage">阶段 {{ store.data.治疗.阶段 }}·{{ stage_name }}</span>
-            <span class="heal-pct">{{ store.data.治疗.完成度.toFixed(1) }}%</span>
+            <span class="heal-stage">{{ header_stage_label }}</span>
+            <span class="heal-pct">{{ header_pct.toFixed(1) }}%</span>
           </div>
           <div class="healing-track">
-            <div class="healing-fill" :style="{ width: store.data.治疗.完成度 + '%' }"></div>
+            <div class="healing-fill" :style="{ width: header_pct + '%' }"></div>
             <div v-for="n in 9" :key="n" class="stage-tick" :style="{ left: n * 10 + '%' }"></div>
           </div>
         </section>
@@ -160,7 +160,21 @@ function toggleTab(id: string) {
 }
 
 const STAGE_NAMES = ['', '破冰', '初感', '温润', '渐通', '融合', '深化', '贯通', '共鸣', '圆融', '圆满'];
+const LUO_STAGE_NAMES = ['', '排斥', '警惕', '动摇', '好奇', '期待', '依赖', '主动', '渴望', '归属', '完全倒向'];
 const stage_name = computed(() => STAGE_NAMES[Math.min(10, Math.max(1, store.data.治疗.阶段))] ?? '');
+
+// 头部进度区: 跟随 active_tab 切换, 洛书晴 tab 时显示洛书晴阶段/顺从度; 其他 tab 默认云霜凝
+const header_target = computed<'云霜凝' | '洛书晴'>(() => (active_tab.value === '洛书晴' ? '洛书晴' : '云霜凝'));
+const header_stage_label = computed(() => {
+  if (header_target.value === '洛书晴') {
+    const s = store.data.洛书晴.调教阶段;
+    return `洛书晴 阶段${s}·${LUO_STAGE_NAMES[Math.min(10, Math.max(1, s))] ?? ''}`;
+  }
+  return `云霜凝 阶段${store.data.治疗.阶段}·${stage_name.value}`;
+});
+const header_pct = computed(() =>
+  header_target.value === '洛书晴' ? store.data.洛书晴.顺从度 : store.data.治疗.完成度,
+);
 
 const freeze_remaining = computed(() => {
   const floor = (window as any).SillyTavern?.chat?.length ?? 0;
@@ -620,6 +634,27 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
     height: 3px;
     border-radius: 50%;
     background: rgba($c-frost, 0.25);
+  }
+}
+
+// ── 洛书晴 tab 时的粉紫主题覆盖(和 LuoPanel 色系一致) ──
+.healing-section.hs-luo {
+  .heal-stage {
+    color: #ff8fa8;
+    text-shadow: 0 0 6px rgba(#ff8fa8, 0.2);
+  }
+  .heal-pct {
+    color: #ffe0e8;
+    text-shadow: 0 0 8px rgba(#d36c86, 0.3);
+  }
+  .healing-track {
+    border-color: rgba(#ff8fa8, 0.2);
+  }
+  .healing-fill {
+    background: linear-gradient(90deg, #8a3c50, #d36c86, #ff8fa8);
+    box-shadow:
+      0 0 12px rgba(#d36c86, 0.4),
+      0 0 4px rgba(#ff8fa8, 0.3);
   }
 }
 
