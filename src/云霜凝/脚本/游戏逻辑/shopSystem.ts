@@ -1117,6 +1117,15 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 5);
       data.苗喧.压抑值 = Math.min(100, data.苗喧.压抑值 + 5);
       break;
+
+    case '未知':
+      // 真相共谋: 两人从此多了"知晓此界真相"的默契。
+      // 写入性癖列表作为永久叙事标签(不占槽位,同"改嫁认知"风格),影响后续 AI 叙事
+      data.云霜凝.性癖列表['真相共谋'] =
+        '知晓此界是"祂"的牧场, 寒霜门是筛选流水线。与{{user}}共谋用凡人发散思维反扑"祂"的安排。{{user}}是命运之外的变数。';
+      // 信任度 +3 (两人的秘密同盟强化)
+      data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + 3);
+      break;
   }
   console.info(`[商店] 特殊场景后果已应用: ${scene}`);
 }
