@@ -152,12 +152,36 @@ const tabs = computed(() => {
   base.push({ id: '商店', label: '商店' });
   return base;
 });
-const active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', null);
+// 2.0.31 性能优化: 老楼层自动折叠 content-area(DOM 省~200 节点/楼)
+// - 最新楼: active_tab 由玩家点击切换(共享 localStorage)
+// - 老楼层: active_tab 永远返回 null → content-area 不渲染, 只保留顶部框架
+// - 玩家发新消息时 isLatest 响应式翻转, 原最新楼自动收起
+const stored_active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', null);
+const isLatest = ref(true);
+function refreshIsLatest() {
+  isLatest.value = isLatestMessage();
+}
+const active_tab = computed<string | null>({
+  get: () => (isLatest.value ? stored_active_tab.value : null),
+  set: v => {
+    if (isLatest.value) stored_active_tab.value = v;
+  },
+});
 const showSoulPicker = ref(false);
 
 function toggleTab(id: string) {
+  if (!isLatest.value) return; // 老楼层不响应点击
   active_tab.value = active_tab.value === id ? null : id;
 }
+
+onMounted(() => {
+  refreshIsLatest();
+  // 监听消息变动 → 重算 isLatest(新消息发送/接收时原最新楼自动折叠)
+  eventOn(tavern_events.MESSAGE_RECEIVED, refreshIsLatest);
+  eventOn(tavern_events.MESSAGE_SENT, refreshIsLatest);
+  eventOn(tavern_events.MESSAGE_DELETED, refreshIsLatest);
+  eventOn(tavern_events.CHAT_CHANGED, refreshIsLatest);
+});
 
 const STAGE_NAMES = ['', '破冰', '初感', '温润', '渐通', '融合', '深化', '贯通', '共鸣', '圆融', '圆满'];
 const LUO_STAGE_NAMES = ['', '排斥', '警惕', '动摇', '好奇', '期待', '依赖', '主动', '渴望', '归属', '完全倒向'];
