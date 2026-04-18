@@ -153,28 +153,32 @@ const tabs = computed(() => {
   return base;
 });
 // 2.0.31 性能优化: 老楼层自动折叠 content-area(DOM 省~200 节点/楼)
-// - 最新楼: 永远展开一个 tab(默认"云霜凝",玩家可切换但不能收起 —— 玩家的意图就是"永远展开")
-// - 老楼层: active_tab 永远返回 null → content-area 不渲染, 只保留顶部框架
-// - 玩家发新消息时 isLatest 响应式翻转, 原最新楼自动收起, 新最新楼自动展开(继承玩家上次选的 tab)
-const DEFAULT_TAB = '云霜凝';
-const stored_active_tab = useLocalStorage<string>('云霜凝:status_bar:active_tab', DEFAULT_TAB);
+// - 最新楼: 共享 stored_active_tab(玩家切 tab / 再点同 tab 收起, 与原 UX 一致)
+// - 老楼层: 独立 local_active_tab(默认 null 不渲染内容区), 玩家可手动点 tab 临时展开查看历史
+// - 玩家发新消息 → 原最新楼 isLatest 翻转 false → watch 自动重置该楼 local 为 null(content 收起)
+// - 首次进入默认展开"云霜凝", 玩家主动收起后 null 持久化(尊重其选择)
+const stored_active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', '云霜凝');
+const local_active_tab = ref<string | null>(null); // 老楼层独立 tab 状态(不污染 stored)
 const isLatest = ref(true);
 function refreshIsLatest() {
   isLatest.value = isLatestMessage();
 }
+// 从最新 → 老: 自动重置 local(刚变老时内容区立即收起)
+watch(isLatest, latest => {
+  if (!latest) local_active_tab.value = null;
+});
 const active_tab = computed<string | null>({
-  // 老楼层永远 null(内容区不渲染); 最新楼读 stored(有默认值保证非空)
-  get: () => (isLatest.value ? stored_active_tab.value || DEFAULT_TAB : null),
+  get: () => (isLatest.value ? stored_active_tab.value : local_active_tab.value),
   set: v => {
-    if (isLatest.value && v) stored_active_tab.value = v;
+    if (isLatest.value) stored_active_tab.value = v;
+    else local_active_tab.value = v;
   },
 });
 const showSoulPicker = ref(false);
 
 function toggleTab(id: string) {
-  if (!isLatest.value) return; // 老楼层不响应点击
-  // 只切 tab, 不再支持"再点一次收起"——最新楼永远保持展开状态
-  active_tab.value = id;
+  // 最新楼写 stored(持久化+跨楼同步); 老楼层写 local(仅本楼有效)
+  active_tab.value = active_tab.value === id ? null : id;
 }
 
 onMounted(() => {
