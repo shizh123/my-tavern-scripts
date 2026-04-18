@@ -213,9 +213,7 @@ const showSoulPicker = ref(false);
 
 // 2.0.31: 在场角色锁定按钮(洛书晴线激活后玩家可手动纠正 AI 判错)
 const showActorPicker = ref(false);
-const bothActorsActive = computed(
-  () => !!store.data._当前场景角色.云霜凝 && !!store.data._当前场景角色.洛书晴,
-);
+const bothActorsActive = computed(() => !!store.data._当前场景角色.云霜凝 && !!store.data._当前场景角色.洛书晴);
 const actorSummary = computed(() => {
   const 云 = store.data._当前场景角色.云霜凝;
   const 洛 = store.data._当前场景角色.洛书晴;
@@ -788,7 +786,10 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.15s;
 
   &:hover {
     background: rgba(#d36c86, 0.16);
