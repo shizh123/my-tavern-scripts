@@ -66,12 +66,15 @@
           </div>
         </section>
 
-        <!-- 神魂空间入口 -->
+        <!-- 神魂空间入口 + 在场角色锁定 -->
         <div class="mode-entry">
           <template v-if="store.data._当前互动模式 === '神魂空间'">
             <button class="mode-btn soul-btn active" @click="exitSoulSpace">
               ⟨ 退出{{ store.data._当前神魂空间角色 === '洛书晴' ? '洛书晴神魂' : '神魂' }} ⟩
             </button>
+          </template>
+          <template v-else-if="bothActorsActive && store.data._神魂空间已解锁 && freeze_remaining <= 0">
+            <button class="mode-btn soul-btn locked" disabled>⟨ 两者在场·无法进入 ⟩</button>
           </template>
           <template v-else-if="store.data._神魂空间已解锁 && freeze_remaining <= 0">
             <button class="mode-btn soul-btn" @click="handleEnterSoulClick">⟨ 进入神魂 ⟩</button>
@@ -82,6 +85,15 @@
           <template v-else>
             <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
           </template>
+          <!-- 在场角色锁定(仅洛书晴线激活后显示) -->
+          <button
+            v-if="store.data._洛书晴线已激活"
+            class="actor-lock-btn"
+            :title="`在场: ${actorSummary}`"
+            @click="showActorPicker = true"
+          >
+            🔒
+          </button>
         </div>
 
         <!-- 神魂空间角色选择浮层（洛书晴激活后） -->
@@ -98,6 +110,29 @@
                 <div class="soul-picker-sub">闺房意识空间</div>
               </button>
               <button class="soul-picker-cancel" @click="showSoulPicker = false">取消</button>
+            </div>
+          </div>
+        </Teleport>
+
+        <!-- 在场角色锁定浮层 -->
+        <Teleport to="body">
+          <div v-if="showActorPicker" class="soul-picker-mask" @click.self="showActorPicker = false">
+            <div class="soul-picker-dialog">
+              <div class="soul-picker-title">锁定本轮在场角色</div>
+              <div class="actor-picker-hint">当前: {{ actorSummary }} · 修正后请 reroll</div>
+              <button class="soul-picker-opt" @click="setSceneActor('云霜凝')">
+                <div class="soul-picker-name">仅云霜凝</div>
+                <div class="soul-picker-sub">洛书晴不在本轮画面</div>
+              </button>
+              <button class="soul-picker-opt luo" @click="setSceneActor('洛书晴')">
+                <div class="soul-picker-name">仅洛书晴</div>
+                <div class="soul-picker-sub">云霜凝不在本轮画面</div>
+              </button>
+              <button class="soul-picker-opt both" @click="setSceneActor('两者')">
+                <div class="soul-picker-name">两者在场</div>
+                <div class="soul-picker-sub">同屏互动(此时无法进入神魂)</div>
+              </button>
+              <button class="soul-picker-cancel" @click="showActorPicker = false">取消</button>
             </div>
           </div>
         </Teleport>
@@ -175,6 +210,39 @@ const active_tab = computed<string | null>({
   },
 });
 const showSoulPicker = ref(false);
+
+// 2.0.31: 在场角色锁定按钮(洛书晴线激活后玩家可手动纠正 AI 判错)
+const showActorPicker = ref(false);
+const bothActorsActive = computed(
+  () => !!store.data._当前场景角色.云霜凝 && !!store.data._当前场景角色.洛书晴,
+);
+const actorSummary = computed(() => {
+  const 云 = store.data._当前场景角色.云霜凝;
+  const 洛 = store.data._当前场景角色.洛书晴;
+  if (云 && 洛) return '两者在场';
+  if (云) return '仅云霜凝';
+  if (洛) return '仅洛书晴';
+  return '无';
+});
+function setSceneActor(preset: '云霜凝' | '洛书晴' | '两者') {
+  if (!isLatestMessage()) return;
+  showActorPicker.value = false;
+  store.pull();
+  store.data._当前场景角色 =
+    preset === '云霜凝'
+      ? { 云霜凝: true, 洛书晴: false }
+      : preset === '洛书晴'
+        ? { 云霜凝: false, 洛书晴: true }
+        : { 云霜凝: true, 洛书晴: true };
+  store.flush();
+  // 用 SillyTavern 全局 toastr 提示
+  const tr = (globalThis as any).toastr;
+  if (tr && typeof tr.success === 'function') {
+    tr.success(`在场角色已锁定: ${preset === '两者' ? '两者在场' : '仅' + preset}, 请 reroll 让 AI 重新生成`, '', {
+      timeOut: 3500,
+    });
+  }
+}
 
 function toggleTab(id: string) {
   // 最新楼写 stored(持久化+跨楼同步); 老楼层写 local(仅本楼有效)
@@ -354,6 +422,20 @@ function exitSoulSpace() {
       background: rgba(211, 108, 134, 0.3);
     }
   }
+  &.both {
+    background: linear-gradient(135deg, rgba(192, 48, 80, 0.15) 0%, rgba(211, 108, 134, 0.15) 100%);
+    border-color: rgba(255, 143, 168, 0.4);
+    &:hover {
+      background: linear-gradient(135deg, rgba(192, 48, 80, 0.3) 0%, rgba(211, 108, 134, 0.3) 100%);
+    }
+  }
+}
+.actor-picker-hint {
+  font-size: 11px;
+  color: #a07080;
+  text-align: center;
+  margin: -8px 0 12px;
+  font-style: italic;
 }
 .soul-picker-name {
   font-size: 14px;
@@ -695,6 +777,27 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   gap: 8px;
   padding: 10px 16px;
   border-bottom: 1px solid rgba($c-ice, 0.08);
+}
+.actor-lock-btn {
+  flex: 0 0 auto;
+  width: 42px;
+  padding: 10px 0;
+  border: 1px solid rgba(#ff8fa8, 0.25);
+  border-radius: 8px;
+  background: rgba(#d36c86, 0.08);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+
+  &:hover {
+    background: rgba(#d36c86, 0.16);
+    border-color: rgba(#ff8fa8, 0.5);
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0);
+  }
 }
 .mode-btn {
   flex: 1;
