@@ -1109,6 +1109,14 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.洛书晴.顺从度 = Math.min(100, data.洛书晴.顺从度 + 2);
       data.云霜凝.信任度 = Math.min(100, data.云霜凝.信任度 + 2);
       break;
+
+    case '苗喧的一日':
+      // 后日谈: 双重改嫁之后的钝痛日常。
+      // 云/洛数值已到顶,不再推进。苗喧彻底麻木,绝望/压抑小幅推进至封顶区间,
+      // 心态由 calcMiaoxuanMind 自动映射(绝望值>=80 通常是"失去")。
+      data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 5);
+      data.苗喧.压抑值 = Math.min(100, data.苗喧.压抑值 + 5);
+      break;
   }
   console.info(`[商店] 特殊场景后果已应用: ${scene}`);
 }

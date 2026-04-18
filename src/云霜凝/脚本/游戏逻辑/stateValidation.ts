@@ -206,6 +206,8 @@ export const SCENE_ACTORS: Record<string, { 云霜凝: boolean; 洛书晴: boole
   儿媳调教公公: { 云霜凝: true, 洛书晴: true },
   双重改嫁: { 云霜凝: true, 洛书晴: true },
   千晶告知洛书晴: { 云霜凝: true, 洛书晴: true },
+  // 后日谈: 苗喧视角场景, 云/洛作为背景出现(轮3/5/6),登记在场让 snapshot 注入她们的现状数据
+  苗喧的一日: { 云霜凝: true, 洛书晴: true },
   // 脚本内部触发的自动场景
   洛书晴现实初遇: { 云霜凝: true, 洛书晴: true },
 };
