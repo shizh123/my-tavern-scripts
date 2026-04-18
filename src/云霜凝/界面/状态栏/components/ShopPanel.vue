@@ -735,6 +735,13 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       desc: '15阶段·终局·云霜凝改嫁同时洛书晴解除婚约',
       unlockDesc: '洛书晴线已激活，洛≥9，云≥10，千晶幻术完成，苗广=沉溺，需先完成儿媳调教公公',
     },
+    {
+      name: '苗喧的一日',
+      price: 800,
+      type: '特殊场景',
+      desc: '8阶段·后日谈·苗喧视角的一日(双重改嫁后)',
+      unlockDesc: '需先完成双重改嫁',
+    },
   ],
 };
 
@@ -1125,6 +1132,8 @@ function isUnlocked(item: ItemDef): boolean {
       d.苗广.心态 === '沉溺' &&
       d.苗广.千晶幻术.认知改写完成 &&
       !!d._已完成特殊场景['儿媳调教公公'],
+    // 后日谈: 双重改嫁完成后解锁,单一前置
+    苗喧的一日: () => !!d._已完成特殊场景['双重改嫁'],
   };
 
   return conds[name] ? conds[name]() : true;
@@ -1224,6 +1233,7 @@ const SCENE_TURNS: Record<string, number> = {
   儿媳调教公公: 12,
   双重改嫁: 15,
   千晶告知洛书晴: 4,
+  苗喧的一日: 8,
 };
 
 // ── 服装→槽位映射 ──
