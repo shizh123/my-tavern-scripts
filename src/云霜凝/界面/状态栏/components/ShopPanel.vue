@@ -739,7 +739,7 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
       name: '未知',
       price: 10,
       type: '特殊场景',
-      desc: '12阶段·真相揭露 + 反祂战略(千晶幻术前)',
+      desc: '13阶段·真相揭露 + 反祂战略 + 情感托付(千晶幻术前)',
       unlockDesc: '阶段≥7，苗广≥屈辱，千晶幻术尚未使用',
     },
     {
@@ -1243,7 +1243,7 @@ const SCENE_TURNS: Record<string, number> = {
   儿媳调教公公: 12,
   双重改嫁: 15,
   千晶告知洛书晴: 4,
-  未知: 12,
+  未知: 13,
   苗喧的一日: 8,
 };
 
