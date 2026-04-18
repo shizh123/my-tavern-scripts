@@ -17,10 +17,32 @@
 // ────────────────────────────────────────────────────────────
 
 import type { Schema as SchemaType } from '../../schema';
-import { getHealingPhaseName } from './stateValidation';
 
 /** 聊天世界书默认名称：新聊天没绑定时使用这个名字创建一本 */
 const DEFAULT_WORLDBOOK_NAME = '云霜凝-milestones';
+
+/**
+ * 特殊场景"发生了什么"实质概括(给 AI refer 用, 玩家 hide 老楼后也能读懂)
+ * 不写楼层、不写当时数值、只写事件内容, 短小精悍。
+ */
+const SCENE_SUMMARIES: Record<string, string> = {
+  镜前调教: '{{user}} 让云霜凝在铜镜前面对自己被调教的画面, 她痛苦接受"镜中人是自己"。',
+  夫前凌辱: '{{user}} 当着苗广面(帷幔外)调教云霜凝, 苗广听/看到全程, 屈辱中生理反应但未爆发。',
+  寝取宣告: '{{user}} 逼云霜凝向帷幔外的苗广亲口道歉 + 宣告身体归属 {{user}}, 苗广通过透灵幔清楚听见看见。',
+  绿帽奴调教: '{{user}} 进一步调教云霜凝, 苗广心态从默许转向沉溺。',
+  掌门改嫁: '苗广主动提出请 {{user}} 正式迎娶云霜凝, 云霜凝改嫁。',
+  婆媳教导: '云霜凝以师母身份向洛书晴传授"服从调教"的处世心得。',
+  两人同侍: '云霜凝和洛书晴首次一起伺候 {{user}}。',
+  寝取宣告增强: '云霜凝 + 洛书晴 + 苗广 + {{user}} 四人同场的加强版寝取宣告。',
+  门缝春光: '苗广门缝偷窥 {{user}} 与云霜凝, 洛书晴心机觉醒。',
+  双重目击: '苗喧亲眼目击父亲苗广偷窥 + 门内画面, 苗喧绝望感首次具象化。',
+  儿媳调教公公: '洛书晴反向调教苗广, 强化绿帽奴路径。',
+  双重改嫁:
+    '云霜凝和洛书晴双双改嫁 {{user}}, 苗喧被强迫见证全程, 家族秩序彻底颠倒。苗广已被千晶幻术改写认知, 叫 {{user}} 义父、叫云霜凝娘亲。',
+  千晶告知洛书晴: '云霜凝告诉洛书晴她对苗广施了千晶幻术, 师徒共谋默契加深。',
+  苗喧的一日: '苗喧麻木度过双重改嫁后的一日(后日谈, 他视角的钝痛日常)。',
+  未知: '云霜凝在老祖遗物中发现临终私记, 揭露此界是"祂"的牧场、寒霜门是筛选流水线、她是第 88 位成品。云霜凝向 {{user}} 展开反"祂"战略 + 情感托付。',
+};
 
 /** 条目 `extra` 字段的 marker，区分我们的条目 vs 玩家/其他脚本写的条目 */
 const MILESTONE_MARKER = 'yunshuangning_milestone';
@@ -49,100 +71,31 @@ interface Milestone {
 function detectMilestones(newData: SchemaType, oldData: SchemaType, currentFloor: number): Milestone[] {
   const out: Milestone[] = [];
 
-  // 1. 治疗阶段突破
-  if (newData.治疗.阶段 > oldData.治疗.阶段) {
-    const phaseName = getHealingPhaseName(newData.治疗.阶段);
-    out.push({
-      type: `stage_up_${newData.治疗.阶段}`,
-      floor: currentFloor,
-      title: `第${currentFloor}楼·治疗阶段${oldData.治疗.阶段}→${newData.治疗.阶段}·${phaseName}`,
-      content: `[里程碑·治疗阶段] 第${currentFloor}楼 治疗阶段 ${oldData.治疗.阶段}→${newData.治疗.阶段}·${phaseName}。当前云霜凝信任${newData.云霜凝.信任度} 防线${newData.云霜凝.心理防线} 完成度${newData.治疗.完成度}%。这是关键转折，后续描写应体现此突破带来的心理与身体状态变化。`,
-      keys: ['云霜凝', '治疗', '阶段', '突破'],
-    });
-  }
-
-  // 2. 苗广心态转变
-  if (newData.苗广.心态 !== oldData.苗广.心态) {
-    const 是后半程 = ['屈辱', '默许', '沉溺'].includes(newData.苗广.心态);
-    const label = 是后半程 ? '绿帽值' : '疑心值';
-    out.push({
-      type: `miaoguang_mind_${newData.苗广.心态}`,
-      floor: currentFloor,
-      title: `第${currentFloor}楼·苗广心态 ${oldData.苗广.心态}→${newData.苗广.心态}`,
-      content: `[里程碑·苗广心态] 第${currentFloor}楼 苗广心态从「${oldData.苗广.心态}」转变为「${newData.苗广.心态}」。当前${label}=${newData.苗广.疑心值}。苗广对{{user}}和云霜凝的关系态度发生本质变化，后续描写需体现此转变。`,
-      keys: ['苗广', '心态', '绿帽', '疑心'],
-    });
-  }
-
-  // 3. 特殊场景完成（diff 两个 record）
+  // 特殊场景完成——核心里程碑, 每场景独立
+  // floor 字段仅供内部 cleanupFutureMilestones 回退保护用, 不暴露给 AI
   const oldScenes = oldData._已完成特殊场景 ?? {};
   const newScenes = newData._已完成特殊场景 ?? {};
   for (const sceneName of Object.keys(newScenes)) {
     if (newScenes[sceneName] && !oldScenes[sceneName]) {
+      const summary = SCENE_SUMMARIES[sceneName] ?? '';
       out.push({
         type: `scene_done_${sceneName}`,
         floor: currentFloor,
-        title: `第${currentFloor}楼·特殊场景完成·${sceneName}`,
-        content: `[里程碑·特殊场景] 第${currentFloor}楼 特殊场景「${sceneName}」完成。此场景的叙事成果（云霜凝心理状态、苗广绿帽进度、洛书晴互动等）已永久刻入游戏历史，后续描写可自然 refer 到此场景曾发生。`,
-        keys: ['云霜凝', sceneName, '特殊场景'],
+        title: `特殊场景·${sceneName} 已完成`,
+        content: `「${sceneName}」已完成。${summary}此事件已成为游戏历史,后续相关叙事可自然 refer。`,
+        keys: [sceneName], // 仅场景名作为触发词, 避免高频词常驻激活
       });
     }
   }
 
-  // 4. 千晶幻术 3 次施术完成
+  // 千晶幻术 3 次施术完成——涉及称谓 canon, 老楼被 hide 后 AI 仍需靠此记住
   if (newData.苗广.千晶幻术.认知改写完成 && !oldData.苗广.千晶幻术.认知改写完成) {
     out.push({
       type: 'qianjing_complete',
       floor: currentFloor,
-      title: `第${currentFloor}楼·千晶幻术最终封印完成`,
-      content: `[里程碑·千晶幻术] 第${currentFloor}楼 千晶幻术三次施术全部完成，苗广认知永久改写：认{{user}}为"义父"、认云霜凝为"娘亲"、自己是"儿子"（对亲生儿子苗喧的父子关系保持不变）。此后苗广私下称呼{{user}}为义父、云霜凝为娘。`,
-      keys: ['苗广', '千晶', '义父', '娘亲', '认知改写'],
-    });
-  }
-
-  // 5. 洛书晴线激活
-  if (newData._洛书晴线已激活 && !oldData._洛书晴线已激活) {
-    out.push({
-      type: 'luo_activated',
-      floor: currentFloor,
-      title: `第${currentFloor}楼·洛书晴线激活`,
-      content: `[里程碑·洛书晴] 第${currentFloor}楼 洛书晴线正式激活。洛书晴不再假装不识{{user}}，开始以云霜凝大弟子身份参与联动场景（婆媳教导/两人同侍等）。苗喧反抗剧情、苗喧观看框架、双重改嫁等后续剧情均以此为起点。`,
-      keys: ['洛书晴', '师姐', '天骄'],
-    });
-  }
-
-  // 6. 坏结局触发
-  if (newData._坏结局已触发 && !oldData._坏结局已触发) {
-    out.push({
-      type: 'bad_ending',
-      floor: currentFloor,
-      title: `第${currentFloor}楼·坏结局触发`,
-      content: `[里程碑·坏结局] 第${currentFloor}楼 坏结局触发：苗广发现{{user}}和云霜凝之间超出治疗范畴的关系，愤怒不可逆。{{user}}被逐出寒霜门，治疗终止，云霜凝被带走。游戏数值已冻结，此后仅余残局氛围描写。`,
-      keys: ['坏结局', '苗广', '愤怒'],
-    });
-  }
-
-  // 7. 神魂空间首次进入
-  if (newData._神魂空间已进入过 && !oldData._神魂空间已进入过) {
-    out.push({
-      type: 'soul_space_first',
-      floor: currentFloor,
-      title: `第${currentFloor}楼·首次进入神魂空间`,
-      content: `[里程碑·神魂空间] 第${currentFloor}楼 {{user}}第一次进入云霜凝的神魂空间。神魂空间是云霜凝识海深处的秘境，苗广无法感知。{{user}}在此可以与云霜凝进行现实中不可能的亲密互动。`,
-      keys: ['神魂空间', '识海'],
-    });
-  }
-
-  // 8. 苗广打断治疗（新触发的冻结）
-  const oldFreeze = oldData._打断冻结至楼层 ?? 0;
-  const newFreeze = newData._打断冻结至楼层 ?? 0;
-  if (newFreeze > oldFreeze && newFreeze > currentFloor) {
-    out.push({
-      type: `interruption_floor_${currentFloor}`,
-      floor: currentFloor,
-      title: `第${currentFloor}楼·苗广打断治疗`,
-      content: `[里程碑·打断] 第${currentFloor}楼 苗广打断了一次治疗互动。当前苗广心态=${newData.苗广.心态}。此事件标记{{user}}在治疗过程中被直接发现过一次，应影响后续苗广对{{user}}的态度与警戒度。`,
-      keys: ['苗广', '打断', '治疗'],
+      title: `千晶幻术·认知改写完成`,
+      content: `千晶幻术三次施术已完成。苗广记忆被永久改写: 他现在认 {{user}} 为"义父"、认云霜凝为"娘亲"、自己是"儿子"(对亲生儿子苗喧的父子关系保持不变)。私下称呼 {{user}} 为义父、云霜凝为娘。`,
+      keys: ['千晶幻术', '义父', '娘亲', '认知改写'], // 用具体名词,按需激活
     });
   }
 
