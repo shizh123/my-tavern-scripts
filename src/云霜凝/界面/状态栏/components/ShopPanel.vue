@@ -2642,10 +2642,22 @@ function stateLabel(item: ItemDef) {
 
 function stateClass(name: string) {
   const item = findItem(name);
+  // 体改/性癖 已拥有: 区分云/洛/两者
   if (item && (item.type === '性癖' || item.type === '体改') && isAlreadyOwned(name)) {
+    const yO = isYunOwned(name);
+    const lO = isLuoOwned(name);
+    if (yO && lO) return 'st-owned st-owned-both';
+    if (yO) return 'st-owned st-owned-yun';
+    if (lO) return 'st-owned st-owned-luo';
     return 'st-owned';
   }
+  // 装备类 使用中: 区分云/洛/两者
   if (item && item.type === '装备' && isEitherUsing(name)) {
+    const yU = isYunUsing(name);
+    const lU = isLuoUsing(name);
+    if (yU && lU) return 'st-active st-active-both';
+    if (yU) return 'st-active st-active-yun';
+    if (lU) return 'st-active st-active-luo';
     return 'st-active';
   }
   // 消耗品冷却中
@@ -2653,7 +2665,8 @@ function stateClass(name: string) {
   const s = store.data.系统.道具状态[name];
   if (!s) return 'st-none';
   if (s === '已购买') return 'st-bought';
-  if (s === '使用中') return 'st-active';
+  // 系统.道具状态=使用中 → 默认云霜凝在用(无洛书晴版)
+  if (s === '使用中') return 'st-active st-active-yun';
   return '';
 }
 // ── 留影石 ──────────────────────────────────────────
@@ -2733,14 +2746,21 @@ function rowClass(item: ItemDef) {
     const yunO = isYunOwned(item.name);
     const luoO = isLuoOwned(item.name);
     if (yunO && luoO) return 'row-done'; // 两者都拥有 → 真正完成
-    if (yunO || luoO) return 'row-active'; // 单方拥有 → 正常亮度 + 绿色 accent
+    if (yunO) return 'row-active row-active-yun';
+    if (luoO) return 'row-active row-active-luo';
   }
-  // 装备：任一角色装备 = 激活
+  // 装备：按 target 区分着色
   if (item.type === '装备' && isEitherUsing(item.name)) {
+    const yU = isYunUsing(item.name);
+    const lU = isLuoUsing(item.name);
+    if (yU && lU) return 'row-active row-active-both';
+    if (yU) return 'row-active row-active-yun';
+    if (lU) return 'row-active row-active-luo';
     return 'row-active';
   }
   const s = store.data.系统.道具状态[item.name];
-  if (s === '使用中') return 'row-active';
+  // 系统.道具状态=使用中 走云霜凝着色(无洛书晴版)
+  if (s === '使用中') return 'row-active row-active-yun';
   if (s === '已购买') return checkedItems.has(item.name) ? 'row-bought row-selected' : 'row-bought';
   return '';
 }
@@ -3267,6 +3287,20 @@ $cat-场景: #d8a040;
     border-bottom-color: $c-good;
     box-shadow: 0 0 12px rgba($c-good, 0.06);
   }
+  // ── per-target row 区分(2.0.30): 云霜凝=绛红 / 洛书晴=粉紫 / 两者=绿(默认 row-active 保留) ──
+  &.row-active.row-active-yun {
+    background: linear-gradient(135deg, rgba(#c03050, 0.1) 0%, rgba($c-panel, 0.45) 100%);
+    border-color: rgba(#c03050, 0.28);
+    border-bottom-color: #c03050;
+    box-shadow: 0 0 12px rgba(#c03050, 0.08);
+  }
+  &.row-active.row-active-luo {
+    background: linear-gradient(135deg, rgba(#ff8fa8, 0.1) 0%, rgba($c-panel, 0.45) 100%);
+    border-color: rgba(#ff8fa8, 0.28);
+    border-bottom-color: #ff8fa8;
+    box-shadow: 0 0 12px rgba(#ff8fa8, 0.08);
+  }
+  // row-active-both 保留 row-active 默认绿色, 不需覆盖
   &.row-locked {
     opacity: 0.2;
     cursor: not-allowed;
@@ -3417,13 +3451,14 @@ $cat-场景: #d8a040;
   // 通过自身 filter 部分抵消 row 的 opacity
   filter: brightness(1.1);
 }
+// 2.0.30: 调亮 luo 徽章, 和 yun 绛红拉开对比 (原两色都偏红不易区分)
 .owner-yun {
   background: linear-gradient(135deg, #c03050 0%, #8a2038 100%);
   box-shadow: 0 0 4px rgba(#c03050, 0.4);
 }
 .owner-luo {
-  background: linear-gradient(135deg, #d36c86 0%, #8a3c50 100%);
-  box-shadow: 0 0 4px rgba(#d36c86, 0.4);
+  background: linear-gradient(135deg, #ff8fa8 0%, #c05080 100%);
+  box-shadow: 0 0 4px rgba(#ff8fa8, 0.5);
 }
 .st-none {
   color: rgba($c-sub, 0.4);
@@ -3436,6 +3471,16 @@ $cat-场景: #d8a040;
   color: $c-good;
   background: rgba($c-good, 0.08);
 }
+// per-target state label(2.0.30): 云霜凝=绛红/洛书晴=粉紫/两者=绿(默认 st-active 保留)
+.st-active.st-active-yun {
+  color: #ff6080;
+  background: rgba(#c03050, 0.14);
+}
+.st-active.st-active-luo {
+  color: #ff8fa8;
+  background: rgba(#d36c86, 0.14);
+}
+// st-active-both 保留 st-active 默认绿, 不需覆盖
 .st-kink-active {
   color: $cat-性癖;
   background: rgba($cat-性癖, 0.12);
@@ -3444,6 +3489,15 @@ $cat-场景: #d8a040;
   color: rgba($c-sub, 0.55);
   background: rgba($c-sub, 0.08);
 }
+.st-owned.st-owned-yun {
+  color: rgba(#ff6080, 0.75);
+  background: rgba(#c03050, 0.1);
+}
+.st-owned.st-owned-luo {
+  color: rgba(#ff8fa8, 0.75);
+  background: rgba(#d36c86, 0.1);
+}
+// st-owned-both 保留 st-owned 默认灰
 .st-cooldown {
   color: #e07c4a;
   background: rgba(#e07c4a, 0.08);
