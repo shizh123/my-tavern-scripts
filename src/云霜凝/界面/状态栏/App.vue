@@ -153,25 +153,28 @@ const tabs = computed(() => {
   return base;
 });
 // 2.0.31 性能优化: 老楼层自动折叠 content-area(DOM 省~200 节点/楼)
-// - 最新楼: active_tab 由玩家点击切换(共享 localStorage)
+// - 最新楼: 永远展开一个 tab(默认"云霜凝",玩家可切换但不能收起 —— 玩家的意图就是"永远展开")
 // - 老楼层: active_tab 永远返回 null → content-area 不渲染, 只保留顶部框架
-// - 玩家发新消息时 isLatest 响应式翻转, 原最新楼自动收起
-const stored_active_tab = useLocalStorage<string | null>('云霜凝:status_bar:active_tab', null);
+// - 玩家发新消息时 isLatest 响应式翻转, 原最新楼自动收起, 新最新楼自动展开(继承玩家上次选的 tab)
+const DEFAULT_TAB = '云霜凝';
+const stored_active_tab = useLocalStorage<string>('云霜凝:status_bar:active_tab', DEFAULT_TAB);
 const isLatest = ref(true);
 function refreshIsLatest() {
   isLatest.value = isLatestMessage();
 }
 const active_tab = computed<string | null>({
-  get: () => (isLatest.value ? stored_active_tab.value : null),
+  // 老楼层永远 null(内容区不渲染); 最新楼读 stored(有默认值保证非空)
+  get: () => (isLatest.value ? stored_active_tab.value || DEFAULT_TAB : null),
   set: v => {
-    if (isLatest.value) stored_active_tab.value = v;
+    if (isLatest.value && v) stored_active_tab.value = v;
   },
 });
 const showSoulPicker = ref(false);
 
 function toggleTab(id: string) {
   if (!isLatest.value) return; // 老楼层不响应点击
-  active_tab.value = active_tab.value === id ? null : id;
+  // 只切 tab, 不再支持"再点一次收起"——最新楼永远保持展开状态
+  active_tab.value = id;
 }
 
 onMounted(() => {
