@@ -68,15 +68,21 @@ interface Milestone {
 // 检测：对比新旧状态，派生本轮应写入的 milestone 列表
 // ────────────────────────────────────────────────────────────
 
-function detectMilestones(newData: SchemaType, oldData: SchemaType, currentFloor: number): Milestone[] {
+function detectMilestones(newData: SchemaType, _oldData: SchemaType, currentFloor: number): Milestone[] {
   const out: Milestone[] = [];
 
-  // 特殊场景完成——核心里程碑, 每场景独立
+  // 2.0.32 修: 从 "old→new transition 比对" 改为 "扫描 new 当前态"。
+  // 原因: 场景完成标记由 CHAT_COMPLETION_PROMPT_READY 的 Phase 1 脚本预设 +
+  //      Mvu.replaceMvuData 同步写入,等到 VARIABLE_UPDATE_ENDED 触发时 oldData 已含
+  //      true,transition 永远不跳变 → 2.0.31 砍到剩 2 种后等于里程碑全失效。
+  // 改用 "扫当前态 + writeMilestonesToWorldbook 的 existingTypes dedupe" 兜底,
+  // 不再依赖 transition 时机。
+
+  // 特殊场景完成——每场景独立
   // floor 字段仅供内部 cleanupFutureMilestones 回退保护用, 不暴露给 AI
-  const oldScenes = oldData._已完成特殊场景 ?? {};
   const newScenes = newData._已完成特殊场景 ?? {};
   for (const sceneName of Object.keys(newScenes)) {
-    if (newScenes[sceneName] && !oldScenes[sceneName]) {
+    if (newScenes[sceneName]) {
       const summary = SCENE_SUMMARIES[sceneName] ?? '';
       out.push({
         type: `scene_done_${sceneName}`,
@@ -89,7 +95,7 @@ function detectMilestones(newData: SchemaType, oldData: SchemaType, currentFloor
   }
 
   // 千晶幻术 3 次施术完成——涉及称谓 canon, 老楼被 hide 后 AI 仍需靠此记住
-  if (newData.苗广.千晶幻术.认知改写完成 && !oldData.苗广.千晶幻术.认知改写完成) {
+  if (newData.苗广.千晶幻术.认知改写完成) {
     out.push({
       type: 'qianjing_complete',
       floor: currentFloor,

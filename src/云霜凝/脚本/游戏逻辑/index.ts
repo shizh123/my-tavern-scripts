@@ -149,6 +149,17 @@ $(() => {
         sessionStorage.setItem(ALREADY_TOASTED_KEY, '1');
       }
       sessionStorage.setItem('云霜凝_脚本已加载', String(Date.now()));
+      // 2.0.32: 心跳 + 清失败 gate，让状态栏 iframe 能跨 iframe 监察脚本是否在跑。
+      // 脚本 iframe reload(切聊天)时 setInterval 随 iframe 销毁,不会累积。
+      try {
+        _top.sessionStorage?.setItem?.('云霜凝_脚本心跳', String(Date.now()));
+        _top.sessionStorage?.removeItem?.('云霜凝_加载失败toast已弹');
+        setInterval(() => {
+          try {
+            _top.sessionStorage?.setItem?.('云霜凝_脚本心跳', String(Date.now()));
+          } catch {}
+        }, 5000);
+      } catch {}
       console.info('[云霜凝] 游戏逻辑脚本已加载（Schema 已注册）');
     } catch (err) {
       console.error('[云霜凝] 游戏逻辑脚本加载失败:', err);
@@ -412,7 +423,13 @@ $(() => {
             const currentFloor = SillyTavern.chat?.length ?? 0;
             const qjActive = data.苗广.千晶幻术.激活中 && data._千晶幻术开始楼层 > 0;
             const xjActive = data.苗广.孝敬师父.激活中 && data._孝敬师父开始楼层 > 0;
-            const sceneActive = !!data._特殊场景.进行中 && data._特殊场景开始楼层 > 0;
+            // 2.0.32: 洛书晴现实初遇排除在"道具楼让位"外——本场景由脚本硬触发,
+            // 不应被道具事件让延后楼数累加,否则 Phase 1.9b nominalRound(不减 delay)
+            // 和 buildStatusSnapshot 的 round(减 delay)会错位,玩家体验卡轮。
+            const sceneActive =
+              !!data._特殊场景.进行中 &&
+              data._特殊场景开始楼层 > 0 &&
+              data._特殊场景.进行中 !== '洛书晴现实初遇';
             const luoActivating = data._洛书晴激活轮次进度 >= 1 && data._洛书晴激活轮次进度 < 5;
             const anyActive = qjActive || xjActive || sceneActive || luoActivating;
 

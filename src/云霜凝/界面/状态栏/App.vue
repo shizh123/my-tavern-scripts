@@ -254,6 +254,23 @@ onMounted(() => {
   eventOn(tavern_events.MESSAGE_SENT, refreshIsLatest);
   eventOn(tavern_events.MESSAGE_DELETED, refreshIsLatest);
   eventOn(tavern_events.CHAT_CHANGED, refreshIsLatest);
+  // 2.0.32: 游戏逻辑脚本未加载监察。
+  // 脚本跑起来会每 5s 往 _top.sessionStorage 写心跳,延迟 15s 后心跳仍空/陈旧 → 弹错误 toast。
+  // 脚本成功加载时会清 gate,所以"脚本一度失败后恢复再失败"能重弹。
+  setTimeout(() => {
+    try {
+      const top = window.parent as any;
+      const heartbeat = Number(top?.sessionStorage?.getItem?.('云霜凝_脚本心跳') || 0);
+      if (heartbeat > 0 && Date.now() - heartbeat < 15000) return;
+      if (top?.sessionStorage?.getItem?.('云霜凝_加载失败toast已弹')) return;
+      top?.toastr?.error?.(
+        '⚠️ 游戏逻辑脚本未加载，状态栏数值可能异常。\n请刷新页面或检查酒馆助手插件是否启用。',
+        '云霜凝',
+        { timeOut: 0, extendedTimeOut: 0 },
+      );
+      top?.sessionStorage?.setItem?.('云霜凝_加载失败toast已弹', '1');
+    } catch {}
+  }, 15000);
 });
 
 const STAGE_NAMES = ['', '破冰', '初感', '温润', '渐通', '融合', '深化', '贯通', '共鸣', '圆融', '圆满'];
@@ -362,6 +379,10 @@ function exitSoulSpace() {
   store.pull(); // 从 MVU 拉取最新数据，防止读到已消费的旧事件
   store.data._当前互动模式 = '日常';
   store.data._神魂空间激活中 = false;
+  // 2.0.32: 退出时把 _当前神魂空间角色 重置回默认,避免 MVU 数据残留为"洛书晴"
+  // 与 _当前互动模式='日常' 矛盾(虽然读取处都先 gate 模式,残留不影响行为,
+  // 但调试时看 MVU 容易误判)
+  store.data._当前神魂空间角色 = '云霜凝';
   const existing = store.data._待发送道具事件;
   const event = '__退出神魂空间__';
   store.data._待发送道具事件 = existing ? existing + '|||' + event : event;
