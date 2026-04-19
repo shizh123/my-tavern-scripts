@@ -427,9 +427,7 @@ $(() => {
             // 不应被道具事件让延后楼数累加,否则 Phase 1.9b nominalRound(不减 delay)
             // 和 buildStatusSnapshot 的 round(减 delay)会错位,玩家体验卡轮。
             const sceneActive =
-              !!data._特殊场景.进行中 &&
-              data._特殊场景开始楼层 > 0 &&
-              data._特殊场景.进行中 !== '洛书晴现实初遇';
+              !!data._特殊场景.进行中 && data._特殊场景开始楼层 > 0 && data._特殊场景.进行中 !== '洛书晴现实初遇';
             const luoActivating = data._洛书晴激活轮次进度 >= 1 && data._洛书晴激活轮次进度 < 5;
             const anyActive = qjActive || xjActive || sceneActive || luoActivating;
 
