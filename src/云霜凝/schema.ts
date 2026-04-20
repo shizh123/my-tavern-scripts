@@ -431,6 +431,15 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
+  // 监视解除通知已发送对应的 _打断冻结至楼层 锚点(2.0.37)
+  // 用法: 每次冻结结束只提示一次, 持久化防 reload 重发
+  //   · 条件: _打断冻结至楼层 > 0 且 currentFloor >= _打断冻结至楼层 且本字段 < _打断冻结至楼层
+  //   · 发完后本字段 = _打断冻结至楼层
+  //   · 下次新冻结覆写 _打断冻结至楼层 到更大值时, 本字段 < 新值 → 门控重放行
+  _监视解除已发送楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
   // 蚀心露+隔音灵阵隐藏组合是否已触发过（一次性，察觉→屈辱）
   _已触发蚀心露屈辱: z.boolean().prefault(false),
   // 消耗品上次使用的楼层号（用于冷却判断，key=道具名，value=楼层号）

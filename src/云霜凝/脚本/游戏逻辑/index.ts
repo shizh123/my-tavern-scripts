@@ -68,10 +68,10 @@ let _scriptFreezeUntil = 0;
 let _scriptConsumableCooldowns: Record<string, number> = {};
 // 上次消费的道具事件（重roll保护：楼层号相同说明是重roll，重注入事件文本）
 let _lastConsumedEvent: { floor: number; items: string[] } = { floor: -1, items: [] };
-// 打断冻结"解除提示已发送"的门控：记录最近一次已注入解除提示的 _打断冻结至楼层 值。
-// 不把 _打断冻结至楼层 清零，因为 stateValidation.ts 的冷却闸门需要它做锚点；
-// 清零会导致 `currentFloor >= 0 + 8` 恒为 true，冷却失效 → 监视结束立刻复发死循环。
-let _freezeNoticeSent = 0;
+// 监视解除通知门控 (2.0.37)
+// 原实现: 模块变量 _freezeNoticeSent, reload 后归零 → 条件重新成立 → 重复 bake 进 user 消息
+// 新实现: 用 MVU 持久字段 data._监视解除已发送楼层 做门控, reload 也不会重发
+// 通知本身仍 bake 到 user 消息, 给 AI 保留"监视在哪楼解除"的时间锚
 
 // 时间推进楼层守卫（防止同一楼层重复推进时间，如重新生成）
 
@@ -382,25 +382,32 @@ $(() => {
 ═══════════════════════════════════════`;
             richEvent = richEvent ? richEvent + '\n\n' + freezeNotice : freezeNotice;
             console.info(`[云霜凝] 打断冻结持续提示注入（剩余${freezeUntil - currentFloor}楼）`);
-          } else if (freezeUntil > 0 && currentFloor >= freezeUntil && _freezeNoticeSent < freezeUntil) {
-            // 冻结刚结束：注入解除提示，引导AI回归正常剧情
-            // 注意：必须用 >= 而非 ===，因为 chat.length 每轮+2（user+AI），
-            // 奇偶不匹配时 === 永远命中不了目标楼层
+          } else if (freezeUntil > 0 && currentFloor >= freezeUntil && data._监视解除已发送楼层 < freezeUntil) {
+            // 冻结刚结束: 注入一次性解除提示到 user 消息(bake 进 chat history 做时间锚)
             //
-            // 关键：不再把 _打断冻结至楼层 清零——stateValidation.ts:603 的冷却闸门
+            // 2.0.37 修 reload 重发 bug: 门控从模块变量 _freezeNoticeSent 改为 MVU 持久字段
+            //   data._监视解除已发送楼层。旧实现 reload 后模块变量归零,条件重新成立 →
+            //   每次 reload 都再烤一份到当前 user 消息, chat history 累积多份。
+            //   持久字段 reload 后仍在 → 每次冻结只烤一次。
+            //
+            // 注意:必须用 >= 而非 ===，因为 chat.length 每轮+2（user+AI），
+            // 奇偶不匹配时 === 永远命中不了目标楼层。
+            //
+            // 关键:不再把 _打断冻结至楼层 清零——stateValidation.ts:603 的冷却闸门
             // `currentFloor >= _打断冻结至楼层 + INTERRUPT_COOLDOWN` 需要它作为锚点。
             // 清零会让冷却闸门变成 `currentFloor >= 8` 恒为 true，导致监视结束后
             // 立即可以触发新的打断 → "监视结束立刻被监视"死循环。
             //
-            // 用 _freezeNoticeSent 门控"只发一次"：只要它小于当前 freezeUntil 就发，
-            // 发完记录为 freezeUntil；下次新的打断把 _打断冻结至楼层 覆写到更大的值时，
-            // 新值 > _freezeNoticeSent，门控重新放行。
+            // 下次新的打断覆写 _打断冻结至楼层 到更大值时, 新值 > data._监视解除已发送楼层,
+            // 门控重新放行,新冻结周期结束后能再发一次解除通知。
             const unfreezeNotice = `【监视解除】苗广的监视告一段落，{{user}}和云霜凝又有了单独相处的空间，治疗互动可以恢复。
 不要继续描写苗广的监视行为，苗广当前不在房间内。回归正常互动节奏。`;
             richEvent = richEvent ? richEvent + '\n\n' + unfreezeNotice : unfreezeNotice;
-            _freezeNoticeSent = freezeUntil;
+            data._监视解除已发送楼层 = freezeUntil;
+            _.set(raw, 'stat_data._监视解除已发送楼层', freezeUntil);
+            Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
             console.info(
-              `[云霜凝] 打断冻结结束，已注入解除提示（锚点 _打断冻结至楼层=${freezeUntil} 保留用于冷却闸门）`,
+              `[云霜凝] 打断冻结结束,解除提示已注入(持久化门控 _监视解除已发送楼层=${freezeUntil})`,
             );
           }
         }
