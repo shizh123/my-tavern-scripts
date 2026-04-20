@@ -1731,7 +1731,13 @@ function handleClick(item: ItemDef) {
   }
 
   if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
-    showToast(`「${item.name}」已完成`, 'info');
+    // 2.0.33: 配对场景原版已完成+增强版未完成 → 不 toast,弹浮层让玩家升级到增强版
+    const enhanced = SCENE_PAIRS[item.name];
+    if (enhanced && !store.data._已完成特殊场景[enhanced]) {
+      openScenePairDialog(item.name);
+    } else {
+      showToast(`「${item.name}」已完成`, 'info');
+    }
     return;
   }
 
@@ -1753,16 +1759,6 @@ function handleClick(item: ItemDef) {
     }
     // 已购买/已装备 → 弹 dialog 让玩家选 装备/卸下 的 target
     openEquipDialog(item);
-    return;
-  }
-
-  // 2.0.33: 配对场景原版已完成但增强版未完成 → 直接弹浮层让玩家升级到增强版
-  // (原逻辑: 已完成场景无 '已完成' 分支处理 → 点击无响应; 加上 row-done 有 pointer-events:none/opacity 0.25 → 玩家看不到且点不到增强版入口)
-  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
-    const enhanced = SCENE_PAIRS[item.name];
-    if (enhanced && !store.data._已完成特殊场景[enhanced]) {
-      openScenePairDialog(item.name);
-    }
     return;
   }
 
