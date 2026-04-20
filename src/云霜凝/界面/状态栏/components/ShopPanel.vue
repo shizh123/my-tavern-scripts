@@ -242,9 +242,13 @@
           <div class="target-dialog-title">{{ pendingScenePair }}</div>
           <div class="target-dialog-desc">选择场景参与形式</div>
           <div class="scene-pair-btns">
-            <button class="scene-pair-btn scene-pair-solo" @click="pickSceneVersion('solo')">
+            <button
+              class="scene-pair-btn scene-pair-solo"
+              :disabled="pendingSoloDone"
+              @click="pickSceneVersion('solo')"
+            >
               <span class="scene-pair-btn-main">单独进行</span>
-              <span class="scene-pair-btn-sub">云霜凝独自承受</span>
+              <span class="scene-pair-btn-sub">{{ pendingSoloDone ? '已完成,无法重复' : '云霜凝独自承受' }}</span>
             </button>
             <button
               class="scene-pair-btn scene-pair-luo"
@@ -1577,6 +1581,12 @@ const pendingEnhancedMissing = computed(() => {
   return enhanced ? getEnhancedMissing(enhanced) : [];
 });
 
+// 2.0.33: 原版已完成时,浮层"单独进行"按钮 disabled(不允许重复开原版)
+const pendingSoloDone = computed(() => {
+  const original = pendingScenePair.value;
+  return !!(original && store.data._已完成特殊场景[original]);
+});
+
 function openScenePairDialog(originalName: string) {
   pendingScenePair.value = originalName;
   showScenePairDialog.value = true;
@@ -1589,6 +1599,11 @@ function pickSceneVersion(version: 'solo' | 'luo') {
     return;
   }
   if (version === 'solo') {
+    // 2.0.33: 防御——原版已完成不允许再开(UI 已 disabled 但加一层防御)
+    if (store.data._已完成特殊场景[original]) {
+      showScenePairDialog.value = false;
+      return;
+    }
     checkedItems.add(original);
   } else {
     const enhanced = SCENE_PAIRS[original];
@@ -1738,6 +1753,16 @@ function handleClick(item: ItemDef) {
     }
     // 已购买/已装备 → 弹 dialog 让玩家选 装备/卸下 的 target
     openEquipDialog(item);
+    return;
+  }
+
+  // 2.0.33: 配对场景原版已完成但增强版未完成 → 直接弹浮层让玩家升级到增强版
+  // (原逻辑: 已完成场景无 '已完成' 分支处理 → 点击无响应; 加上 row-done 有 pointer-events:none/opacity 0.25 → 玩家看不到且点不到增强版入口)
+  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
+    const enhanced = SCENE_PAIRS[item.name];
+    if (enhanced && !store.data._已完成特殊场景[enhanced]) {
+      openScenePairDialog(item.name);
+    }
     return;
   }
 
@@ -2720,7 +2745,12 @@ function unapplyBodyModLuo(name: string) {
  * - 消耗品冷却：冷却X楼
  */
 function stateLabel(item: ItemDef) {
-  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return '已完成';
+  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
+    // 2.0.33: 配对场景原版已完成但增强版未完成 → 显示"可升级",卡片仍可点击弹浮层选增强版
+    const enhanced = SCENE_PAIRS[item.name];
+    if (enhanced && !store.data._已完成特殊场景[enhanced]) return '可升级';
+    return '已完成';
+  }
 
   // 体改/性癖：用 owned 判断
   if (item.type === '性癖' || item.type === '体改') {
@@ -2851,7 +2881,12 @@ function rowClass(item: ItemDef) {
   if (!isUnlocked(item)) return 'row-locked';
   // 多选模式：对当前 target 不可用的道具灰显
   if (multiSelectMode.value && isMultiTargetInvalid(item)) return 'row-target-invalid';
-  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) return 'row-done';
+  if (item.type === '特殊场景' && store.data._已完成特殊场景[item.name]) {
+    // 2.0.33: 配对场景原版已完成但增强版未完成 → 保持可点击,卡片不灰
+    const enhanced = SCENE_PAIRS[item.name];
+    if (enhanced && !store.data._已完成特殊场景[enhanced]) return 'row-bought';
+    return 'row-done';
+  }
   // 体改/性癖：区分单方 vs 双方 —— 双方都拥有才算"完成"变灰
   if (item.type === '性癖' || item.type === '体改') {
     const yunO = isYunOwned(item.name);
