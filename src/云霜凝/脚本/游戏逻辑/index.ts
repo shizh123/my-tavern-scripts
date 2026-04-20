@@ -406,9 +406,7 @@ $(() => {
             data._监视解除已发送楼层 = freezeUntil;
             _.set(raw, 'stat_data._监视解除已发送楼层', freezeUntil);
             Mvu.replaceMvuData(raw, { type: 'message', message_id: -1 });
-            console.info(
-              `[云霜凝] 打断冻结结束,解除提示已注入(持久化门控 _监视解除已发送楼层=${freezeUntil})`,
-            );
+            console.info(`[云霜凝] 打断冻结结束,解除提示已注入(持久化门控 _监视解除已发送楼层=${freezeUntil})`);
           }
         }
 
