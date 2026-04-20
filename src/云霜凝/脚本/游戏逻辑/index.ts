@@ -29,6 +29,9 @@ import {
   getQianjingMaxRounds,
   getSpecialSceneMaxRounds,
   getSpecialSceneRoundGuidance,
+  hasSceneV3,
+  buildSceneV3BeatMessage,
+  SCENE_V3_BEAT_MARKER,
   LUO_FIRST_MEET_MAX_ROUNDS,
   XIAOJING_MAX_ROUNDS,
   getXiaojingEntryTrigger,
@@ -641,6 +644,10 @@ $(() => {
         // 原判定 `sceneName && sceneStartFloor > 0` 会让它进入,拿 maxRounds=0 的 fallback
         // 让 nominalRound=1 满足 isOvershoot,场景第 1 轮就被清场,session 9 a44d142 的 4 轮
         // beat guide 永不生效。
+        //
+        // 2.0.36 场景引擎 v3: 如果场景有 v3 字段,beat 注入改为 system msg(Phase 3.6 推送,
+        // 不污染 user msg,marker cleanup 幂等),否则走 v2 path(user msg 拼接)。
+        let _v3BeatPendingPush: string | null = null;
         {
           const currentFloor = SillyTavern.chat?.length ?? 0;
           const sceneName = data._特殊场景.进行中;
@@ -650,6 +657,7 @@ $(() => {
             const maxRounds = getSpecialSceneMaxRounds(sceneName);
             const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
             const actualRound = Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1;
+            const isV3Scene = hasSceneV3(sceneName);
 
             // 2.0.27 修: 清场条件从 rewriteBeat 注入解耦。
             // 原逻辑 isFinalRound 要求 !_本楼跳过分阶段引导,导致道具楼永远不触发最终轮清场;
@@ -663,15 +671,20 @@ $(() => {
 
             if (应清场) {
               // ── 注入最后一轮引导（非道具楼 + 未越界时才注入）──
-              // v2(2.0.22): rewriteBeat 是玩家口吻"——主题+anchor",空格拼接融入玩家输入
               if (可注入最终beat) {
-                const beat = getSpecialSceneRoundGuidance(sceneName, maxRounds);
-                if (beat) {
-                  for (let i = chat.length - 1; i >= 0; i--) {
-                    if (chat[i].role === 'user') {
-                      const content = chat[i].content;
-                      chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
-                      break;
+                if (isV3Scene) {
+                  // v3: 存 pending,等 Phase 3.6 push 为 system msg
+                  _v3BeatPendingPush = buildSceneV3BeatMessage(sceneName, maxRounds);
+                } else {
+                  // v2: 空格拼到 user 消息末尾
+                  const beat = getSpecialSceneRoundGuidance(sceneName, maxRounds);
+                  if (beat) {
+                    for (let i = chat.length - 1; i >= 0; i--) {
+                      if (chat[i].role === 'user') {
+                        const content = chat[i].content;
+                        chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
+                        break;
+                      }
                     }
                   }
                 }
@@ -694,26 +707,36 @@ $(() => {
                 );
               } else if (可注入最终beat) {
                 console.info(
-                  `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场`,
+                  `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮（最终轮）已注入并自动清场 [${isV3Scene ? 'v3' : 'v2'}]`,
                 );
               } else {
                 console.info(
                   `[云霜凝] 特殊场景「${sceneName}」·第${maxRounds}/${maxRounds}轮(道具楼)无 beat 注入,仍强制清场`,
                 );
               }
-            } else if (!_本楼跳过分阶段引导 && actualRound >= 2) {
-              // ── 注入逐轮 rewriteBeat 到 user 消息末尾（actualRound 扣延后）──
-              // v2: 空格拼接融入玩家口吻(不是 '\n\n' 另起段)
-              const beat = getSpecialSceneRoundGuidance(sceneName, actualRound);
-              if (beat) {
-                for (let i = chat.length - 1; i >= 0; i--) {
-                  if (chat[i].role === 'user') {
-                    const content = chat[i].content;
-                    chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
-                    break;
-                  }
+            } else if (!_本楼跳过分阶段引导) {
+              if (isV3Scene) {
+                // v3: 每轮(含第1轮)注入 beat 为 system msg,让 Phase 3.6 处理 push
+                const v3Msg = buildSceneV3BeatMessage(sceneName, actualRound);
+                if (v3Msg) {
+                  _v3BeatPendingPush = v3Msg;
+                  console.info(
+                    `[云霜凝] 特殊场景v3·${sceneName}·第${actualRound}/${maxRounds}轮 beat 将注入(system msg)`,
+                  );
                 }
-                console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮 rewriteBeat 已注入`);
+              } else if (actualRound >= 2) {
+                // v2: 从第 2 轮开始拼接到 user 消息末尾(第 1 轮只靠 entryText)
+                const beat = getSpecialSceneRoundGuidance(sceneName, actualRound);
+                if (beat) {
+                  for (let i = chat.length - 1; i >= 0; i--) {
+                    if (chat[i].role === 'user') {
+                      const content = chat[i].content;
+                      chat[i].content = typeof content === 'string' ? content + ' ' + beat : beat;
+                      break;
+                    }
+                  }
+                  console.info(`[云霜凝] 特殊场景·${sceneName}·第${actualRound}/${maxRounds}轮 rewriteBeat 已注入`);
+                }
               }
             }
           }
@@ -902,6 +925,30 @@ $(() => {
           } else {
             chat.push({ role: 'system', content: snapshot });
             console.info('[云霜凝] 状态快照: push 到末尾（清理后）');
+          }
+        }
+
+        // ── Phase 3.6: v3 场景 beat 注入 (2.0.36 · 场景引擎 v3) ──
+        // 幂等清理 + push 新 beat: 类似 Phase 3.5 snapshot 策略,确保 chat history 不被污染
+        // - 无论是否在场景中,都清理旧 [场景节拍·ᅠ system msg(场景退出后也会清掉上一场残留)
+        // - 仅当 Phase 1.9 决定要注入(_v3BeatPendingPush 非空)时 push 新 beat
+        {
+          for (let i = chat.length - 1; i >= 0; i--) {
+            const msg = chat[i];
+            const content = msg?.content;
+            if (msg?.role === 'system' && typeof content === 'string' && content.includes(SCENE_V3_BEAT_MARKER)) {
+              chat.splice(i, 1);
+            }
+          }
+          if (_v3BeatPendingPush) {
+            const lastMsg2 = chat[chat.length - 1];
+            if (lastMsg2 && lastMsg2.role === 'assistant') {
+              chat.splice(chat.length - 1, 0, { role: 'system', content: _v3BeatPendingPush });
+              console.info('[云霜凝] v3 beat: 插入到 prefill 之前(清理后)');
+            } else {
+              chat.push({ role: 'system', content: _v3BeatPendingPush });
+              console.info('[云霜凝] v3 beat: push 到末尾(清理后)');
+            }
           }
         }
 

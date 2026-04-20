@@ -1482,6 +1482,36 @@ function equipClothing(name: string) {
   recalcExposure();
 }
 
+/**
+ * 给洛书晴装备服装时同步 `洛书晴.服装[slot]` 让状态栏外观即时更新
+ * 2.0.36: 原逻辑只写 `_洛书晴道具状态[name] = '使用中'`,`洛书晴.服装` 字段
+ * 要等 AI 回复后 VARIABLE_UPDATE_ENDED 里 processNewlyActivatedLuoItems
+ * 才同步 → 玩家装备后状态栏外观显示没变化。此函数在前端立即同步。
+ */
+function syncLuoClothingEquip(name: string) {
+  const slot = CLOTHING_SLOT[name];
+  if (!slot) return;
+  if (slot === '特殊配饰') {
+    const sub = ACCESSORY_SUB_SLOT[name];
+    if (!sub) return;
+    // 卸下同子槽的旧配饰
+    for (const [itemName, itemSub] of Object.entries(ACCESSORY_SUB_SLOT)) {
+      if (itemSub === sub && itemName !== name && store.data._洛书晴道具状态[itemName] === '使用中') {
+        store.data._洛书晴道具状态[itemName] = '已购买';
+      }
+    }
+    store.data.洛书晴.服装.特殊配饰[sub] = name;
+  } else {
+    // 卸下同槽的旧服装
+    for (const [itemName, itemSlot] of Object.entries(CLOTHING_SLOT)) {
+      if (itemSlot === slot && itemName !== name && store.data._洛书晴道具状态[itemName] === '使用中') {
+        store.data._洛书晴道具状态[itemName] = '已购买';
+      }
+    }
+    store.data.洛书晴.服装[slot as MainClothingSlot] = name;
+  }
+}
+
 /** 脱下服装：恢复默认、重算暴露 */
 function unequipClothing(name: string) {
   const slot = CLOTHING_SLOT[name];
@@ -1958,6 +1988,8 @@ function executeConfirmUse(target: '云霜凝' | '洛书晴') {
         }
         // 性癖 / 体改 / 服装 / 身体器具 / 洛书晴消耗品
         store.data._洛书晴道具状态[name] = '使用中';
+        // 2.0.36: 如果是服装,前端立即同步 洛书晴.服装[slot](原本要等 AI 回复后 processNewlyActivatedLuoItems 才写入)
+        if (CLOTHING_SLOT[name]) syncLuoClothingEquip(name);
         // 【修复 2.0.20】：装备/体改/性癖 不删除 系统.道具状态（云洛可共存装载）；
         // 只有消耗品真正被"消耗"，才清掉 云侧购买记录
         const it = findItem(name);
@@ -2467,7 +2499,33 @@ function buildEquipDialogActions(item: ItemDef): EquipDialogAction[] {
 function openEquipDialog(item: ItemDef) {
   const actions = buildEquipDialogActions(item);
   if (actions.length === 0) {
-    showToast(`「${item.name}」两者都已拥有`, 'info');
+    // 2.0.36: 细化提示原因, 原版只说"两者都已拥有" 但实际场景也可能是
+    // 云已超过/洛前置未满足等组合,玩家会以为数据错了
+    const name = item.name;
+    const isBodyMod = item.type === '体改';
+    const isShared = isSharedItem(name);
+    const luoActive = !!store.data._洛书晴线已激活;
+    const reasons: string[] = [];
+    // 云霜凝侧
+    if (isYunOwned(name)) {
+      reasons.push('云已拥有');
+    } else if (isBodyMod && !canApplyBodyMod(name, '云霜凝')) {
+      reasons.push('云已达/超过此等级');
+    }
+    // 洛书晴侧
+    if (isShared) {
+      if (!luoActive) {
+        reasons.push('洛线未激活');
+      } else if (isLuoOwned(name)) {
+        reasons.push('洛已拥有');
+      } else if (isBodyMod && !canApplyBodyMod(name, '洛书晴')) {
+        reasons.push('洛已达/超过此等级');
+      } else if (!meetsLuoUnlock(name)) {
+        reasons.push('洛前置未满足');
+      }
+    }
+    const msg = reasons.length > 0 ? `「${name}」无法应用: ${reasons.join('; ')}` : `「${name}」无可用操作`;
+    showToast(msg, 'info');
     return;
   }
   equipDialogItem.value = item;
@@ -2527,7 +2585,8 @@ function executeImmediateEquip(item: ItemDef, target: '云霜凝' | '洛书晴')
         if (GIFTABLE_CLOTHING.has(name)) eventNames.push(name);
       } else {
         store.data._洛书晴道具状态[name] = '使用中';
-        // 洛书晴服装写入（后端 processNewlyActivatedLuoItems 处理）
+        // 2.0.36: 前端立即同步 洛书晴.服装[slot],否则状态栏外观要等 AI 回复后才更新
+        syncLuoClothingEquip(name);
         eventNames.push(`洛书晴·${name}`);
       }
     } else {
