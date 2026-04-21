@@ -4084,10 +4084,10 @@ function buildV3SceneSnapshot(
   let snapshot = `\n[当前游戏状态快照·${sceneName}·第${actualRound}/${maxRounds}轮]\n`;
   snapshot += `时间: ${timeLabel} | 治疗阶段: 第${data.治疗.阶段}阶·${phase} | 治疗完成度: ${data.治疗.完成度}%\n`;
 
-  // 场景简介: 只在第 1 轮注入, 后续轮 AI 靠 context memory
-  if (actualRound === 1) {
-    snapshot += `\n▍本场简介\n${v3.场景简介}\n`;
-  }
+  // 场景简介 + 场景切换提示: 每轮稳定注入, 防止 AI 接续上一场景残留剧情
+  // 2.0.39: 取消"仅第 1 轮"条件 — 上一场景剧情一直在 chat history, 提示每轮都要
+  snapshot += `\n▍场景切换(每轮重申)\n以上 chat history 中任何发生在本场景之前的剧情、情绪、人物互动、未完事件, 均与本场完全独立。entry prefill "几日后——"等已明示时间跳跃, AI 必须用 hard cut 进入本场, 不承接上场残留, 不过渡, 不回顾, 不延续上场动作/情绪。\n`;
+  snapshot += `\n▍本场简介\n${v3.场景简介}\n`;
 
   snapshot += `\n▍本轮主题\n${beat.本轮主题}\n`;
 
@@ -4095,11 +4095,69 @@ function buildV3SceneSnapshot(
     snapshot += `\n▍AI 自由度\n${beat.自由度}\n`;
   }
 
+  const 本轮角色 = beat.角色呈现 ? new Set(Object.keys(beat.角色呈现)) : new Set<string>();
+
   if (beat.角色呈现) {
     snapshot += `\n▍本轮参考数据\n`;
     for (const [role, mode] of Object.entries(beat.角色呈现)) {
       snapshot += renderV3角色(role, data, currentFloor, mode);
     }
+  }
+
+  // ── 软指引层 (2.0.39): 按本轮角色呈现自动注入, 让 AI 写出沉浸感 ──
+  // 心理阶段指引/叙事指引/独立线/封口/文风 — v2 里每轮都给, v3b 继承同样机制
+  const 软指引段: string[] = [];
+  const 云在场 = 本轮角色.has('云霜凝');
+  const 洛在场 = 本轮角色.has('洛书晴') && data._洛书晴线已激活;
+  const 苗喧在场 = 本轮角色.has('苗喧');
+
+  if (云在场) {
+    const 神魂 = data._当前互动模式 === '神魂空间';
+    const g = buildPsychologyGuide(data, 神魂, currentFloor).trim();
+    if (g) 软指引段.push(g);
+  }
+  if (洛在场) {
+    const g = buildLuoShuqingPsychologyGuide(data).trim();
+    if (g) 软指引段.push(g);
+  }
+  if (苗喧在场) {
+    const g = buildMiaoxuanGuide(data).trim();
+    if (g) 软指引段.push(g);
+  }
+
+  // 两人独立线硬约束: 云 + 洛 同场时, 防串味
+  if (云在场 && 洛在场 && !data._已完成特殊场景?.['苗喧的一日']) {
+    const 阶段描述 =
+      data.洛书晴.调教阶段 <= 3
+        ? '宗门天骄,骄傲端庄'
+        : data.洛书晴.调教阶段 <= 5
+          ? '动摇中,表面维持仪态'
+          : '堕落深化';
+    软指引段.push(`⚠️【两人独立线·不可串味】云霜凝与洛书晴是**完全独立的角色**,各自的阶段/心态/身体开发/性癖/防线 **互不影响**。
+- 云霜凝当前的堕落程度不决定洛书晴的表现;洛书晴按她自己的阶段/心理防线/顺从度/性癖列表演
+- 两者阶段差距大时尤其警惕:严禁因云霜凝已沉溺/信任高/防线崩塌,就把阶段较低的洛书晴写得放得开、口吻暧昧、主动迎合——她当前阶段仍是${阶段描述}
+- 反向同理:洛书晴若仍清纯,不代表同场的云霜凝状态要退回;云霜凝按自己的数值/心态正常演绎
+- 同屏时各演各的数值基线,交互叙事可以并行,但心态/语气/性癖表现严禁交叉串味`);
+  }
+
+  // 洛书晴秘密·现实封口: 云在场 + 洛未在本轮 + 洛阶段<3 + 线已激活
+  if (云在场 && !本轮角色.has('洛书晴') && data._洛书晴线已激活 && data.洛书晴.调教阶段 < 3) {
+    软指引段.push(`⚠️【洛书晴秘密·现实封口】 {{user}} 已知洛书晴有神魂体质和私人神魂空间,但寒霜门无人知晓——包括云霜凝/苗广/苗喧。洛书晴本人目前不在宗门。
+- {{user}} 不主动向云霜凝/苗广/苗喧提及洛书晴
+- AI 绝对禁止让云霜凝/苗广/苗喧在本场主动提起洛书晴这个人或她的体质空间`);
+  }
+
+  // 文风块(哦齁齁体质激活时)
+  {
+    const 云哦齁齁 = 云在场 && data.系统.道具状态['哦齁齁体质'] === '使用中';
+    const 洛哦齁齁 = 洛在场 && data._洛书晴道具状态['哦齁齁体质'] === '使用中';
+    if (云哦齁齁 || 洛哦齁齁) {
+      软指引段.push(buildOhHohoStyleBlock().trim());
+    }
+  }
+
+  if (软指引段.length > 0) {
+    snapshot += `\n▍软指引(按本轮角色自动)\n${软指引段.join('\n\n')}\n`;
   }
 
   snapshot += `
