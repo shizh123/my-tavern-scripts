@@ -1135,27 +1135,38 @@ interface SpecialSceneData {
   /** v1 遗留 · 每轮AI引导(迁移 v2 时删除) */
   roundGuidance?: Record<number, string>;
   /**
-   * v3 场景引擎 (2.0.36) · 每轮强制 beat + NPC 主动推进模型
+   * v3 场景引擎 · 每轮推进 beat + NPC 主动引导模型
    *
-   * 设计背景:
-   * - v2 rewriteBeat 拼到 user 消息末尾,默认"玩家导演到目标",玩家偏离→楼层推进→场景终止无 beat
-   * - v3 改为: N 轮 = N 个强制 beat, 每轮通过 system msg 硬指令让 AI 完成本轮目标
-   * - 注入用 marker cleanup 模式,不污染 chat history(类似 snapshot)
-   * - AI 自由度保留在 beat 内部(措辞/细节),beat 之间是轨道
+   * 两个版本并存:
+   * v3a (2.0.36, 旧): 目录 + beats.目标 · 独立 system msg 路径(Phase 3.6 push)
+   * v3b (2.0.38, 新): 场景简介 + beats.本轮主题/角色呈现 · 合并到 buildStatusSnapshot
+   *
+   * 如果场景有 `场景简介` 字段 → 走 v3b 路径(合并到 snapshot, 动态 per-beat 角色呈现)
+   * 如果场景只有 `目录` 字段 → 走 v3a 路径(独立 system msg)
    *
    * 不设 v3 字段的场景仍走 v2 rewriteBeat path (向后兼容)
    */
   v3?: {
-    /** 本场目录,仅第 1 轮注入,让 AI 通读整场 beat 规划(不剧透细节,只是轮次骨架) */
-    目录: string;
-    /** 每轮强制 beat, key = 1 ~ maxRounds */
+    /** v3a · 本场目录,仅第 1 轮注入 */
+    目录?: string;
+    /** v3b · 整场剧情概括(开场注入, 后续 AI 靠记忆) */
+    场景简介?: string;
+    /** 每轮 beat, key = 1 ~ maxRounds */
     beats: Record<
       number,
       {
-        /** 本轮必演目标(AI 必须完成) */
-        目标: string;
-        /** AI 在目标内的创作自由度(可选) */
+        /** v3a · 本轮必演目标(硬指令) */
+        目标?: string;
+        /** v3b · 本轮主题(柔性引导, AI 聊着聊着悄悄带到) */
+        本轮主题?: string;
+        /** AI 在目标/主题内的自由度 */
         自由度?: string;
+        /** v3b · 本轮参与角色 + 各自呈现粒度
+         * - '完整': 渲染该角色全套状态(穿着/身体开发/激活效果/性癖/肉体改造/心态/防线/信任度/顺从度)
+         * - '精简': 只渲染心态/防线/信任度/顺从度(不给穿着/开发/性癖)
+         * - string[]: 列具体字段路径, 最精细控制
+         */
+        角色呈现?: Record<string, '完整' | '精简' | string[]>;
       }
     >;
   };
@@ -1582,8 +1593,11 @@ export function buildSceneV3BeatMessage(sceneName: string, currentRound: number)
   const scene = SPECIAL_SCENE_GUIDES[sceneName];
   if (!scene?.v3) return null;
 
+  // v3b 场景(有 场景简介)走合并到 snapshot 路径(buildV3SceneSnapshot), 此函数只服务 v3a
+  if (scene.v3.场景简介) return null;
+
   const beat = scene.v3.beats[currentRound];
-  if (!beat) return null;
+  if (!beat?.目标) return null;
 
   const maxRounds = scene.maxRounds;
   let msg = `${SCENE_V3_BEAT_MARKER}${sceneName}·第${currentRound}/${maxRounds}轮·本轮必演]\n`;
@@ -3202,52 +3216,105 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
       10: '——苗喧恍惚逃离,不是哭,是断片式机械式的,回到自己房间独坐到天黑',
     },
     v3: {
-      目录: `第1轮 苗喧出门·朝洛书晴住处 / 第2轮 洛不在·转去找父亲 / 第3轮 朝母亲卧房走 / 第4轮 目击父亲失常姿态(门外) / 第5轮 听到门内双声(母亲+陌生女声) / 第6轮 三段连击(父/母/未婚妻)世界塌 / 第7轮 洛试探师父·师公偷窥话题 / 第8轮 云察觉苗喧·嘴角翘·不告诉洛 / 第9轮 云反问洛关苗喧·故意让苗喧听到 / 第10轮 苗喧恍惚逃离·独坐到天黑`,
+      场景简介: `【双重目击 · 10 轮 · 本场整场概览】
+苗喧心神不宁想找未婚妻洛书晴倾诉,扑空后转去找父亲苗广,在云霜凝卧房外撞见父亲正贴门偷看、自慰、低声指挥的失常姿态;顺父亲视线从门缝看入,三段连击目击父亲失常 → 母亲被亲密 → 未婚妻也在场,世界观彻底崩塌。
+房内三人(云霜凝/洛书晴/{{user}})同步进行亲密;洛书晴主动用"师公偷窥"话题试探云霜凝,师徒表面共谋实际暗中较劲;云霜凝以高境界神识察觉苗喧在外,刻意用反问话语让苗喧听到,同时压回洛书晴的挑战。
+最终苗喧不哭不喊,断片式机械式退离,回到自己房间独坐到天黑 —— 比哭闹更悲剧。
+注意全程房内三人不察觉苗喧在场(除云霜凝外),苗喧不进门打断,逃离不是情绪爆发而是麻木崩溃。`,
       beats: {
         1: {
-          目标: '苗喧心神不宁,出院子朝洛书晴住处走去——他想倾诉的对象是未婚妻。本轮必须完成"苗喧出门 + 方向明确(朝洛书晴住处)"两个动作,不到洛住处,不见任何人。',
+          本轮主题: '苗喧心神不宁,出院子朝洛书晴住处走去——他想倾诉的对象是未婚妻。本轮让剧情自然走到"苗喧在路上朝洛书晴住处走"这个画面,不到住处,不见任何人。',
           自由度: '他心神不宁的具体来源(按苗喧心态决定是哪种焦虑)、走路姿态、途中偶遇弟子时的掩饰由 AI 自主',
+          角色呈现: {
+            苗喧: '完整',
+          },
         },
         2: {
-          目标: '苗喧到洛书晴住处,发现她不在(房门虚掩/无回应/侍女说她去见师父了等)。他失望,决定转去找父亲倾诉。本轮必须完成"扑空 + 转向找父亲"这个决定。',
+          本轮主题: '苗喧到洛书晴住处,发现她不在(房门虚掩/无回应/侍女说她去见师父了等)。他失望,决定转去找父亲倾诉。本轮让剧情自然走到"扑空 + 转向找父亲"。',
           自由度: '扑空的具体方式(敲门/问侍女/看到空房)、失望情绪的表达、转向时的内心独白由 AI 自主',
+          角色呈现: {
+            苗喧: '完整',
+            洛书晴: ['调教阶段'],
+          },
         },
         3: {
-          目标: '苗喧朝母亲(云霜凝)卧房方向走——他知道父亲最近总在那附近。本轮只走到卧房附近,还没看到苗广。让读者知道他的路径,建立"即将目击"的张力。',
-          自由度: '路线细节(走廊/庭院)、途中心理活动(想和父亲说什么)、路过时环境描写由 AI 自主',
+          本轮主题: '苗喧朝母亲(云霜凝)卧房方向走——他知道父亲最近总在那附近。本轮让剧情自然走到"苗喧走到卧房附近"——还没看到苗广,建立"即将目击"的张力。同时房内三人(云霜凝/洛书晴/{{user}})亲密同步进行,镜头可双线切换(走廊苗喧 + 房内亲密背景),但苗喧本轮不到门缝。',
+          自由度: '路线细节(走廊/庭院)、途中心理活动(想和父亲说什么)、房内背景亲密的描写粒度由 AI 自主',
+          角色呈现: {
+            苗喧: ['心态'],
+            云霜凝: '完整',
+            洛书晴: '完整',
+          },
         },
         4: {
-          目标: '苗喧在转角停住——看到父亲贴在云霜凝卧房门边,神情恍惚,一只手在裤裆里,还低声在喊什么。这是慢镜头确认画面,给苗喧时间震惊。本轮必须完成"苗喧停住 + 慢镜确认父亲姿态"——让他看清但还没完全理解。',
-          自由度:
-            '苗广恍惚的具体表情、低声喊的内容(含糊的/具体动作指令按苗广沉溺深度)、苗喧停住时的身体反应(手按剑/呼吸停)由 AI 自主',
+          本轮主题: '苗喧在转角停住——看到父亲贴在云霜凝卧房门边,神情恍惚,一只手在裤裆里,还低声在喊什么。本轮让剧情自然走到"慢镜头确认父亲姿态"——让苗喧看清但还没完全理解。房内亲密继续同步。',
+          自由度: '苗广恍惚的具体表情、低声喊的内容(含糊的/具体动作指令按苗广沉溺深度)、苗喧停住时的身体反应(手按剑/呼吸停)由 AI 自主',
+          角色呈现: {
+            苗喧: ['心态'],
+            苗广: '完整',
+            云霜凝: '完整',
+            洛书晴: '完整',
+          },
         },
         5: {
-          目标: '苗喧走近几步,听到卧房门内传出母亲的声音 + 一个他不愿承认的不熟悉女声(但他心里知道是谁)。本轮必须完成"听到双声 + 苗喧心里的否认机制"。不到门缝,不看入。',
+          本轮主题: '苗喧走近几步,听到卧房门内传出母亲的声音 + 一个他不愿承认的不熟悉女声(但他心里知道是谁)。本轮让剧情自然走到"听到双声 + 苗喧心里的否认机制"。不到门缝,不看入。',
           自由度: '具体听到什么(呻吟/话语/器物声)、苗喧否认的内心独白(不可能/不会是/听错了)由 AI 自主',
+          角色呈现: {
+            苗喧: ['心态'],
+            苗广: ['心态'],
+            云霜凝: '完整',
+            洛书晴: '完整',
+          },
         },
         6: {
-          目标: '苗喧顺着父亲的视线看向门缝——三段连击画面必须全部呈现: 先看到父亲(失常/自慰/低喊指挥) → 然后视线移到门缝里,看到母亲(被亲密) → 最后看到未婚妻(也在场)。世界观崩塌。本轮必须按此顺序完成三段连击,不能省略任何一段。',
+          本轮主题: '苗喧顺着父亲的视线看向门缝——三段连击画面必须全部呈现: 先看到父亲(失常/自慰/低喊指挥) → 然后视线移到门缝里,看到母亲(被亲密) → 最后看到未婚妻(也在场)。世界观崩塌。本轮让剧情自然按这个顺序完成三段连击,三段缺一不可。',
           自由度: '视线移动的时间节奏、每一段停留的具体细节、苗喧意识的断裂感由 AI 按 data 动态',
+          角色呈现: {
+            苗喧: '完整',
+            苗广: '完整',
+            云霜凝: '完整',
+            洛书晴: '完整',
+          },
         },
         7: {
-          目标: '镜头切到房内——洛书晴主动试探,用"师公在门外偷窥"的话题挑逗云霜凝。表面是师徒共谋,暗中是晚辈挑战师父。本轮必须完成"洛书晴先开口 + 话题锋利"这个主动攻势,门外的苗广+苗喧不知情。',
-          自由度:
-            '洛书晴挑逗的具体措辞、云霜凝初始反应(从容/轻笑/挑眉)、{{user}}的姿态由 AI 按 data 洛书晴阶段/性癖激活自主',
+          本轮主题: '镜头切到房内——洛书晴主动试探,用"师公在门外偷窥"的话题挑逗云霜凝。表面是师徒共谋,暗中是晚辈挑战师父。本轮让剧情自然走到"洛书晴先开口 + 话题锋利"这个主动攻势,门外的苗广+苗喧不知情。',
+          自由度: '洛书晴挑逗的具体措辞、云霜凝初始反应(从容/轻笑/挑眉)、{{user}}的姿态由 AI 按 data 洛书晴阶段/性癖激活自主',
+          角色呈现: {
+            云霜凝: '完整',
+            洛书晴: '完整',
+            苗广: ['心态'],
+            苗喧: ['心态'],
+          },
         },
         8: {
-          目标: '云霜凝以高境界神识感知到——门外不只苗广,还有苗喧。她嘴角翘起没有惊慌,也不告诉洛书晴,选择"默默利用苗喧的存在"。本轮必须完成"云感知 + 她独有的得意微表情 + 对洛书晴隐瞒"。',
-          自由度:
-            '感知到时的具体身体反应(眼神一顿/嘴角翘起的细节)、她决定隐瞒的内心独白、对{{user}}是否眨眼暗示由 AI 自主',
+          本轮主题: '云霜凝以高境界神识感知到——门外不只苗广,还有苗喧。她嘴角翘起没有惊慌,也不告诉洛书晴,选择"默默利用苗喧的存在"。本轮让剧情自然走到"云感知 + 她独有的得意微表情 + 对洛书晴隐瞒"。',
+          自由度: '感知到时的具体身体反应(眼神一顿/嘴角翘起的细节)、她决定隐瞒的内心独白、对{{user}}是否眨眼暗示由 AI 自主',
+          角色呈现: {
+            云霜凝: '完整',
+            洛书晴: '精简',
+            苗喧: ['心态'],
+            苗广: ['心态'],
+          },
         },
         9: {
-          目标: '云霜凝反问洛书晴关于苗喧的话题——眼神瞟向门缝方向。表面是回应徒弟,暗中是(a)故意让苗喧听到 (b)用更狠的话压回洛书晴的挑战。师徒争风的反击。本轮必须完成"云的反问 + 双层效果(苗喧听到+洛被压)"。',
-          自由度:
-            '云反问的具体措辞(比如"你说苗喧知道他父亲这样吗")、眼神瞟门缝的细节、洛书晴承受压力时的反应由 AI 自主',
+          本轮主题: '云霜凝反问洛书晴关于苗喧的话题——眼神瞟向门缝方向。表面是回应徒弟,暗中是(a)故意让苗喧听到 (b)用更狠的话压回洛书晴的挑战。本轮让剧情自然走到"云的反问 + 双层效果(苗喧听到+洛被压)"。',
+          自由度: '云反问的具体措辞(比如"你说苗喧知道他父亲这样吗")、眼神瞟门缝的细节、洛书晴承受压力时的反应由 AI 自主',
+          角色呈现: {
+            云霜凝: '完整',
+            洛书晴: '完整',
+            苗喧: ['心态', '绝望值'],
+            苗广: ['心态'],
+          },
         },
         10: {
-          目标: '苗喧恍惚逃离——不是哭着跑,是断片式、机械式的后退/转身/离开。他回到自己房间独坐到天黑。本轮必须完成"机械逃离 + 独坐到天黑"这个终极画面,不能写他哭闹喊叫。',
-          自由度:
-            '机械逃离的步伐细节、房内三人是否感知(除云霜凝已知外,洛和{{user}}不应察觉)、独坐时的姿态和环境描写由 AI 自主',
+          本轮主题: '苗喧恍惚逃离——不是哭着跑,是断片式、机械式的后退/转身/离开。他回到自己房间独坐到天黑。本轮让剧情自然收在"机械逃离 + 独坐到天黑"这个终极画面,不能写他哭闹喊叫。',
+          自由度: '机械逃离的步伐细节、房内三人是否感知(除云霜凝已知外,洛和{{user}}不应察觉)、独坐时的姿态和环境描写由 AI 自主',
+          角色呈现: {
+            苗喧: '完整',
+            云霜凝: '精简',
+            洛书晴: '精简',
+            苗广: ['心态'],
+          },
         },
       },
     },
@@ -3860,6 +3927,178 @@ export function getActiveCharacters(data: SchemaType): { 云霜凝: boolean; 洛
   };
 }
 
+// ────────────────────────────────────────────
+// v3b 场景引擎 (2.0.38) · 每轮动态 snapshot
+// 按 beat.角色呈现 渲染各角色状态, 避免整场全套字段塞满
+// ────────────────────────────────────────────
+
+type V3RoleMode = '完整' | '精简' | string[];
+
+function v3Want(mode: V3RoleMode, 完整字段: string[], 精简字段: string[], field: string): boolean {
+  if (mode === '完整') return 完整字段.includes(field);
+  if (mode === '精简') return 精简字段.includes(field);
+  return Array.isArray(mode) && mode.includes(field);
+}
+
+function renderV3云霜凝(data: SchemaType, currentFloor: number, mode: V3RoleMode): string {
+  const 完整 = ['信任度', '心理防线', '穿着', '身体开发', '激活效果', '肉体改造', '性癖'];
+  const 精简 = ['信任度', '心理防线'];
+  const want = (f: string) => v3Want(mode, 完整, 精简, f);
+  const lines: string[] = [];
+  const base: string[] = [];
+  if (want('信任度')) base.push(`信任度${data.云霜凝.信任度}`);
+  if (want('心理防线')) base.push(`心理防线${data.云霜凝.心理防线}`);
+  if (base.length) lines.push(`云霜凝: ${base.join(' ')}`);
+  if (want('穿着')) {
+    const pei = data.云霜凝.服装.特殊配饰;
+    const peiList = [pei.脚踝, pei.颈部, pei.耳部, pei.腰部, pei.大腿, pei.胸部, pei.阴蒂, pei.前后穴]
+      .filter(s => s && s.trim().length > 0)
+      .join('、');
+    const peiText = peiList || '无';
+    lines.push(
+      `云霜凝·穿着: 上装[${data.云霜凝.服装.上装}] 下装[${data.云霜凝.服装.下装}] 内衣[${data.云霜凝.服装.内衣}] 内裤[${data.云霜凝.服装.内裤}] 配饰[${peiText}] → 暴露[${data.云霜凝.服装.暴露程度}]`,
+    );
+  }
+  if (want('身体开发')) {
+    lines.push(
+      `云霜凝·身体开发: 小嘴${getDevLevel(data.云霜凝.身体开发.小嘴)} 胸部${getDevLevel(data.云霜凝.身体开发.胸部)} 小屄${getDevLevel(data.云霜凝.身体开发.小屄)} 屁穴${getDevLevel(data.云霜凝.身体开发.屁穴)}`,
+    );
+  }
+  if (want('激活效果')) {
+    const tags = buildActiveItemTags(data);
+    if (tags) lines.push(`云霜凝·当前激活效果: ${tags}`);
+  }
+  if (want('肉体改造')) {
+    const mod = buildBodyModTags(data, currentFloor).trim();
+    if (mod) lines.push(mod);
+  }
+  if (want('性癖')) {
+    const kink = buildKinkDirectives(data, currentFloor).trim();
+    if (kink) lines.push(kink);
+  }
+  return lines.length ? lines.join('\n') + '\n' : '';
+}
+
+function renderV3洛书晴(data: SchemaType, currentFloor: number, mode: V3RoleMode): string {
+  const 完整 = ['调教阶段', '心理防线', '顺从度', '穿着', '身体开发', '性癖'];
+  const 精简 = ['调教阶段', '心理防线', '顺从度'];
+  const want = (f: string) => v3Want(mode, 完整, 精简, f);
+  const lines: string[] = [];
+  const base: string[] = [];
+  if (want('调教阶段')) base.push(`阶段${data.洛书晴.调教阶段}`);
+  if (want('心理防线')) base.push(`心理防线${data.洛书晴.心理防线}`);
+  if (want('顺从度')) base.push(`顺从度${data.洛书晴.顺从度}`);
+  if (base.length) lines.push(`洛书晴: ${base.join(' ')}`);
+  if (want('穿着') && data.洛书晴.调教阶段 >= 3) {
+    const pei = data.洛书晴.服装.特殊配饰;
+    const peiList = [pei.脚踝, pei.颈部, pei.耳部, pei.腰部, pei.大腿, pei.胸部, pei.阴蒂, pei.前后穴]
+      .filter(s => s && s.trim().length > 0)
+      .join('、');
+    lines.push(
+      `洛书晴·穿着: 上装[${data.洛书晴.服装.上装}] 下装[${data.洛书晴.服装.下装}] 内衣[${data.洛书晴.服装.内衣}] 内裤[${data.洛书晴.服装.内裤}] 配饰[${peiList || '无'}]`,
+    );
+  }
+  if (want('身体开发')) {
+    lines.push(
+      `洛书晴·身体开发: 小嘴${getDevLevel(data.洛书晴.身体开发.小嘴)} 胸部${getDevLevel(data.洛书晴.身体开发.胸部)} 小屄${getDevLevel(data.洛书晴.身体开发.小屄)} 屁穴${getDevLevel(data.洛书晴.身体开发.屁穴)}`,
+    );
+  }
+  if (want('性癖')) {
+    const kink = buildLuoKinkDirectives(data, currentFloor).trim();
+    if (kink) lines.push(kink);
+  }
+  return lines.length ? lines.join('\n') + '\n' : '';
+}
+
+function renderV3苗广(data: SchemaType, mode: V3RoleMode): string {
+  const 完整 = ['心态', '疑心值', '千晶幻术'];
+  const 精简 = ['心态'];
+  const want = (f: string) => v3Want(mode, 完整, 精简, f);
+  const parts: string[] = [];
+  if (want('心态')) parts.push(`心态[${data.苗广.心态}]`);
+  if (want('疑心值')) {
+    const 是后半程 = ['屈辱', '默许', '沉溺'].includes(data.苗广.心态);
+    parts.push(`${是后半程 ? '绿帽值' : '疑心值'}${data.苗广.疑心值}`);
+  }
+  if (want('千晶幻术') && data.苗广.千晶幻术.已使用次数 > 0) {
+    parts.push(`千晶已施术${data.苗广.千晶幻术.已使用次数}/3次`);
+  }
+  return parts.length ? `苗广: ${parts.join(' · ')}\n` : '';
+}
+
+function renderV3苗喧(data: SchemaType, mode: V3RoleMode): string {
+  const 完整 = ['心态', '绝望值', '压抑值'];
+  const 精简 = ['心态'];
+  const want = (f: string) => v3Want(mode, 完整, 精简, f);
+  const parts: string[] = [];
+  if (want('心态')) parts.push(`心态[${data.苗喧.心态}]`);
+  if (want('绝望值')) parts.push(`绝望值${data.苗喧.绝望值}`);
+  if (want('压抑值')) parts.push(`压抑值${data.苗喧.压抑值}`);
+  return parts.length ? `苗喧: ${parts.join(' · ')}\n` : '';
+}
+
+function renderV3角色(role: string, data: SchemaType, currentFloor: number, mode: V3RoleMode): string {
+  if (role === '云霜凝') return renderV3云霜凝(data, currentFloor, mode);
+  if (role === '洛书晴') return renderV3洛书晴(data, currentFloor, mode);
+  if (role === '苗广') return renderV3苗广(data, mode);
+  if (role === '苗喧') return renderV3苗喧(data, mode);
+  return '';
+}
+
+/**
+ * v3b 场景 snapshot 构建 (2.0.38)
+ * 合并到 buildStatusSnapshot, 替换原有状态快照
+ * 场景简介开场一次, 后续 AI 靠上下文记忆
+ */
+function buildV3SceneSnapshot(
+  data: SchemaType,
+  sceneName: string,
+  currentFloor: number,
+  actualRound: number,
+  maxRounds: number,
+): string | null {
+  const scene = SPECIAL_SCENE_GUIDES[sceneName];
+  const v3 = scene?.v3;
+  if (!v3?.场景简介) return null;
+  const beat = v3.beats[actualRound];
+  if (!beat?.本轮主题) return null;
+
+  const timeLabel = data.时间.玄霜历;
+  const phase = getHealingPhaseName(data.治疗.阶段);
+
+  let snapshot = `\n[当前游戏状态快照·${sceneName}·第${actualRound}/${maxRounds}轮]\n`;
+  snapshot += `时间: ${timeLabel} | 治疗阶段: 第${data.治疗.阶段}阶·${phase} | 治疗完成度: ${data.治疗.完成度}%\n`;
+
+  // 场景简介: 只在第 1 轮注入, 后续轮 AI 靠 context memory
+  if (actualRound === 1) {
+    snapshot += `\n▍本场简介\n${v3.场景简介}\n`;
+  }
+
+  snapshot += `\n▍本轮主题\n${beat.本轮主题}\n`;
+
+  if (beat.自由度) {
+    snapshot += `\n▍AI 自由度\n${beat.自由度}\n`;
+  }
+
+  if (beat.角色呈现) {
+    snapshot += `\n▍本轮参考数据\n`;
+    for (const [role, mode] of Object.entries(beat.角色呈现)) {
+      snapshot += renderV3角色(role, data, currentFloor, mode);
+    }
+  }
+
+  snapshot += `
+▍引导原则
+- AI 和 {{user}} 聊着聊着, 悄悄把话题/动作/镜头引导到本轮主题方向
+- {{user}} 输入跟主题无关: 用 1-2 句自然 reflect 玩家内容, 然后由 NPC 主动转话题/换镜头
+- 不要突兀硬拽, 不要打断玩家, 手法要顺
+- 务必在本轮自然触及主题, 若玩家极度偏离至少埋钩子让下轮继续
+- 贴近主题时自然融合
+`;
+
+  return snapshot;
+}
+
 export function buildStatusSnapshot(data: SchemaType): string {
   const phase = getHealingPhaseName(data.治疗.阶段);
   const timeLabel = data.时间.玄霜历;
@@ -3869,6 +4108,28 @@ export function buildStatusSnapshot(data: SchemaType): string {
   const 冻结剩余 = Math.max(0, data._打断冻结至楼层 - currentFloor);
   const 治疗冻结中 = currentFloor > 0 && 冻结剩余 > 0;
   const 特殊场景中 = !!data._特殊场景.进行中;
+
+  // ── v3b 场景引擎 (2.0.38) 早退分支 ──
+  // 有 场景简介 字段的场景走独立 snapshot 构建,替代全套旧注入
+  // 其他 v3 场景(v3a, 只有 目录) 或 v2 场景 走下面原逻辑
+  if (特殊场景中 && data._特殊场景.进行中 !== '洛书晴现实初遇' && !千晶激活 && !data.苗广.孝敬师父.激活中 && !data._坏结局已触发) {
+    const sceneName = data._特殊场景.进行中;
+    const scene = SPECIAL_SCENE_GUIDES[sceneName];
+    if (scene?.v3?.场景简介) {
+      const sceneStartFloor = data._特殊场景开始楼层;
+      if (sceneStartFloor > 0) {
+        const actualRound = Math.max(
+          1,
+          Math.min(
+            scene.maxRounds,
+            Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1,
+          ),
+        );
+        const v3Snapshot = buildV3SceneSnapshot(data, sceneName, currentFloor, actualRound, scene.maxRounds);
+        if (v3Snapshot) return v3Snapshot;
+      }
+    }
+  }
   const 叙事型场景 = 特殊场景中 && data._特殊场景.进行中 === '掌门改嫁';
   const 神魂空间中 = data._当前互动模式 === '神魂空间';
 
