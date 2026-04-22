@@ -35,6 +35,47 @@
         </div>
       </template>
 
+      <!-- ═══ 2.0.43 终局覆盖层(苗喧的一日退出 + 3 楼视角切回后) ═══ -->
+      <template v-else-if="is_game_ending">
+        <div class="good-ending-overlay" ref="endingOverlayRef">
+          <div class="ge-decor-top"></div>
+          <div class="ge-icon">⚜️</div>
+          <div class="ge-title">★ 终局 ★</div>
+          <div class="ge-rank-badge" :class="`ge-rank-${ending_rank.toLowerCase()}`">
+            <span class="ge-rank-label">{{ ending_rank }}</span>
+            <span class="ge-rank-title">「{{ ending_rank_title }}」</span>
+          </div>
+          <div class="ge-divider"></div>
+          <div class="ge-comment">{{ ending_comment }}</div>
+          <div class="ge-divider ge-divider-sub"></div>
+          <div class="ge-achievements">
+            <p v-for="(line, i) in ending_achievements" :key="i">{{ line }}</p>
+          </div>
+          <div class="ge-stats-grid">
+            <div class="ge-stat-cell">
+              <div class="ge-stat-label">游戏楼层</div>
+              <div class="ge-stat-val">{{ ending_floor_count }}</div>
+            </div>
+            <div class="ge-stat-cell">
+              <div class="ge-stat-label">特殊场景</div>
+              <div class="ge-stat-val">{{ completed_scene_count }} 场</div>
+            </div>
+            <div class="ge-stat-cell">
+              <div class="ge-stat-label">灵石结余</div>
+              <div class="ge-stat-val">◈{{ store.data.系统.灵石 }}</div>
+            </div>
+          </div>
+          <div class="ge-time">{{ store.data.时间.玄霜历 }}</div>
+          <div class="ge-actions">
+            <button class="ge-btn ge-btn-primary" @click="continueAfterEnding">继续日常</button>
+            <button class="ge-btn ge-btn-share" :disabled="sharing" @click="shareToDiscord">
+              {{ sharing ? '截图中…' : '晒到帖子 📸' }}
+            </button>
+          </div>
+          <div class="ge-decor-bottom"></div>
+        </div>
+      </template>
+
       <!-- ═══ 正常游戏UI ═══ -->
       <template v-else>
         <!-- 顶栏 -->
@@ -362,6 +403,233 @@ const freeze_remaining = computed(() => {
 });
 
 const is_bad_ending = computed(() => !!store.data._坏结局已触发);
+
+// ══════════════════════════════════════════════════════════
+// 2.0.43 终局覆盖层 (玩家完成"苗喧的一日"并退出且 3 楼视角切回过了)
+// ══════════════════════════════════════════════════════════
+
+const endingOverlayRef = ref<HTMLElement | null>(null);
+const sharing = ref(false);
+
+const is_game_ending = computed(() => {
+  if (is_bad_ending.value) return false;
+  const exitFloor = store.data._退出苗喧一日楼层 ?? 0;
+  if (exitFloor <= 0) return false;
+  if (!store.data._已完成特殊场景?.['苗喧的一日']) return false;
+  const currentFloor = (window as any).SillyTavern?.chat?.length ?? 0;
+  return currentFloor >= exitFloor + 3;
+});
+
+/** 评价等级: SSS / SS / S / A / B / C / D */
+const ending_rank = computed<'SSS' | 'SS' | 'S' | 'A' | 'B' | 'C' | 'D'>(() => {
+  const d = store.data;
+  const scenes = d._已完成特殊场景 ?? {};
+  const qianjingDone = !!d.苗广.千晶幻术.认知改写完成;
+  const doubleMarriage = !!scenes['双重改嫁'];
+  const mainMarriage = !!scenes['掌门改嫁'];
+  const luoStage = d._洛书晴线已激活 ? (d.洛书晴.调教阶段 ?? 0) : 0;
+  const yunStage = d.治疗.阶段;
+  const yunDefense = d.云霜凝.心理防线;
+  const sceneCount = Object.values(scenes).filter(Boolean).length;
+  const yunKinkCount = Object.keys(d.云霜凝.性癖列表 ?? {}).length;
+  const luoKinkCount = Object.keys(d.洛书晴.性癖列表 ?? {}).length;
+
+  // SSS: 双重改嫁 + 千晶 3/3 + 云阶段≥10 + 洛阶段≥9 + 云防线低 + 性癖多
+  if (doubleMarriage && qianjingDone && yunStage >= 10 && luoStage >= 9 && yunDefense < 20 && yunKinkCount >= 5) {
+    return 'SSS';
+  }
+  // SS: 双重改嫁 + 千晶 完成
+  if (doubleMarriage && qianjingDone) return 'SS';
+  // S: 掌门改嫁 + 千晶完成
+  if (mainMarriage && qianjingDone) return 'S';
+  // A: 云阶段≥8 + 特殊场景 ≥5
+  if (yunStage >= 8 && sceneCount >= 5) return 'A';
+  // B: 云阶段≥6 或 特殊场景≥3
+  if (yunStage >= 6 || sceneCount >= 3) return 'B';
+  // C: 基础完成(阶段≥4)
+  if (yunStage >= 4) return 'C';
+  // D: 进度有限
+  return 'D';
+});
+
+const ending_rank_title = computed(() => {
+  const map: Record<string, string> = {
+    SSS: '道成圆满',
+    SS: '三界倒映',
+    S: '三百年定局',
+    A: '深度开发',
+    B: '新径初开',
+    C: '初探',
+    D: '浅尝',
+  };
+  return map[ending_rank.value] ?? '';
+});
+
+const ending_comment = computed(() => {
+  const rank = ending_rank.value;
+  const map: Record<string, string> = {
+    SSS: '你用凡人的发散思维颠倒了三百年的道侣——掌门改嫁了两次,连未来儿媳也一同归属于你。苗广真诚唤你义父,老祖的筛选轮回断在你手里。祂只能看着,没有办法。这是最完美的反叛。',
+    SS: '你颠覆了这场筛选。掌门改嫁、义父义子、新秩序在祂眼皮下落定。祂学不会你们的发散玩法,只能远远看着。',
+    S: '三百年的道侣亲手把她交给你,苗广认子,新秩序在寒霜门安静落定。老祖埋下的筛选路径,在你这里第一次脱轨。',
+    A: '你深入了她的道,让她成为你的人——她的故事已经脱轨,走向了未曾写下的那条路。',
+    B: '你和她走出了一段新径。三百年的寒霜门,终于有人不再按老祖的剧本走。',
+    C: '故事初开,她开始不同了。剩下的路,你还有时间走。',
+    D: '你浅浅尝了她的道。剩下的,留给下次。',
+  };
+  return map[rank] ?? '';
+});
+
+/** 成就列表(动态按 data 生成,剧情式) */
+const ending_achievements = computed<string[]>(() => {
+  const d = store.data;
+  const lines: string[] = [];
+  const scenes = d._已完成特殊场景 ?? {};
+  const sceneCount = Object.values(scenes).filter(Boolean).length;
+  const sceneList = Object.keys(scenes)
+    .filter(k => scenes[k])
+    .join('、');
+
+  // 云霜凝核心数据
+  lines.push(
+    `在你的陪伴下,云霜凝的心理防线从 100 降到了 **${d.云霜凝.心理防线}**,她对你的信任度达到了 **${d.云霜凝.信任度}**。`,
+  );
+  if (d.治疗.阶段 >= 8) {
+    lines.push(`她的治疗走到了 **第 ${d.治疗.阶段} 阶·${stage_name.value}**,完成度 **${d.治疗.完成度.toFixed(1)}%**。`);
+  } else {
+    lines.push(`她的治疗停在 **第 ${d.治疗.阶段} 阶·${stage_name.value}**,完成度 **${d.治疗.完成度.toFixed(1)}%**。`);
+  }
+
+  // 云霜凝性癖 + 改造
+  const yunKinks = Object.keys(d.云霜凝.性癖列表 ?? {});
+  if (yunKinks.length > 0) {
+    lines.push(`你觉醒了她的 **${yunKinks.length} 种性癖**: ${yunKinks.join('、')}。`);
+  }
+  const modNames: string[] = [];
+  const mod = d.云霜凝.肉体改造 ?? ({} as any);
+  for (const [k, v] of Object.entries(mod)) {
+    if (v) modNames.push(k);
+  }
+  if (modNames.length > 0) {
+    lines.push(`她身上留下了你刻下的痕迹: **${modNames.join('、')}**。`);
+  }
+
+  // 苗广
+  if (d.苗广.千晶幻术.认知改写完成) {
+    lines.push(`苗广的认知被千晶幻术 **3 次施术**彻底改写——他真诚地唤你"义父",唤云霜凝"娘亲"。`);
+  } else if (d.苗广.千晶幻术.已使用次数 > 0) {
+    lines.push(`苗广经历了 **${d.苗广.千晶幻术.已使用次数}/3 次**千晶幻术,认知已在动摇。`);
+  }
+  lines.push(`苗广的最终心态: **${d.苗广.心态}**。`);
+
+  // 洛书晴
+  if (d._洛书晴线已激活) {
+    const luoStageName = LUO_STAGE_NAMES[Math.min(10, Math.max(1, d.洛书晴.调教阶段))] ?? '';
+    lines.push(
+      `洛书晴被你调教到了 **阶段 ${d.洛书晴.调教阶段}·${luoStageName}**,顺从度 **${d.洛书晴.顺从度}**。`,
+    );
+    const luoKinks = Object.keys(d.洛书晴.性癖列表 ?? {});
+    if (luoKinks.length > 0) {
+      lines.push(`她觉醒了 **${luoKinks.length} 种性癖**: ${luoKinks.join('、')}。`);
+    }
+  }
+
+  // 苗喧
+  lines.push(
+    `苗喧最终心态 **${d.苗喧.心态}**,绝望值 **${d.苗喧.绝望值}** / 压抑值 **${d.苗喧.压抑值}** — 他成了家里唯一清醒的人。`,
+  );
+
+  // 场景
+  if (sceneCount > 0) {
+    lines.push(`你完成了 **${sceneCount} 个特殊场景**: ${sceneList}。`);
+  }
+
+  return lines;
+});
+
+const ending_floor_count = computed(() => {
+  return (window as any).SillyTavern?.chat?.length ?? 0;
+});
+
+const completed_scene_count = computed(() => {
+  const scenes = store.data._已完成特殊场景 ?? {};
+  return Object.values(scenes).filter(Boolean).length;
+});
+
+/** "继续日常"按钮: 清 _退出苗喧一日楼层 = 0 → is_game_ending 自动为 false → 覆盖层消失 */
+function continueAfterEnding() {
+  try {
+    const Mvu = (globalThis as any).Mvu;
+    if (Mvu && typeof Mvu.getMvuData === 'function' && typeof Mvu.replaceMvuData === 'function') {
+      const latestRaw = Mvu.getMvuData({ type: 'message', message_id: -1 });
+      if (latestRaw) {
+        _.set(latestRaw, 'stat_data._退出苗喧一日楼层', 0);
+        Mvu.replaceMvuData(latestRaw, { type: 'message', message_id: -1 });
+      }
+    }
+  } catch (e) {
+    console.warn('[云霜凝] 继续日常写 MVU 失败:', e);
+  }
+  store.data._退出苗喧一日楼层 = 0;
+}
+
+/** "晒到帖子"按钮: html2canvas 截图状态栏 → 复制到剪贴板 → 打开 Discord */
+async function shareToDiscord() {
+  if (sharing.value) return;
+  sharing.value = true;
+  const DISCORD_URL = 'https://discord.com/channels/1380075940285124724/1482678610371416166';
+  try {
+    // 动态 import(避免首屏加载)
+    const { default: html2canvas } = await import('html2canvas');
+    const el = endingOverlayRef.value ?? (document.querySelector('.main-panel') as HTMLElement | null);
+    if (!el) {
+      throw new Error('找不到截图目标元素');
+    }
+    const canvas = await html2canvas(el, {
+      backgroundColor: '#1a0618',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+    // 复制到剪切板
+    let clipboardOk = false;
+    try {
+      const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob 失败'))), 'image/png');
+      });
+      if ((navigator as any).clipboard?.write) {
+        await (navigator as any).clipboard.write([new (window as any).ClipboardItem({ 'image/png': blob })]);
+        clipboardOk = true;
+      }
+    } catch (e) {
+      console.warn('[云霜凝] 复制截图到剪贴板失败, 降级为下载:', e);
+    }
+    // 降级: 下载 PNG
+    if (!clipboardOk) {
+      const link = document.createElement('a');
+      link.download = `云霜凝-终局-${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    // 打开 Discord
+    (window.top ?? window).open(DISCORD_URL, '_blank');
+    const tr = (globalThis as any).toastr;
+    if (tr && typeof tr.success === 'function') {
+      tr.success(clipboardOk ? '截图已复制到剪贴板 · 在 Discord 里 Ctrl+V 粘贴' : '截图已下载 · 拖到 Discord 上传', '', {
+        timeOut: 4500,
+      });
+    }
+  } catch (e) {
+    console.error('[云霜凝] 截图失败:', e);
+    const tr = (globalThis as any).toastr;
+    if (tr && typeof tr.error === 'function') {
+      tr.error('截图失败,请手动截图并分享', '', { timeOut: 3500 });
+    }
+    // 至少打开 Discord
+    (window.top ?? window).open(DISCORD_URL, '_blank');
+  } finally {
+    sharing.value = false;
+  }
+}
 
 const mode_class = computed(() => ({
   'mode-soul': store.data._当前互动模式 === '神魂空间',
@@ -1208,6 +1476,287 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   color: rgba($c-danger, 0.4);
   letter-spacing: 2px;
   font-weight: 600;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 2.0.43 终局覆盖层 · 金色系
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+$ge-gold: #e8be58;
+$ge-gold-deep: #b8933a;
+$ge-gold-light: #fff2cc;
+$ge-bg: #1a0618;
+$ge-accent: #b03040;
+
+.good-ending-overlay {
+  padding: 24px 18px 22px;
+  text-align: center;
+  background: radial-gradient(
+    ellipse at top,
+    rgba($ge-gold, 0.12) 0%,
+    rgba($ge-accent, 0.08) 40%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  animation: geFadeIn 1.5s ease-out;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(circle at 20% 30%, rgba($ge-gold, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba($ge-gold, 0.06) 0%, transparent 40%);
+    animation: geGlow 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+}
+
+@keyframes geFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes geGlow {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ge-decor-top,
+.ge-decor-bottom {
+  width: 70%;
+  height: 1px;
+  margin: 0 auto 14px;
+  background: linear-gradient(90deg, transparent, $ge-gold, transparent);
+  box-shadow: 0 0 12px rgba($ge-gold, 0.5);
+}
+.ge-decor-bottom {
+  margin: 14px auto 0;
+}
+
+.ge-icon {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px rgba($ge-gold, 0.6));
+  animation: geIconSpin 6s linear infinite;
+  position: relative;
+  z-index: 1;
+}
+@keyframes geIconSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.ge-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: $ge-gold;
+  letter-spacing: 6px;
+  text-shadow:
+    0 0 18px rgba($ge-gold, 0.6),
+    0 0 36px rgba($ge-gold, 0.2);
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.ge-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, rgba($ge-gold, 0.2), rgba($ge-gold-deep, 0.1));
+  border: 1px solid rgba($ge-gold, 0.5);
+  border-radius: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 12px rgba($ge-gold, 0.25);
+  position: relative;
+  z-index: 1;
+
+  .ge-rank-label {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: $ge-gold-light;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px rgba($ge-gold, 0.8);
+  }
+  .ge-rank-title {
+    font-size: 0.82rem;
+    color: $ge-gold;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  &.ge-rank-sss {
+    background: linear-gradient(135deg, rgba($ge-gold, 0.35), rgba(255, 255, 255, 0.15));
+    border-color: $ge-gold;
+    box-shadow: 0 0 20px rgba($ge-gold, 0.5);
+    .ge-rank-label {
+      color: #fff;
+    }
+  }
+  &.ge-rank-ss,
+  &.ge-rank-s {
+    background: linear-gradient(135deg, rgba($ge-gold, 0.25), rgba($ge-accent, 0.1));
+  }
+  &.ge-rank-d {
+    background: linear-gradient(135deg, rgba(160, 112, 128, 0.2), rgba(80, 56, 64, 0.1));
+    border-color: rgba(160, 112, 128, 0.4);
+    .ge-rank-label {
+      color: rgba(255, 232, 236, 0.7);
+    }
+    .ge-rank-title {
+      color: rgba(160, 112, 128, 0.9);
+    }
+    box-shadow: none;
+  }
+}
+
+.ge-divider {
+  width: 60%;
+  height: 1px;
+  margin: 0 auto 14px;
+  background: linear-gradient(90deg, transparent, rgba($ge-gold, 0.5), transparent);
+}
+.ge-divider-sub {
+  width: 40%;
+  opacity: 0.5;
+}
+
+.ge-comment {
+  font-size: 0.88rem;
+  line-height: 1.85;
+  color: rgba($ge-gold-light, 0.88);
+  letter-spacing: 0.6px;
+  padding: 0 4px;
+  margin-bottom: 12px;
+  font-style: italic;
+  position: relative;
+  z-index: 1;
+}
+
+.ge-achievements {
+  text-align: left;
+  padding: 14px 14px;
+  background: linear-gradient(180deg, rgba($ge-gold, 0.06), rgba(0, 0, 0, 0.15));
+  border: 1px solid rgba($ge-gold, 0.25);
+  border-radius: 6px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+
+  p {
+    font-size: 0.82rem;
+    line-height: 1.9;
+    color: rgba(#ffe8ec, 0.88);
+    margin: 0 0 6px;
+    padding-left: 12px;
+    position: relative;
+    letter-spacing: 0.3px;
+    &::before {
+      content: '◈';
+      position: absolute;
+      left: 0;
+      color: $ge-gold;
+      font-size: 0.7rem;
+      top: 5px;
+    }
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.ge-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+.ge-stat-cell {
+  padding: 10px 6px;
+  background: rgba($ge-gold, 0.08);
+  border: 1px solid rgba($ge-gold, 0.25);
+  border-radius: 4px;
+  text-align: center;
+  .ge-stat-label {
+    font-size: 0.7rem;
+    color: rgba($ge-gold, 0.75);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .ge-stat-val {
+    font-size: 0.92rem;
+    color: $ge-gold-light;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+}
+
+.ge-time {
+  font-size: 0.75rem;
+  color: rgba($ge-gold, 0.5);
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.ge-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.ge-btn {
+  flex: 1;
+  padding: 10px 14px;
+  background: rgba($ge-gold, 0.12);
+  border: 1px solid rgba($ge-gold, 0.5);
+  color: $ge-gold-light;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: all 0.25s;
+  &:hover:not(:disabled) {
+    background: rgba($ge-gold, 0.28);
+    box-shadow: 0 0 14px rgba($ge-gold, 0.4);
+    transform: translateY(-1px);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &.ge-btn-primary {
+    background: linear-gradient(135deg, rgba($ge-gold, 0.3), rgba($ge-gold-deep, 0.18));
+    border-color: $ge-gold;
+  }
+  &.ge-btn-share {
+    background: linear-gradient(135deg, rgba($ge-accent, 0.25), rgba($ge-gold, 0.1));
+    border-color: rgba($ge-gold, 0.55);
+  }
 }
 
 // ━━━ 移动端适配 ━━━

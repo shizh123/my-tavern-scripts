@@ -86,6 +86,7 @@
     "compare-versions": "^6.1.1",
     "dedent": "^1.7.2",
     "gsap": "^3.15.0",
+    "html2canvas": "^1.4.1",
     "jquery": "^3.7.1",
     "jqueryui": "^1.11.1",
     "json5": "^2.2.3",

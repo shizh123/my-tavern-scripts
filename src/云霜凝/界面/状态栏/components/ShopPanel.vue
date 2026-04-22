@@ -143,13 +143,16 @@
           <button class="liuying-toggle-btn" @click="toggleLiuyingshi(item.name)">
             {{ item.state === '使用中' ? '停止' : '录制' }}
           </button>
+          <!-- 2.0.43: 出售按钮改为始终显示(录制中) + disabled 提示, 避免玩家疑惑"为何按钮不出现" -->
           <button
-            v-if="canSellLiuyingshi && item.state === '使用中'"
+            v-if="item.state === '使用中'"
             class="liuying-sell-btn"
-            :disabled="liuyingshiSellCooldown.inCooldown"
-            @click="handleSellLiuyingshi(item.name)"
+            :disabled="!canSellLiuyingshi || liuyingshiSellCooldown.inCooldown"
+            :title="!canSellLiuyingshi ? liuyingshiSellMissing : ''"
+            @click="canSellLiuyingshi && handleSellLiuyingshi(item.name)"
           >
-            <template v-if="liuyingshiSellCooldown.inCooldown">
+            <template v-if="!canSellLiuyingshi"> 需前置 </template>
+            <template v-else-if="liuyingshiSellCooldown.inCooldown">
               冷却中({{ liuyingshiSellCooldown.remainingFloors }}楼)
             </template>
             <template v-else> 出售 <span class="p-icon">◈</span>{{ sellPrice }} </template>
@@ -2884,6 +2887,18 @@ const liuyingshiItems = computed(() => {
 const canSellLiuyingshi = computed(
   () => ['默许', '沉溺'].includes(store.data.苗广.心态) && !!store.data._已完成特殊场景['夫前凌辱'],
 );
+
+// 2.0.43: 出售前置未满足时显示的原因 (用作 button title)
+const liuyingshiSellMissing = computed(() => {
+  const reasons: string[] = [];
+  if (!['默许', '沉溺'].includes(store.data.苗广.心态)) {
+    reasons.push(`苗广心态需达「默许/沉溺」(当前「${store.data.苗广.心态}」)`);
+  }
+  if (!store.data._已完成特殊场景['夫前凌辱']) {
+    reasons.push('需完成「夫前凌辱」场景');
+  }
+  return reasons.join(' · ') || '条件不明';
+});
 
 const sellPrice = computed(() => (store.data.苗广.心态 === '沉溺' ? 800 : 500));
 
