@@ -49,7 +49,7 @@
           <div class="ge-comment">{{ ending_comment }}</div>
           <div class="ge-divider ge-divider-sub"></div>
           <div class="ge-achievements">
-            <p v-for="(line, i) in ending_achievements" :key="i">{{ line }}</p>
+            <p v-for="(line, i) in ending_achievements" :key="i" v-html="line"></p>
           </div>
           <div class="ge-stats-grid">
             <div class="ge-stat-cell">
@@ -479,6 +479,11 @@ const ending_comment = computed(() => {
   return map[rank] ?? '';
 });
 
+/** 把 markdown **xxx** 转 <b>xxx</b>(数据均内部生成, 无 XSS 风险) */
+function parseMarkdown(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
 /** 成就列表(动态按 data 生成,剧情式) */
 const ending_achievements = computed<string[]>(() => {
   const d = store.data;
@@ -541,7 +546,8 @@ const ending_achievements = computed<string[]>(() => {
     lines.push(`你完成了 **${sceneCount} 个特殊场景**: ${sceneList}。`);
   }
 
-  return lines;
+  // 解析 markdown 粗体
+  return lines.map(parseMarkdown);
 });
 
 const ending_floor_count = computed(() => {
@@ -570,30 +576,30 @@ function continueAfterEnding() {
   store.data._退出苗喧一日楼层 = 0;
 }
 
-/** "晒到帖子"按钮: html2canvas 截图状态栏 → 复制到剪贴板 → 打开 Discord */
+/** "晒到帖子"按钮: modern-screenshot 截图状态栏 → 复制到剪贴板 → 打开 Discord
+ *  2.0.44 换 modern-screenshot (SVG foreignObject 方案), 保留华丽动画版原样, 无需 screenshot-mode 切换 */
 async function shareToDiscord() {
   if (sharing.value) return;
   sharing.value = true;
   const DISCORD_URL = 'https://discord.com/channels/1380075940285124724/1482678610371416166';
   try {
-    // 动态 import(避免首屏加载)
-    const { default: html2canvas } = await import('html2canvas');
+    // 动态 import(避免首屏加载, ~60KB 按需加载)
+    const { domToBlob } = await import('modern-screenshot');
     const el = endingOverlayRef.value ?? (document.querySelector('.main-panel') as HTMLElement | null);
     if (!el) {
       throw new Error('找不到截图目标元素');
     }
-    const canvas = await html2canvas(el, {
-      backgroundColor: '#1a0618',
+    const blob = await domToBlob(el, {
       scale: 2,
-      logging: false,
-      useCORS: true,
+      backgroundColor: '#1a0618',
+      quality: 0.95,
+      type: 'image/png',
     });
+    if (!blob) throw new Error('截图生成失败');
+
     // 复制到剪切板
     let clipboardOk = false;
     try {
-      const blob: Blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob 失败'))), 'image/png');
-      });
       if ((navigator as any).clipboard?.write) {
         await (navigator as any).clipboard.write([new (window as any).ClipboardItem({ 'image/png': blob })]);
         clipboardOk = true;
@@ -603,10 +609,12 @@ async function shareToDiscord() {
     }
     // 降级: 下载 PNG
     if (!clipboardOk) {
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `云霜凝-终局-${Date.now()}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = url;
       link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
     }
     // 打开 Discord
     (window.top ?? window).open(DISCORD_URL, '_blank');
@@ -1682,6 +1690,11 @@ $ge-accent: #b03040;
     }
     &:last-child {
       margin-bottom: 0;
+    }
+    b {
+      color: $ge-gold;
+      font-weight: 700;
+      text-shadow: 0 0 6px rgba($ge-gold, 0.3);
     }
   }
 }
