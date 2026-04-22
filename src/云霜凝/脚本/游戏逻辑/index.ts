@@ -663,14 +663,17 @@ $(() => {
             const nominalRound = Math.floor((currentFloor - sceneStartFloor) / 2) + 1;
             const actualRound = Math.floor((currentFloor - sceneStartFloor - data._特殊场景引导延后楼数) / 2) + 1;
             const isV3Scene = hasSceneV3(sceneName);
+            // 2.0.41: 苗喧的一日 = 沙盒场景, 玩家扮演苗喧,轮次不限, 只有玩家主动点
+            // "结束扮演"按钮才清场 (shopSystem 层负责触发退出)。这里跳过 actualRound 自动清场。
+            const isSandboxScene = sceneName === '苗喧的一日';
 
             // 2.0.27 修: 清场条件从 rewriteBeat 注入解耦。
             // 原逻辑 isFinalRound 要求 !_本楼跳过分阶段引导,导致道具楼永远不触发最终轮清场;
             // isOvershoot 要求 nominalRound 超过 maxRounds,但 reroll 时 cf 不变,
             // 若玩家在最终轮卡 reroll(尤其是道具 reroll 重注入),场景永远不清。
             // 改法: 达到最终轮就清场(强制);道具楼跳过 beat 注入但仍清场。
-            const 达到最终轮 = actualRound >= maxRounds;
-            const isOvershoot = nominalRound > maxRounds;
+            const 达到最终轮 = !isSandboxScene && actualRound >= maxRounds;
+            const isOvershoot = !isSandboxScene && nominalRound > maxRounds;
             const 应清场 = 达到最终轮 || isOvershoot;
             const 可注入最终beat = 达到最终轮 && !isOvershoot && !_本楼跳过分阶段引导;
 

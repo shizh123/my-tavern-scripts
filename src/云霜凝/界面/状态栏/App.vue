@@ -54,6 +54,17 @@
           ⚠ 苗广监视中 · 治疗冻结（剩余 {{ freeze_remaining }} 楼）
         </div>
 
+        <!-- 2.0.41 扮演苗喧 banner: 仅在"苗喧的一日"场景进行中显示 -->
+        <div v-if="playingAsMiaoxuan" class="roleplay-banner">
+          <div class="rp-main">
+            <span class="rp-icon">🎭</span>
+            <span class="rp-text">
+              <b>扮演苗喧</b> · 沙盒日常 · 其他功能已冷却
+            </span>
+          </div>
+          <button class="rp-exit-btn" @click="exitPlayAsMiaoxuan">结束扮演</button>
+        </div>
+
         <!-- 进度(根据 active_tab 切换: 云霜凝=治疗完成度 / 洛书晴=顺从度) -->
         <section class="healing-section" :class="{ 'hs-luo': header_target === '洛书晴' }">
           <div class="healing-meta">
@@ -67,8 +78,11 @@
         </section>
 
         <!-- 神魂空间入口 + 在场角色锁定 -->
-        <div class="mode-entry">
-          <template v-if="store.data._当前互动模式 === '神魂空间'">
+        <div class="mode-entry" :class="{ 'locked-by-roleplay': playingAsMiaoxuan }">
+          <template v-if="playingAsMiaoxuan">
+            <button class="mode-btn soul-btn locked" disabled>⟨ 扮演苗喧·已冷却 ⟩</button>
+          </template>
+          <template v-else-if="store.data._当前互动模式 === '神魂空间'">
             <button class="mode-btn soul-btn active" @click="exitSoulSpace">
               ⟨ 退出{{ store.data._当前神魂空间角色 === '洛书晴' ? '洛书晴神魂' : '神魂' }} ⟩
             </button>
@@ -85,12 +99,13 @@
           <template v-else>
             <button class="mode-btn soul-btn locked" disabled>⟨ 等待接引 ⟩</button>
           </template>
-          <!-- 在场角色锁定(仅洛书晴线激活后显示) -->
+          <!-- 在场角色锁定(仅洛书晴线激活后显示, 扮演苗喧时禁用) -->
           <button
             v-if="store.data._洛书晴线已激活"
             class="actor-lock-btn"
-            :title="`在场: ${actorSummary}`"
-            @click="showActorPicker = true"
+            :title="playingAsMiaoxuan ? '扮演苗喧中·不可修改' : `在场: ${actorSummary}`"
+            :disabled="playingAsMiaoxuan"
+            @click="playingAsMiaoxuan ? null : (showActorPicker = true)"
           >
             🔒
           </button>
@@ -137,13 +152,14 @@
           </div>
         </Teleport>
 
-        <!-- 标签页 -->
+        <!-- 标签页 (扮演苗喧时仅苗喧 tab 可点,便于查看心态/绝望/压抑) -->
         <nav class="tabs">
           <button
             v-for="tab in tabs"
             :key="tab.id"
             class="tab-btn"
-            :class="{ active: active_tab === tab.id }"
+            :class="{ active: active_tab === tab.id, 'disabled-roleplay': playingAsMiaoxuan && tab.id !== '苗喧' }"
+            :disabled="playingAsMiaoxuan && tab.id !== '苗喧'"
             @click="toggleTab(tab.id)"
           >
             {{ tab.label }}
@@ -214,6 +230,39 @@ const showSoulPicker = ref(false);
 // 2.0.31: 在场角色锁定按钮(洛书晴线激活后玩家可手动纠正 AI 判错)
 const showActorPicker = ref(false);
 const bothActorsActive = computed(() => !!store.data._当前场景角色.云霜凝 && !!store.data._当前场景角色.洛书晴);
+
+// 2.0.41 扮演苗喧标志(_特殊场景.进行中 === '苗喧的一日')
+const playingAsMiaoxuan = computed(() => store.data._特殊场景.进行中 === '苗喧的一日');
+
+/** 退出扮演苗喧: 清场 + 标记完成 + 记录退出楼层(门控 snapshot 视角切回提示) */
+function exitPlayAsMiaoxuan() {
+  const currentFloor = (window as any).SillyTavern?.chat?.length ?? 0;
+  try {
+    const Mvu = (globalThis as any).Mvu;
+    if (Mvu && typeof Mvu.getMvuData === 'function' && typeof Mvu.replaceMvuData === 'function') {
+      const latestRaw = Mvu.getMvuData({ type: 'message', message_id: -1 });
+      if (latestRaw) {
+        // 清场 + 标已完成 + 记录退出楼层
+        _.set(latestRaw, 'stat_data._特殊场景.进行中', '');
+        _.set(latestRaw, 'stat_data._特殊场景开始楼层', 0);
+        _.set(latestRaw, 'stat_data._已完成特殊场景.苗喧的一日', true);
+        _.set(latestRaw, 'stat_data._退出苗喧一日楼层', currentFloor);
+        Mvu.replaceMvuData(latestRaw, { type: 'message', message_id: -1 });
+      }
+    }
+  } catch (e) {
+    console.warn('[云霜凝] 退出苗喧的一日写 MVU 失败:', e);
+  }
+  // 本地 store 同步(UI 立刻切回)
+  store.data._特殊场景.进行中 = '';
+  store.data._特殊场景开始楼层 = 0;
+  store.data._已完成特殊场景['苗喧的一日'] = true;
+  store.data._退出苗喧一日楼层 = currentFloor;
+  const tr = (globalThis as any).toastr;
+  if (tr && typeof tr.success === 'function') {
+    tr.success('已结束扮演苗喧, 视角切回 {{user}}', '', { timeOut: 3000 });
+  }
+}
 const actorSummary = computed(() => {
   const 云 = store.data._当前场景角色.云霜凝;
   const 洛 = store.data._当前场景角色.洛书晴;
@@ -223,21 +272,40 @@ const actorSummary = computed(() => {
   return '无';
 });
 function setSceneActor(preset: '云霜凝' | '洛书晴' | '两者') {
-  if (!isLatestMessage()) return;
-  showActorPicker.value = false;
-  store.pull();
-  store.data._当前场景角色 =
+  const new当前场景角色 =
     preset === '云霜凝'
       ? { 云霜凝: true, 洛书晴: false }
       : preset === '洛书晴'
         ? { 云霜凝: false, 洛书晴: true }
         : { 云霜凝: true, 洛书晴: true };
-  store.flush();
-  // 用 SillyTavern 全局 toastr 提示
+
+  showActorPicker.value = false;
+
+  // 2.0.41 修: 去掉 isLatestMessage 限制 + 直接写最新楼 MVU(message_id=-1)
+  // 原 store.flush 写的是 iframe 所在楼的 MVU, 玩家发 user 消息后 iframe 所在楼
+  // 不再是最新楼, AI 下轮读的是最新楼 MVU, 旧逻辑修改不同步。
+  // 新逻辑: 绕过 store 直接写最新楼 MVU, 本地 store 同步更新让 UI 立刻响应。
+  try {
+    const Mvu = (globalThis as any).Mvu;
+    if (Mvu && typeof Mvu.getMvuData === 'function' && typeof Mvu.replaceMvuData === 'function') {
+      const latestRaw = Mvu.getMvuData({ type: 'message', message_id: -1 });
+      if (latestRaw) {
+        _.set(latestRaw, 'stat_data._当前场景角色', new当前场景角色);
+        Mvu.replaceMvuData(latestRaw, { type: 'message', message_id: -1 });
+      }
+    }
+  } catch (e) {
+    console.warn('[云霜凝] setSceneActor 写最新楼 MVU 失败:', e);
+  }
+
+  // 本地 store 立刻更新 UI(UI 判定 bothActorsActive 看 store.data)
+  store.data._当前场景角色 = new当前场景角色;
+
+  // toastr 提示
   const tr = (globalThis as any).toastr;
   if (tr && typeof tr.success === 'function') {
-    tr.success(`在场角色已锁定: ${preset === '两者' ? '两者在场' : '仅' + preset}, 请 reroll 让 AI 重新生成`, '', {
-      timeOut: 3500,
+    tr.success(`在场角色已锁定: ${preset === '两者' ? '两者在场' : '仅' + preset}`, '', {
+      timeOut: 2500,
     });
   }
 }
@@ -684,6 +752,54 @@ $font-main: 'Noto Sans SC', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-se
   letter-spacing: 0.5px;
   text-shadow: 0 0 8px rgba($c-danger, 0.2);
   animation: bannerPulse 2s ease-in-out infinite;
+}
+
+// 2.0.41 扮演苗喧 banner
+.roleplay-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: linear-gradient(90deg, rgba(176, 48, 64, 0.2), rgba(232, 190, 88, 0.12), rgba(176, 48, 64, 0.2));
+  border-top: 1px solid rgba(232, 190, 88, 0.4);
+  border-bottom: 1px solid rgba(232, 190, 88, 0.4);
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: #ffe8ec;
+  .rp-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .rp-icon {
+    font-size: 1.1rem;
+  }
+  .rp-text b {
+    color: #e8be58;
+  }
+  .rp-exit-btn {
+    padding: 4px 12px;
+    background: rgba(232, 190, 88, 0.2);
+    border: 1px solid rgba(232, 190, 88, 0.6);
+    color: #e8be58;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    &:hover {
+      background: rgba(232, 190, 88, 0.4);
+    }
+  }
+}
+.mode-entry.locked-by-roleplay .actor-lock-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.tab-btn.disabled-roleplay {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 @keyframes bannerPulse {
   0%,

@@ -1091,8 +1091,8 @@ export function applySpecialSceneConsequences(scene: string, data: SchemaType): 
       data.苗广.疑心值 = Math.min(100, data.苗广.疑心值 + 10);
       // 未婚妻调教父亲——苗喧的终极羞辱与崩溃（+15）
       data.苗喧.绝望值 = Math.min(100, data.苗喧.绝望值 + 15);
-      // 同时标记原版完成（用于后续场景前置）
-      data._已完成特殊场景['绿帽奴调教'] = true;
+      // 2.0.41: 不再自动标记原版绿帽奴调教完成。原版与增强版是二选一路径,
+      // 做了增强版后玩家仍可回头做原版; 千晶的解锁条件用 需完成任一场景 判断。
       break;
 
     case '双重改嫁':

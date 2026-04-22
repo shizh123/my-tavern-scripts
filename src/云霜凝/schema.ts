@@ -440,6 +440,14 @@ export const Schema = z.object({
     .number()
     .transform(v => Math.max(0, Math.floor(v)))
     .prefault(0),
+  // 2.0.41 扮演苗喧退出楼层锚点
+  // - 玩家点"结束扮演"退出苗喧的一日时记录当前楼层
+  // - buildStatusSnapshot 用此字段门控"退出后 3 楼内强提示视角切回 {{user}}"
+  // - 退出 3 楼后该字段仍保留(不清零),但注入门控 `currentFloor < 值 + 3` 自动失效
+  _退出苗喧一日楼层: z.coerce
+    .number()
+    .transform(v => Math.max(0, Math.floor(v)))
+    .prefault(0),
   // 蚀心露+隔音灵阵隐藏组合是否已触发过（一次性，察觉→屈辱）
   _已触发蚀心露屈辱: z.boolean().prefault(false),
   // 消耗品上次使用的楼层号（用于冷却判断，key=道具名，value=楼层号）
