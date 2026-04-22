@@ -58,9 +58,7 @@
         <div v-if="playingAsMiaoxuan" class="roleplay-banner">
           <div class="rp-main">
             <span class="rp-icon">🎭</span>
-            <span class="rp-text">
-              <b>扮演苗喧</b> · 沙盒日常 · 其他功能已冷却
-            </span>
+            <span class="rp-text"> <b>扮演苗喧</b> · 沙盒日常 · 其他功能已冷却 </span>
           </div>
           <button class="rp-exit-btn" @click="exitPlayAsMiaoxuan">结束扮演</button>
         </div>
