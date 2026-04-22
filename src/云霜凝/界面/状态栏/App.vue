@@ -524,9 +524,7 @@ const ending_achievements = computed<string[]>(() => {
   // 洛书晴
   if (d._洛书晴线已激活) {
     const luoStageName = LUO_STAGE_NAMES[Math.min(10, Math.max(1, d.洛书晴.调教阶段))] ?? '';
-    lines.push(
-      `洛书晴被你调教到了 **阶段 ${d.洛书晴.调教阶段}·${luoStageName}**,顺从度 **${d.洛书晴.顺从度}**。`,
-    );
+    lines.push(`洛书晴被你调教到了 **阶段 ${d.洛书晴.调教阶段}·${luoStageName}**,顺从度 **${d.洛书晴.顺从度}**。`);
     const luoKinks = Object.keys(d.洛书晴.性癖列表 ?? {});
     if (luoKinks.length > 0) {
       lines.push(`她觉醒了 **${luoKinks.length} 种性癖**: ${luoKinks.join('、')}。`);
@@ -614,9 +612,13 @@ async function shareToDiscord() {
     (window.top ?? window).open(DISCORD_URL, '_blank');
     const tr = (globalThis as any).toastr;
     if (tr && typeof tr.success === 'function') {
-      tr.success(clipboardOk ? '截图已复制到剪贴板 · 在 Discord 里 Ctrl+V 粘贴' : '截图已下载 · 拖到 Discord 上传', '', {
-        timeOut: 4500,
-      });
+      tr.success(
+        clipboardOk ? '截图已复制到剪贴板 · 在 Discord 里 Ctrl+V 粘贴' : '截图已下载 · 拖到 Discord 上传',
+        '',
+        {
+          timeOut: 4500,
+        },
+      );
     }
   } catch (e) {
     console.error('[云霜凝] 截图失败:', e);
