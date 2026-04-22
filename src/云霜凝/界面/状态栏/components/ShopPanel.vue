@@ -865,6 +865,8 @@ const SCENE_PAIRS: Record<string, string> = {
 };
 // 从商店列表中隐藏的场景（仅作为 dialog 里的"洛书晴参与"选项存在）
 const HIDDEN_SCENES = new Set(['寝取宣告增强', '儿媳调教公公', '双重改嫁']);
+// 2.0.45: 沙盒场景 — 已完成仍可无限重入(花灵石再开)。商店标签显示"可重入"而非"已完成"
+const INFINITE_RE_ENTRY_SCENES = new Set(['苗喧的一日']);
 // ── 可折叠分组 ──
 const collapsedGroups = reactive(new Set<string>());
 
@@ -1768,10 +1770,13 @@ function handleClick(item: ItemDef) {
     const enhanced = SCENE_PAIRS[item.name];
     if (enhanced && !store.data._已完成特殊场景[enhanced]) {
       openScenePairDialog(item.name);
-    } else {
-      showToast(`「${item.name}」已完成`, 'info');
+      return;
     }
-    return;
+    // 2.0.45: 苗喧的一日是沙盒场景, 支持无限次重入 — 已完成不阻止, 继续走下方正常购买流程
+    if (!INFINITE_RE_ENTRY_SCENES.has(item.name)) {
+      showToast(`「${item.name}」已完成`, 'info');
+      return;
+    }
   }
 
   // ── Phase 2 新流程：装备/体改/性癖 走即时 dialog（多选模式除外） ──
@@ -2807,6 +2812,8 @@ function stateLabel(item: ItemDef) {
     // 2.0.33: 配对场景原版已完成但增强版未完成 → 显示"可升级",卡片仍可点击弹浮层选增强版
     const enhanced = SCENE_PAIRS[item.name];
     if (enhanced && !store.data._已完成特殊场景[enhanced]) return '可升级';
+    // 2.0.45: 沙盒场景可重入,显示"可重入"代替"已完成"
+    if (INFINITE_RE_ENTRY_SCENES.has(item.name)) return '可重入';
     return '已完成';
   }
 
