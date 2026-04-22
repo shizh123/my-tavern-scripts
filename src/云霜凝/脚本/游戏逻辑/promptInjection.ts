@@ -3236,7 +3236,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           自由度: '扑空的具体方式(敲门/问侍女/看到空房)、失望情绪的表达、转向时的内心独白由 AI 自主',
           角色呈现: {
             苗喧: '完整',
-            洛书晴: ['调教阶段'],
           },
         },
         3: {
@@ -3245,8 +3244,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           自由度: '路线细节(走廊/庭院)、途中心理活动(想和父亲说什么)、房内背景亲密的描写粒度由 AI 自主',
           角色呈现: {
             苗喧: ['心态'],
-            云霜凝: '完整',
-            洛书晴: '完整',
           },
         },
         4: {
@@ -3257,8 +3254,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           角色呈现: {
             苗喧: ['心态'],
             苗广: '完整',
-            云霜凝: '完整',
-            洛书晴: '完整',
           },
         },
         5: {
@@ -3268,8 +3263,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           角色呈现: {
             苗喧: ['心态'],
             苗广: ['心态'],
-            云霜凝: '完整',
-            洛书晴: '完整',
           },
         },
         6: {
@@ -3279,8 +3272,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           角色呈现: {
             苗喧: '完整',
             苗广: '完整',
-            云霜凝: '完整',
-            洛书晴: '完整',
           },
         },
         7: {
@@ -3289,8 +3280,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           自由度:
             '洛书晴挑逗的具体措辞、云霜凝初始反应(从容/轻笑/挑眉)、{{user}}的姿态由 AI 按 data 洛书晴阶段/性癖激活自主',
           角色呈现: {
-            云霜凝: '完整',
-            洛书晴: '完整',
             苗广: ['心态'],
             苗喧: ['心态'],
           },
@@ -3301,8 +3290,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           自由度:
             '感知到时的具体身体反应(眼神一顿/嘴角翘起的细节)、她决定隐瞒的内心独白、对{{user}}是否眨眼暗示由 AI 自主',
           角色呈现: {
-            云霜凝: '完整',
-            洛书晴: '精简',
             苗喧: ['心态'],
             苗广: ['心态'],
           },
@@ -3313,8 +3300,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
           自由度:
             '云反问的具体措辞(比如"你说苗喧知道他父亲这样吗")、眼神瞟门缝的细节、洛书晴承受压力时的反应由 AI 自主',
           角色呈现: {
-            云霜凝: '完整',
-            洛书晴: '完整',
             苗喧: ['心态', '绝望值'],
             苗广: ['心态'],
           },
@@ -3326,8 +3311,6 @@ const SPECIAL_SCENE_GUIDES: Record<string, SpecialSceneData> = {
             '机械逃离的步伐细节、房内三人是否感知(除云霜凝已知外,洛和{{user}}不应察觉)、独坐时的姿态和环境描写由 AI 自主',
           角色呈现: {
             苗喧: '完整',
-            云霜凝: '精简',
-            洛书晴: '精简',
             苗广: ['心态'],
           },
         },
@@ -4052,14 +4035,6 @@ function renderV3苗喧(data: SchemaType, mode: V3RoleMode): string {
   return parts.length ? `苗喧: ${parts.join(' · ')}\n` : '';
 }
 
-function renderV3角色(role: string, data: SchemaType, currentFloor: number, mode: V3RoleMode): string {
-  if (role === '云霜凝') return renderV3云霜凝(data, currentFloor, mode);
-  if (role === '洛书晴') return renderV3洛书晴(data, currentFloor, mode);
-  if (role === '苗广') return renderV3苗广(data, mode);
-  if (role === '苗喧') return renderV3苗喧(data, mode);
-  return '';
-}
-
 /**
  * v3b 场景 snapshot 构建 (2.0.38)
  * 合并到 buildStatusSnapshot, 替换原有状态快照
@@ -4095,22 +4070,39 @@ function buildV3SceneSnapshot(
     snapshot += `\n▍AI 自由度\n${beat.自由度}\n`;
   }
 
-  const 本轮角色 = beat.角色呈现 ? new Set(Object.keys(beat.角色呈现)) : new Set<string>();
+  // 2.0.40 角色在场机制:
+  // - 云/洛: 变量 _当前场景角色 判定, 整场自动完整渲染 + 自动软指引
+  // - 苗广/苗喧: beat.角色呈现 配置 per-beat 动态, 按剧情需要才显示
+  const 云在场 = !!data._当前场景角色?.云霜凝;
+  const 洛在场 = !!data._当前场景角色?.洛书晴 && !!data._洛书晴线已激活;
+  const beat角色 = beat.角色呈现 ?? {};
+  const 苗广模式 = beat角色['苗广'];
+  const 苗喧模式 = beat角色['苗喧'];
 
-  if (beat.角色呈现) {
-    snapshot += `\n▍本轮参考数据\n`;
-    for (const [role, mode] of Object.entries(beat.角色呈现)) {
-      snapshot += renderV3角色(role, data, currentFloor, mode);
-    }
+  // ── 本轮参考数据: 云/洛 自动完整 + 苗广/苗喧 按 beat ──
+  const 参考数据段: string[] = [];
+  if (云在场) {
+    const 云文本 = renderV3云霜凝(data, currentFloor, '完整').trim();
+    if (云文本) 参考数据段.push(云文本);
+  }
+  if (洛在场) {
+    const 洛文本 = renderV3洛书晴(data, currentFloor, '完整').trim();
+    if (洛文本) 参考数据段.push(洛文本);
+  }
+  if (苗广模式) {
+    const 苗广文本 = renderV3苗广(data, 苗广模式).trim();
+    if (苗广文本) 参考数据段.push(苗广文本);
+  }
+  if (苗喧模式) {
+    const 苗喧文本 = renderV3苗喧(data, 苗喧模式).trim();
+    if (苗喧文本) 参考数据段.push(苗喧文本);
+  }
+  if (参考数据段.length > 0) {
+    snapshot += `\n▍本轮参考数据\n${参考数据段.join('\n')}\n`;
   }
 
-  // ── 软指引层 (2.0.39): 按本轮角色呈现自动注入, 让 AI 写出沉浸感 ──
-  // 心理阶段指引/叙事指引/独立线/封口/文风 — v2 里每轮都给, v3b 继承同样机制
+  // ── 软指引层: 云/洛 按变量自动, 苗喧 按 beat 配置 ──
   const 软指引段: string[] = [];
-  const 云在场 = 本轮角色.has('云霜凝');
-  const 洛在场 = 本轮角色.has('洛书晴') && data._洛书晴线已激活;
-  const 苗喧在场 = 本轮角色.has('苗喧');
-
   if (云在场) {
     const 神魂 = data._当前互动模式 === '神魂空间';
     const g = buildPsychologyGuide(data, 神魂, currentFloor).trim();
@@ -4120,12 +4112,12 @@ function buildV3SceneSnapshot(
     const g = buildLuoShuqingPsychologyGuide(data).trim();
     if (g) 软指引段.push(g);
   }
-  if (苗喧在场) {
+  if (苗喧模式) {
     const g = buildMiaoxuanGuide(data).trim();
     if (g) 软指引段.push(g);
   }
 
-  // 两人独立线硬约束: 云 + 洛 同场时, 防串味
+  // 两人独立线硬约束: 云+洛 同场时, 防串味
   if (云在场 && 洛在场 && !data._已完成特殊场景?.['苗喧的一日']) {
     const 阶段描述 =
       data.洛书晴.调教阶段 <= 3 ? '宗门天骄,骄傲端庄' : data.洛书晴.调教阶段 <= 5 ? '动摇中,表面维持仪态' : '堕落深化';
@@ -4136,12 +4128,8 @@ function buildV3SceneSnapshot(
 - 同屏时各演各的数值基线,交互叙事可以并行,但心态/语气/性癖表现严禁交叉串味`);
   }
 
-  // 洛书晴秘密·现实封口: 云在场 + 洛未在本轮 + 洛阶段<3 + 线已激活
-  if (云在场 && !本轮角色.has('洛书晴') && data._洛书晴线已激活 && data.洛书晴.调教阶段 < 3) {
-    软指引段.push(`⚠️【洛书晴秘密·现实封口】 {{user}} 已知洛书晴有神魂体质和私人神魂空间,但寒霜门无人知晓——包括云霜凝/苗广/苗喧。洛书晴本人目前不在宗门。
-- {{user}} 不主动向云霜凝/苗广/苗喧提及洛书晴
-- AI 绝对禁止让云霜凝/苗广/苗喧在本场主动提起洛书晴这个人或她的体质空间`);
-  }
+  // 洛书晴现实封口分支 (2.0.40 移除): 特殊场景前置解锁条件已兜底洛线激活程度,
+  // v3 场景触发时洛线已到位, 无需再用封口软指引。
 
   // 文风块(哦齁齁体质激活时)
   {
@@ -4153,7 +4141,7 @@ function buildV3SceneSnapshot(
   }
 
   if (软指引段.length > 0) {
-    snapshot += `\n▍软指引(按本轮角色自动)\n${软指引段.join('\n\n')}\n`;
+    snapshot += `\n▍软指引\n${软指引段.join('\n\n')}\n`;
   }
 
   snapshot += `
