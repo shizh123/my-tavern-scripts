@@ -662,6 +662,13 @@ const ALL_ITEMS: Record<string, ItemDef[]> = {
     { name: '身体书写', price: 300, type: '性癖', desc: '渴望被在身上写标记文字', unlockDesc: '阶段≥4，防线≤30' },
     { name: '窒息快感', price: 400, type: '性癖', desc: '呼吸受限时快感倍增', unlockDesc: '阶段≥5，防线≤30' },
     { name: '精液面膜', price: 300, type: '性癖', desc: '渴望颜射，满足陶醉', unlockDesc: '阶段≥4，防线≤30' },
+    {
+      name: '傻白甜',
+      price: 350,
+      type: '性癖',
+      desc: '性场景中智识/矜持坍塌成甜糯小傻甜，洗脑话术本能照收',
+      unlockDesc: '阶段≥5，防线≤35',
+    },
   ],
   场景: [
     { name: '镜前调教', price: 400, type: '特殊场景', desc: '6阶段·面对镜子观察自己', unlockDesc: '阶段≥4，防线≤50' },
@@ -1098,6 +1105,9 @@ function isUnlocked(item: ItemDef): boolean {
     精液面膜: () =>
       (d.治疗.阶段 >= 4 && d.云霜凝.心理防线 <= 30) ||
       (!!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= 4 && d.洛书晴.心理防线 <= 30),
+    傻白甜: () =>
+      (d.治疗.阶段 >= 5 && d.云霜凝.心理防线 <= 35) ||
+      (!!d._洛书晴线已激活 && d.洛书晴.调教阶段 >= 5 && d.洛书晴.心理防线 <= 35),
     // 特殊场景
     镜前调教: () => d.治疗.阶段 >= 4 && d.云霜凝.心理防线 <= 50,
     夫前凌辱: () =>
@@ -1209,6 +1219,7 @@ const KINK_EFFECTS: Record<string, { name: string; tag: string }> = {
   身体书写: { name: '身体书写', tag: '渴望被在身上写标记文字' },
   窒息快感: { name: '窒息快感', tag: '呼吸受限时快感倍增' },
   精液面膜: { name: '精液面膜', tag: '渴望颜射，满足陶醉' },
+  傻白甜: { name: '傻白甜', tag: '性场景中智识/矜持坍塌成甜糯小傻甜' },
 };
 
 const MAX_KINKS = 3;
@@ -2361,6 +2372,8 @@ function meetsLuoUnlock(name: string): boolean {
       return s >= 5 && c.心理防线 <= 30;
     case '精液面膜':
       return s >= 4 && c.心理防线 <= 30;
+    case '傻白甜':
+      return s >= 5 && c.心理防线 <= 35;
     // 洛书晴专属消耗品(线已激活 + 阶段<=2)
     case '安抚符':
       return s <= 2;

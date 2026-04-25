@@ -1424,6 +1424,7 @@ const ITEM_UNLOCK_CONDITIONS: Record<string, UnlockCondition> = {
   身体书写: { 阶段: 4, 防线: 30 },
   窒息快感: { 阶段: 5, 防线: 30 },
   精液面膜: { 阶段: 4, 防线: 30 },
+  傻白甜: { 阶段: 5, 防线: 35 },
 
   // ── 留影石 ──
   留影石: { 阶段: 3 },
@@ -1625,6 +1626,7 @@ export const ITEM_PRICE: Record<string, number> = {
   身体书写: 300,
   窒息快感: 400,
   精液面膜: 300,
+  傻白甜: 350,
 
   // 留影石
   留影石: 60,

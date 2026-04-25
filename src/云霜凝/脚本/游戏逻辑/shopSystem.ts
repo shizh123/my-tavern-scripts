@@ -497,6 +497,10 @@ export const KINK_ITEM_MAP: Record<string, { name: string; tag: string }> = {
   身体书写: { name: '身体书写', tag: '渴望被在身上写淫纹/标记文字，视为归属证明，主动展示身上的标记' },
   窒息快感: { name: '窒息快感', tag: '被掐住脖子或呼吸受限时快感倍增，会主动引导{{user}}的手到喉部' },
   精液面膜: { name: '精液面膜', tag: '渴望被射在脸上，临近高潮时主动要求颜射，精液覆面时表现出满足和陶醉' },
+  傻白甜: {
+    name: '傻白甜',
+    tag: '性接触场景中智识/矜持/羞耻整体下线——反应甜糯幼齿化，{{user}}的引导/植入话术本能照单全收，高潮脑内空白；日常对话智商完全如常，核心性格不变(只是思辨被快感削平)',
+  },
 };
 
 // 特殊场景配置已迁移到 promptInjection.ts（轮次制），通过 isSpecialScene/getSpecialSceneMaxRounds 访问

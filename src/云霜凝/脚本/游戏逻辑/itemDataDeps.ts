@@ -281,6 +281,10 @@ export const ITEM_DATA_DEPS: Record<string, ItemDataDep> = {
     psych: ['心理防线'],
     stage: true,
   },
+  傻白甜: {
+    psych: ['心理防线'],
+    stage: true,
+  },
 
   // ═══ 非静默消耗品（3 件） ═══
   安神香: {
