@@ -37,7 +37,9 @@
           <span class="decor-line"></span>
         </div>
         <div class="input-group">
-          <div class="target-hint">植入对象：<strong>{{ activeCharacter }}</strong></div>
+          <div class="target-hint">
+            植入对象：<strong>{{ activeCharacter }}</strong>
+          </div>
           <div class="input-wrapper">
             <input
               v-model="thoughtContent"
@@ -64,7 +66,10 @@
           <div class="stage-card">
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
-                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path
+                  class="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
                 <path
                   class="circle"
                   :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`"
@@ -95,7 +100,10 @@
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track">
-                <div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div>
+                <div
+                  class="progress-bar stat-desire"
+                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
+                ></div>
               </div>
             </div>
             <div class="stat-item">
@@ -104,7 +112,10 @@
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track">
-                <div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div>
+                <div
+                  class="progress-bar stat-husband"
+                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
+                ></div>
               </div>
             </div>
           </div>
@@ -119,7 +130,10 @@
             <div class="suspicion-row">
               <span class="label">疑心</span>
               <div class="suspicion-track">
-                <div :class="['suspicion-fill', { danger: currentSuspicion > 70 }]" :style="{ width: currentSuspicion + '%' }"></div>
+                <div
+                  :class="['suspicion-fill', { danger: currentSuspicion > 70 }]"
+                  :style="{ width: currentSuspicion + '%' }"
+                ></div>
               </div>
               <span class="val">{{ currentSuspicion }}</span>
             </div>
@@ -139,7 +153,9 @@
             <div class="mental-content">
               <div class="emotion-row">
                 <span class="label">情绪</span>
-                <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
+                <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{
+                  char?.当前情绪 ?? '平静'
+                }}</span>
               </div>
               <!-- 心防松动提示 -->
               <div v-if="isVulnerable" class="vulnerable-hint">
@@ -163,7 +179,9 @@
               </div>
               <div class="thought-content">{{ t.内容 }}</div>
               <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track"><div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div></div>
+                <div class="progress-track">
+                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
+                </div>
                 <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
               </div>
               <div v-if="t.状态 === '未达标'" class="thought-reject">
@@ -239,8 +257,8 @@ const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '',
 
 const currentSuspicion = computed(() => {
   return activeCharacter.value === '秦璐'
-    ? data.value?.苏文状态?.对秦璐疑心值 ?? 0
-    : data.value?.苏文状态?.对苏梦疑心值 ?? 0;
+    ? (data.value?.苏文状态?.对秦璐疑心值 ?? 0)
+    : (data.value?.苏文状态?.对苏梦疑心值 ?? 0);
 });
 
 const suwenStatusDisplay = computed(() => {
@@ -384,105 +402,476 @@ $c-pink: #ff5d8f;
   font-family: 'Noto Serif SC', serif;
   position: relative;
 }
-.bg-pattern { position: absolute; inset: 0; opacity: 0.03; background-image: radial-gradient($c-gold 1px, transparent 1px); background-size: 20px 20px; pointer-events: none; }
-.main-panel { position: relative; padding: 12px; }
-.panel-decor { height: 2px; background: linear-gradient(90deg, transparent, $c-gold, transparent); margin: 8px 0; }
+.bg-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  background-image: radial-gradient($c-gold 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+.main-panel {
+  position: relative;
+  padding: 12px;
+}
+.panel-decor {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, $c-gold, transparent);
+  margin: 8px 0;
+}
 
-.header { text-align: center; margin-bottom: 10px; }
-.world-info { display: flex; justify-content: center; gap: 8px; align-items: center; font-size: 12px; color: $c-gold-dim; }
-.info-item .icon { margin-right: 2px; }
-.divider { color: $c-gold-dim; }
-.environment { color: $c-gold; font-size: 13px; margin-top: 4px; }
+.header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.world-info {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: $c-gold-dim;
+}
+.info-item .icon {
+  margin-right: 2px;
+}
+.divider {
+  color: $c-gold-dim;
+}
+.environment {
+  color: $c-gold;
+  font-size: 13px;
+  margin-top: 4px;
+}
 
-.char-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.tab-item { flex: 1; text-align: center; padding: 8px; border: 1px solid #333; border-radius: 6px; cursor: pointer; transition: all 0.2s; background: $c-panel; }
-.tab-item.active { border-color: $c-gold; background: rgba(212,175,55,0.1); }
-.tab-item:hover { border-color: $c-gold-dim; }
-.char-name { display: block; color: $c-gold; font-size: 15px; }
-.char-role { display: block; font-size: 11px; color: #888; }
+.char-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: $c-panel;
+}
+.tab-item.active {
+  border-color: $c-gold;
+  background: rgba(212, 175, 55, 0.1);
+}
+.tab-item:hover {
+  border-color: $c-gold-dim;
+}
+.char-name {
+  display: block;
+  color: $c-gold;
+  font-size: 15px;
+}
+.char-role {
+  display: block;
+  font-size: 11px;
+  color: #888;
+}
 
-.implant-control { margin-bottom: 12px; }
-.control-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.decor-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, $c-gold-dim, transparent); }
-.control-header .title { color: $c-gold; font-size: 14px; }
-.target-hint { font-size: 12px; color: #aaa; margin-bottom: 6px; }
-.input-wrapper { display: flex; gap: 6px; align-items: center; position: relative; }
-.input-wrapper input { flex: 1; background: $c-panel; border: 1px solid #333; border-radius: 4px; padding: 6px 8px; color: $c-text; font-size: 13px; }
-.char-count { font-size: 10px; color: #666; }
-.char-count.at-limit { color: $c-red; }
-.submit-btn { padding: 6px 16px; background: linear-gradient(135deg, $c-gold-dim, $c-gold); border: none; border-radius: 4px; color: #000; cursor: pointer; font-weight: 700; }
-.submit-btn:disabled { opacity: 0.4; }
+.implant-control {
+  margin-bottom: 12px;
+}
+.control-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.decor-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, $c-gold-dim, transparent);
+}
+.control-header .title {
+  color: $c-gold;
+  font-size: 14px;
+}
+.target-hint {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+.input-wrapper {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  position: relative;
+}
+.input-wrapper input {
+  flex: 1;
+  background: $c-panel;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: $c-text;
+  font-size: 13px;
+}
+.char-count {
+  font-size: 10px;
+  color: #666;
+}
+.char-count.at-limit {
+  color: $c-red;
+}
+.submit-btn {
+  padding: 6px 16px;
+  background: linear-gradient(135deg, $c-gold-dim, $c-gold);
+  border: none;
+  border-radius: 4px;
+  color: #000;
+  cursor: pointer;
+  font-weight: 700;
+}
+.submit-btn:disabled {
+  opacity: 0.4;
+}
 
-.status-display { display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px; }
+.status-display {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+}
 
-.col-left { display: flex; flex-direction: column; gap: 10px; }
-.stage-card { text-align: center; }
-.stage-ring { position: relative; width: 80px; height: 80px; margin: 0 auto; }
-.circular-chart { width: 100%; height: 100%; }
-.circle-bg { fill: none; stroke: #333; stroke-width: 2; }
-.circle { fill: none; stroke: $c-gold; stroke-width: 2.5; stroke-linecap: round; }
-.stage-text { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.stage-text .label { font-size: 10px; color: #888; }
-.stage-text .value { font-size: 14px; color: $c-gold; }
+.col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stage-card {
+  text-align: center;
+}
+.stage-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+}
+.circular-chart {
+  width: 100%;
+  height: 100%;
+}
+.circle-bg {
+  fill: none;
+  stroke: #333;
+  stroke-width: 2;
+}
+.circle {
+  fill: none;
+  stroke: $c-gold;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.stage-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.stage-text .label {
+  font-size: 10px;
+  color: #888;
+}
+.stage-text .value {
+  font-size: 14px;
+  color: $c-gold;
+}
 
-.stats-group { display: flex; flex-direction: column; gap: 8px; }
-.stat-item { }
-.stat-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
-.stat-header .num { color: $c-gold; }
-.progress-track { height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
-.progress-bar { height: 100%; border-radius: 3px; transition: width 0.3s; }
-.stat-corruption { background: linear-gradient(90deg, $c-orange, $c-red); }
-.stat-desire { background: linear-gradient(90deg, #c54b8f, $c-pink); }
-.stat-husband { background: linear-gradient(90deg, #555, #888); }
+.stats-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stat-item {
+}
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.stat-header .num {
+  color: $c-gold;
+}
+.progress-track {
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.stat-corruption {
+  background: linear-gradient(90deg, $c-orange, $c-red);
+}
+.stat-desire {
+  background: linear-gradient(90deg, #c54b8f, $c-pink);
+}
+.stat-husband {
+  background: linear-gradient(90deg, #555, #888);
+}
 
-.suwen-card { background: $c-panel; border: 1px solid #333; border-radius: 6px; padding: 8px; }
-.suwen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.suwen-header .name { color: $c-gold; font-size: 13px; }
-.status-tag { font-size: 11px; padding: 1px 6px; border-radius: 3px; background: #333; }
-.status-tag.home { background: rgba(196,75,75,0.3); color: $c-red; }
-.status-tag.away { background: rgba(76,175,80,0.3); color: $c-green; }
-.status-tag.sleeping { background: rgba(79,195,247,0.3); color: $c-cyan; }
-.suwen-location { font-size: 11px; color: #aaa; margin-bottom: 6px; }
-.suspicion-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
-.suspicion-track { flex: 1; height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
-.suspicion-fill { height: 100%; background: $c-orange; border-radius: 3px; }
-.suspicion-fill.danger { background: $c-red; }
-.accel-hint { font-size: 11px; color: $c-orange; margin-top: 6px; }
-.safe-indicator { font-size: 11px; color: $c-green; margin-top: 6px; display: flex; gap: 4px; align-items: center; }
+.suwen-card {
+  background: $c-panel;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 8px;
+}
+.suwen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.suwen-header .name {
+  color: $c-gold;
+  font-size: 13px;
+}
+.status-tag {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #333;
+}
+.status-tag.home {
+  background: rgba(196, 75, 75, 0.3);
+  color: $c-red;
+}
+.status-tag.away {
+  background: rgba(76, 175, 80, 0.3);
+  color: $c-green;
+}
+.status-tag.sleeping {
+  background: rgba(79, 195, 247, 0.3);
+  color: $c-cyan;
+}
+.suwen-location {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+.suspicion-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.suspicion-track {
+  flex: 1;
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.suspicion-fill {
+  height: 100%;
+  background: $c-orange;
+  border-radius: 3px;
+}
+.suspicion-fill.danger {
+  background: $c-red;
+}
+.accel-hint {
+  font-size: 11px;
+  color: $c-orange;
+  margin-top: 6px;
+}
+.safe-indicator {
+  font-size: 11px;
+  color: $c-green;
+  margin-top: 6px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
 
-.col-right { display: flex; flex-direction: column; gap: 10px; }
-.section-title { color: $c-gold; font-size: 13px; margin-bottom: 6px; border-bottom: 1px solid #333; padding-bottom: 3px; }
-.mental-section { }
-.mental-content { background: $c-panel; border-radius: 6px; padding: 8px; }
-.emotion-row { display: flex; gap: 6px; align-items: center; font-size: 13px; margin-bottom: 6px; }
-.emotion-val { color: $c-gold; }
-.emotion-val.vulnerable-glow { color: $c-pink; font-weight: 700; text-shadow: 0 0 6px rgba(255,93,143,0.6); animation: vuln-pulse 1.6s ease-in-out infinite; }
-@keyframes vuln-pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
-.vulnerable-hint { display: flex; gap: 4px; align-items: center; padding: 4px 6px; background: rgba(255,93,143,0.12); border: 1px solid rgba(255,93,143,0.4); border-radius: 4px; font-size: 11px; color: $c-pink; margin-bottom: 6px; }
-.thought-bubble { font-size: 12px; color: #ccc; font-style: italic; min-height: 16px; }
+.col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.section-title {
+  color: $c-gold;
+  font-size: 13px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 3px;
+}
+.mental-section {
+}
+.mental-content {
+  background: $c-panel;
+  border-radius: 6px;
+  padding: 8px;
+}
+.emotion-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.emotion-val {
+  color: $c-gold;
+}
+.emotion-val.vulnerable-glow {
+  color: $c-pink;
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(255, 93, 143, 0.6);
+  animation: vuln-pulse 1.6s ease-in-out infinite;
+}
+@keyframes vuln-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.vulnerable-hint {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(255, 93, 143, 0.12);
+  border: 1px solid rgba(255, 93, 143, 0.4);
+  border-radius: 4px;
+  font-size: 11px;
+  color: $c-pink;
+  margin-bottom: 6px;
+}
+.thought-bubble {
+  font-size: 12px;
+  color: #ccc;
+  font-style: italic;
+  min-height: 16px;
+}
 
-.thought-section { }
-.empty { font-size: 12px; color: #555; }
-.thought-item { background: $c-panel; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
-.thought-head { display: flex; gap: 6px; align-items: center; margin-bottom: 3px; }
-.thought-type { font-size: 11px; color: #888; }
-.status-tag.growing { background: rgba(76,175,80,0.3); color: $c-green; }
-.status-tag.pending { background: rgba(79,195,247,0.3); color: $c-cyan; }
-.status-tag.rejected { background: rgba(196,75,75,0.3); color: $c-red; }
-.status-tag.mature { background: rgba(212,175,55,0.3); color: $c-gold; }
-.thought-content { font-size: 12px; color: #ddd; margin-bottom: 4px; }
-.thought-progress { display: flex; align-items: center; gap: 6px; }
-.thought-progress .progress-bar { background: $c-green; }
-.progress-text { font-size: 10px; color: #888; white-space: nowrap; }
-.thought-reject { font-size: 11px; color: $c-red; display: flex; justify-content: space-between; align-items: center; }
-.mini-btn { font-size: 10px; padding: 2px 8px; background: #333; border: 1px solid $c-red; border-radius: 3px; color: $c-red; cursor: pointer; }
+.thought-section {
+}
+.empty {
+  font-size: 12px;
+  color: #555;
+}
+.thought-item {
+  background: $c-panel;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+.thought-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.thought-type {
+  font-size: 11px;
+  color: #888;
+}
+.status-tag.growing {
+  background: rgba(76, 175, 80, 0.3);
+  color: $c-green;
+}
+.status-tag.pending {
+  background: rgba(79, 195, 247, 0.3);
+  color: $c-cyan;
+}
+.status-tag.rejected {
+  background: rgba(196, 75, 75, 0.3);
+  color: $c-red;
+}
+.status-tag.mature {
+  background: rgba(212, 175, 55, 0.3);
+  color: $c-gold;
+}
+.thought-content {
+  font-size: 12px;
+  color: #ddd;
+  margin-bottom: 4px;
+}
+.thought-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.thought-progress .progress-bar {
+  background: $c-green;
+}
+.progress-text {
+  font-size: 10px;
+  color: #888;
+  white-space: nowrap;
+}
+.thought-reject {
+  font-size: 11px;
+  color: $c-red;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mini-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: #333;
+  border: 1px solid $c-red;
+  border-radius: 3px;
+  color: $c-red;
+  cursor: pointer;
+}
 
-.habit-section { }
-.habit-item { display: flex; justify-content: space-between; align-items: center; background: $c-panel; border-radius: 4px; padding: 4px 8px; margin-bottom: 4px; font-size: 12px; }
-.habit-text { color: $c-green; }
-.sell-btn { font-size: 10px; padding: 2px 8px; background: rgba(212,175,55,0.2); border: 1px solid $c-gold-dim; border-radius: 3px; color: $c-gold; cursor: pointer; }
-.habit-full-tip { font-size: 11px; color: $c-orange; margin-top: 4px; }
+.habit-section {
+}
+.habit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: $c-panel;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.habit-text {
+  color: $c-green;
+}
+.sell-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid $c-gold-dim;
+  border-radius: 3px;
+  color: $c-gold;
+  cursor: pointer;
+}
+.habit-full-tip {
+  font-size: 11px;
+  color: $c-orange;
+  margin-top: 4px;
+}
 
-.currency-section { display: flex; justify-content: space-between; align-items: center; }
-.currency-val { color: $c-gold; font-size: 16px; font-weight: 700; }
+.currency-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.currency-val {
+  color: $c-gold;
+  font-size: 16px;
+  font-weight: 700;
+}
 </style>
