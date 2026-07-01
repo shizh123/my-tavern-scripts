@@ -1,0 +1,60 @@
+---
+entries:
+  - keys: [秦璐, 母亲, 妈妈]
+    content: !include 角色/秦璐.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: [苏梦, 姐姐, 梦姐]
+    content: !include 角色/苏梦.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: [苏文, 父亲, 爸爸]
+    content: !include 角色/苏文.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: [主角, 儿子, 弟弟, <user>]
+    content: !include 角色/主角.yaml
+    enabled: true
+    insertion_order: 100
+    case_sensitive: false
+
+  - keys: ['[变量列表]']
+    content: !include 变量/变量列表.yaml
+    enabled: true
+    insertion_order: 1
+    case_sensitive: true
+    constant: true
+    comment: MVU 框架动态注入当前变量结构+值，与 schema 自动同步
+
+  - keys: ['[mvu_update]', 变量更新规则]
+    content: !include 变量/变量更新规则.yaml
+    enabled: true
+    insertion_order: 2
+    case_sensitive: true
+    constant: true
+
+  - keys: ['[mvu_update]', 变量输出格式]
+    content: !include 变量/变量输出格式.yaml
+    enabled: true
+    insertion_order: 3
+    case_sensitive: true
+    constant: true
+
+  - keys: [念头, 习惯, 培育, 植入念头]
+    content: !include 系统设定/念头习惯表现.yaml
+    enabled: true
+    insertion_order: 50
+    case_sensitive: false
+
+  - keys: ['[initvar]', 变量初始化勿开]
+    content: !include initvar.yaml
+    enabled: false
+    insertion_order: 0
+    case_sensitive: true
+    comment: 仅在新建聊天时开启一次，用于初始化MVU变量
