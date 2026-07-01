@@ -73,11 +73,7 @@ export function calcDifficultyAndFloors(
  * 检查越级是否被允许（心防松动窗口 / 道具解锁）
  * 返回有效阶段（用于判断该类型是否合法）
  */
-function getEffectiveStage(
-  data: SchemaType,
-  characterKey: '秦璐状态' | '苏梦状态',
-  currentFloor: number,
-): number {
+function getEffectiveStage(data: SchemaType, characterKey: '秦璐状态' | '苏梦状态', currentFloor: number): number {
   const stage = data[characterKey].当前阶段;
 
   // 心防松动窗口：阶段+1，封顶5
@@ -170,7 +166,9 @@ export function resolveThoughtType(
   } else {
     // 不合格 → 未达标（标红、可退回/保留）
     thought.状态 = '未达标';
-    console.info(`[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 未达标`);
+    console.info(
+      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 未达标`,
+    );
   }
 }
 
@@ -277,11 +275,7 @@ function matureThought(
  * - 每个 100 货币
  * - 习惯消失，阶段不回退
  */
-export function sellHabit(
-  data: SchemaType,
-  characterKey: '秦璐状态' | '苏梦状态',
-  habitIndex: number,
-): boolean {
+export function sellHabit(data: SchemaType, characterKey: '秦璐状态' | '苏梦状态', habitIndex: number): boolean {
   const character = data[characterKey];
   if (character.习惯列表.length < 5) {
     console.warn(`[习惯变卖] ${characterKey} 习惯未满5，不可出售`);
@@ -301,11 +295,7 @@ export function sellHabit(
 /**
  * 玩家退回未达标念头（删除）
  */
-export function discardThought(
-  data: SchemaType,
-  characterKey: '秦璐状态' | '苏梦状态',
-  thoughtId: string,
-): void {
+export function discardThought(data: SchemaType, characterKey: '秦璐状态' | '苏梦状态', thoughtId: string): void {
   const thought = data[characterKey].念头列表[thoughtId];
   if (thought && thought.状态 === '未达标') {
     delete data[characterKey].念头列表[thoughtId];

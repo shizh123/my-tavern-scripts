@@ -15,11 +15,7 @@ import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 import { advanceSuwenRoutine, isInVulnerableWindow } from './suwenRoutine';
-import {
-  tickThoughtProgress,
-  resolveThoughtType,
-  type ThoughtCategoryValue,
-} from './thoughtEngine';
+import { tickThoughtProgress, resolveThoughtType, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
 
 // ────────────────────────────────────────────────────────

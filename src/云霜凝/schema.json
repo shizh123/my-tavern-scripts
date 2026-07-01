@@ -10,6 +10,7 @@
       "type": "object",
       "properties": {
         "完成度": {
+          "default": 0,
           "type": "number"
         },
         "阶段": {
@@ -80,15 +81,19 @@
           "type": "object",
           "properties": {
             "小嘴": {
+              "default": 0,
               "type": "number"
             },
             "胸部": {
+              "default": 0,
               "type": "number"
             },
             "小屄": {
+              "default": 0,
               "type": "number"
             },
             "屁穴": {
+              "default": 0,
               "type": "number"
             }
           }
@@ -137,9 +142,11 @@
               ]
             },
             "乳环": {
+              "default": false,
               "type": "boolean"
             },
             "阴环": {
+              "default": false,
               "type": "boolean"
             },
             "淫纹": {
@@ -152,15 +159,19 @@
               "type": "object",
               "properties": {
                 "腰腹": {
+                  "default": "",
                   "type": "string"
                 },
                 "胸前": {
+                  "default": "",
                   "type": "string"
                 },
                 "大腿内侧": {
+                  "default": "",
                   "type": "string"
                 },
                 "臀部": {
+                  "default": "",
                   "type": "string"
                 }
               }
@@ -217,27 +228,35 @@
               "type": "object",
               "properties": {
                 "脚踝": {
+                  "default": "",
                   "type": "string"
                 },
                 "颈部": {
+                  "default": "",
                   "type": "string"
                 },
                 "耳部": {
+                  "default": "",
                   "type": "string"
                 },
                 "腰部": {
+                  "default": "",
                   "type": "string"
                 },
                 "大腿": {
+                  "default": "",
                   "type": "string"
                 },
                 "胸部": {
+                  "default": "",
                   "type": "string"
                 },
                 "阴蒂": {
+                  "default": "",
                   "type": "string"
                 },
                 "前后穴": {
+                  "default": "",
                   "type": "string"
                 }
               }
@@ -257,6 +276,7 @@
           }
         },
         "心理活动": {
+          "default": "",
           "type": "string"
         }
       }
@@ -282,6 +302,7 @@
       "type": "object",
       "properties": {
         "疑心值": {
+          "default": 0,
           "type": "number"
         },
         "心态": {
@@ -298,6 +319,7 @@
           ]
         },
         "心理活动": {
+          "default": "",
           "type": "string"
         },
         "千晶幻术": {
@@ -311,18 +333,23 @@
           "type": "object",
           "properties": {
             "激活中": {
+              "default": false,
               "type": "boolean"
             },
             "冷却结束楼层": {
+              "default": 0,
               "type": "number"
             },
             "已使用次数": {
+              "default": 0,
               "type": "number"
             },
             "幻境摘要": {
+              "default": "",
               "type": "string"
             },
             "认知改写完成": {
+              "default": false,
               "type": "boolean"
             }
           }
@@ -336,9 +363,11 @@
           "type": "object",
           "properties": {
             "激活中": {
+              "default": false,
               "type": "boolean"
             },
             "冷却结束楼层": {
+              "default": 0,
               "type": "number"
             },
             "上次场景索引": {
@@ -398,6 +427,7 @@
           "type": "number"
         },
         "顺从度": {
+          "default": 0,
           "type": "number"
         },
         "调教阶段": {
@@ -414,15 +444,19 @@
           "type": "object",
           "properties": {
             "小嘴": {
+              "default": 0,
               "type": "number"
             },
             "胸部": {
+              "default": 0,
               "type": "number"
             },
             "小屄": {
+              "default": 0,
               "type": "number"
             },
             "屁穴": {
+              "default": 0,
               "type": "number"
             }
           }
@@ -471,9 +505,11 @@
               ]
             },
             "乳环": {
+              "default": false,
               "type": "boolean"
             },
             "阴环": {
+              "default": false,
               "type": "boolean"
             },
             "淫纹": {
@@ -486,15 +522,19 @@
               "type": "object",
               "properties": {
                 "腰腹": {
+                  "default": "",
                   "type": "string"
                 },
                 "胸前": {
+                  "default": "",
                   "type": "string"
                 },
                 "大腿内侧": {
+                  "default": "",
                   "type": "string"
                 },
                 "臀部": {
+                  "default": "",
                   "type": "string"
                 }
               }
@@ -550,27 +590,35 @@
               "type": "object",
               "properties": {
                 "脚踝": {
+                  "default": "",
                   "type": "string"
                 },
                 "颈部": {
+                  "default": "",
                   "type": "string"
                 },
                 "耳部": {
+                  "default": "",
                   "type": "string"
                 },
                 "腰部": {
+                  "default": "",
                   "type": "string"
                 },
                 "大腿": {
+                  "default": "",
                   "type": "string"
                 },
                 "胸部": {
+                  "default": "",
                   "type": "string"
                 },
                 "阴蒂": {
+                  "default": "",
                   "type": "string"
                 },
                 "前后穴": {
+                  "default": "",
                   "type": "string"
                 }
               }
@@ -578,6 +626,7 @@
           }
         },
         "心理活动": {
+          "default": "",
           "type": "string"
         }
       }
@@ -592,9 +641,11 @@
       "type": "object",
       "properties": {
         "绝望值": {
+          "default": 0,
           "type": "number"
         },
         "压抑值": {
+          "default": 0,
           "type": "number"
         },
         "心态": {
@@ -610,6 +661,7 @@
           ]
         },
         "心理活动": {
+          "default": "",
           "type": "string"
         }
       }
@@ -655,18 +707,23 @@
       }
     },
     "_坏结局已触发": {
+      "default": false,
       "type": "boolean"
     },
     "_打断冻结至楼层": {
+      "default": 0,
       "type": "number"
     },
     "_监视解除已发送楼层": {
+      "default": 0,
       "type": "number"
     },
     "_退出苗喧一日楼层": {
+      "default": 0,
       "type": "number"
     },
     "_已触发蚀心露屈辱": {
+      "default": false,
       "type": "boolean"
     },
     "_消耗品上次使用楼层": {
@@ -680,12 +737,15 @@
       }
     },
     "_净灵铃上次使用楼层": {
+      "default": 0,
       "type": "number"
     },
     "_待发送道具事件": {
+      "default": "",
       "type": "string"
     },
     "_神魂空间激活中": {
+      "default": false,
       "type": "boolean"
     },
     "_当前互动模式": {
@@ -734,11 +794,13 @@
       "type": "object",
       "properties": {
         "进行中": {
+          "default": "",
           "type": "string"
         }
       }
     },
     "_特殊场景开始楼层": {
+      "default": 0,
       "type": "number"
     },
     "_已完成特殊场景": {
@@ -752,15 +814,19 @@
       }
     },
     "_神魂空间已解锁": {
+      "default": false,
       "type": "boolean"
     },
     "_神魂空间已进入过": {
+      "default": false,
       "type": "boolean"
     },
     "_神魂记忆场景": {
+      "default": "",
       "type": "string"
     },
     "_新婚夜已触发": {
+      "default": false,
       "type": "boolean"
     },
     "_记忆进入次数": {
@@ -774,74 +840,97 @@
       }
     },
     "_系统操作中": {
+      "default": false,
       "type": "boolean"
     },
     "_留影石计数": {
+      "default": 0,
       "type": "number"
     },
     "_留影石上次出售楼层": {
+      "default": 0,
       "type": "number"
     },
     "_苗喧上次触发楼层": {
+      "default": 0,
       "type": "number"
     },
     "_苗喧碎片": {
+      "default": "",
       "type": "string"
     },
     "_千晶幻术开始楼层": {
+      "default": 0,
       "type": "number"
     },
     "_孝敬师父开始楼层": {
+      "default": 0,
       "type": "number"
     },
     "_千晶引导延后楼数": {
+      "default": 0,
       "type": "number"
     },
     "_孝敬引导延后楼数": {
+      "default": 0,
       "type": "number"
     },
     "_特殊场景引导延后楼数": {
+      "default": 0,
       "type": "number"
     },
     "_洛书晴激活引导延后楼数": {
+      "default": 0,
       "type": "number"
     },
     "_洛书晴线已激活": {
+      "default": false,
       "type": "boolean"
     },
     "_洛书晴激活轮次进度": {
+      "default": 0,
       "type": "number"
     },
     "_苗喧前期反抗已触发": {
+      "default": 0,
       "type": "number"
     },
     "_苗喧反抗限制中": {
+      "default": false,
       "type": "boolean"
     },
     "_苗喧反抗限制触发楼层": {
+      "default": 0,
       "type": "number"
     },
     "_倾诉冷却结束楼层": {
+      "default": 0,
       "type": "number"
     },
     "_反抗冷却结束楼层": {
+      "default": 0,
       "type": "number"
     },
     "_扰动冷却结束楼层": {
+      "default": 0,
       "type": "number"
     },
     "_打断自神魂空间": {
+      "default": false,
       "type": "boolean"
     },
     "_上次反抗快照": {
+      "default": null,
       "anyOf": [
         {
           "type": "object",
           "properties": {
             "楼层": {
+              "default": 0,
               "type": "number"
             },
             "焦点简述": {
+              "default": null,
               "anyOf": [
                 {
                   "type": "string"
@@ -892,9 +981,11 @@
       }
     },
     "_洛书晴_安抚符生效至": {
+      "default": 0,
       "type": "number"
     },
     "_洛书晴_真心符生效至": {
+      "default": 0,
       "type": "number"
     },
     "_当前场景角色": {
@@ -909,6 +1000,7 @@
           "type": "boolean"
         },
         "洛书晴": {
+          "default": false,
           "type": "boolean"
         }
       }

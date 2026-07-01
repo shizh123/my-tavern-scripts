@@ -85,10 +85,7 @@ const WEEK_ROUTINES: RoutineSegment[][] = [
 ];
 
 /** 一周的总楼数（用于游标取模定位星期） */
-const WEEK_TOTAL_FLOORS = WEEK_ROUTINES.reduce(
-  (sum, routine) => sum + routine.reduce((s, seg) => s + seg.楼数, 0),
-  0,
-);
+const WEEK_TOTAL_FLOORS = WEEK_ROUTINES.reduce((sum, routine) => sum + routine.reduce((s, seg) => s + seg.楼数, 0), 0);
 
 /** 关键词跳转目标段（重置游标） */
 interface JumpTarget {
@@ -194,11 +191,7 @@ export function isSuwenHome(cursor: number): boolean {
  * @param currentFloor 当前消息楼层 ID
  * @param playerInput 玩家本轮输入文本（用于检测跳转关键词）
  */
-export function advanceSuwenRoutine(
-  data: SchemaType,
-  currentFloor: number,
-  playerInput: string,
-): void {
+export function advanceSuwenRoutine(data: SchemaType, currentFloor: number, playerInput: string): void {
   const sys = data.系统;
   const lastFloor = sys._上次处理楼层;
 

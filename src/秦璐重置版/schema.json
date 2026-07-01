@@ -78,9 +78,11 @@
           "type": "string"
         },
         "对秦璐疑心值": {
+          "default": 0,
           "type": "number"
         },
         "对苏梦疑心值": {
+          "default": 0,
           "type": "number"
         },
         "对秦璐疑心值冻结": {
@@ -98,6 +100,7 @@
       "type": "object",
       "properties": {
         "货币": {
+          "default": 0,
           "type": "number"
         },
         "道具状态": {
@@ -184,6 +187,7 @@
       "type": "object",
       "properties": {
         "堕落度": {
+          "default": 0,
           "type": "number"
         },
         "对主角依存度": {
