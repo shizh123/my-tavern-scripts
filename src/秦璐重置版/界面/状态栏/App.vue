@@ -99,7 +99,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-header">
-                <span class="name">💕 主角依存</span>
+                <span class="name">💕 {{ activeCharacter === '秦璐' ? '儿子依存' : '弟弟依存' }}</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track">
@@ -111,7 +111,7 @@
             </div>
             <div class="stat-item">
               <div class="stat-header">
-                <span class="name">💔 苏文依存</span>
+                <span class="name">💔 {{ activeCharacter === '秦璐' ? '丈夫依存' : '爸爸依存' }}</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track">
@@ -137,7 +137,7 @@
               </div>
               <span class="val">{{ suspicion }}</span>
             </div>
-            <div v-if="isAccelerating" class="accel-hint">⚡ 苏文在场 · 念头加速中</div>
+            <div v-if="isAccelerating" class="accel-hint">⚡ 苏文在附近 · 念头加速中</div>
             <div v-else-if="suwenSafeReason" class="safe-indicator">
               <span class="safe-icon">✓</span><span>{{ suwenSafeReason }}</span>
             </div>
@@ -211,11 +211,13 @@
               <span class="mini-tag outline">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
             </div>
             <div class="clothing-list">
-              <span class="clothing-item"><span class="cl">上</span>{{ char?.服装细节?.上装 ?? '——' }}</span>
-              <span class="clothing-item"><span class="cl">下</span>{{ char?.服装细节?.下装 ?? '——' }}</span>
-              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '——' }}</span>
+              <span class="clothing-item"><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '米色针织开衫' }}</span>
+              <span class="clothing-item"><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '深灰长裙' }}</span>
+              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '肉色棉质文胸' }}</span>
+              <span class="clothing-item"><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '棉质内裤' }}</span>
+              <span class="clothing-item"><span class="cl">袜</span>{{ char?.服装细节?.袜裤 ?? '肉色丝袜' }}</span>
             </div>
-            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }}</div>
+            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '清新自然' }}</div>
           </div>
         </div>
       </main>
@@ -229,7 +231,7 @@
 import { ref, computed } from 'vue';
 import type { SchemaType } from '../../schema';
 
-const MAX_LEN = 50;
+const MAX_LEN = 20;
 const VULNERABLE_EMOTION = '心防松动';
 
 const data = ref<SchemaType | null>(null);
