@@ -217,8 +217,7 @@ function getCurrentMessageId2(): number {
 
 async function refreshData() {
   try {
-    const messageId = getCurrentMessageId();
-    const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     data.value = _.get(vars, 'stat_data') as SchemaType;
   } catch (e) {
     console.warn('[秦璐重置版] 刷新数据失败', e);
@@ -298,10 +297,9 @@ async function implantThought() {
   const content = thoughtContent.value.trim();
   if (!content) return;
   try {
-    const messageId = getCurrentMessageId();
-    const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
-    const d = _.get(vars, 'stat_data') as SchemaType;
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as SchemaType;
     const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     if (!d[key].念头列表) d[key].念头列表 = {};
     d[key].念头列表[id] = {
@@ -311,9 +309,9 @@ async function implantThought() {
       难度: '待定',
       需要楼数: 0,
       开发进度: 0,
-      植入楼层: messageId,
+      植入楼层: getCurrentMessageId(),
     };
-    await Mvu.setMvuData({ type: 'message', message_id: messageId, data: vars });
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     thoughtContent.value = '';
     console.info(`[秦璐重置版] 植入念头 ${id}：「${content}」`);
     await refreshData();
@@ -326,12 +324,11 @@ async function implantThought() {
 // 退回未达标念头
 async function discardThought(id: string) {
   try {
-    const messageId = getCurrentMessageId();
-    const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
-    const d = _.get(vars, 'stat_data') as SchemaType;
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as SchemaType;
     delete d[key].念头列表[id];
-    await Mvu.setMvuData({ type: 'message', message_id: messageId, data: vars });
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     await refreshData();
   } catch (e) {
     console.error('[秦璐重置版] 退回失败', e);
@@ -341,17 +338,16 @@ async function discardThought(id: string) {
 // 变卖习惯（满5才能卖）
 async function sellHabit(index: number) {
   try {
-    const messageId = getCurrentMessageId();
-    const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
-    const d = _.get(vars, 'stat_data') as SchemaType;
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as SchemaType;
     if (d[key].习惯列表.length < 5) {
       toastr.warning('习惯未满5，不可出售');
       return;
     }
     d[key].习惯列表.splice(index, 1);
     d.系统.货币 += 100;
-    await Mvu.setMvuData({ type: 'message', message_id: messageId, data: vars });
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     console.info('[秦璐重置版] 变卖习惯 +100货币');
     await refreshData();
   } catch (e) {
