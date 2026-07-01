@@ -299,7 +299,12 @@ async function implantThought() {
   try {
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-    const d = _.get(vars, 'stat_data') as SchemaType;
+    const d = _.get(vars, 'stat_data') as SchemaType | undefined;
+    if (!d || !d[key]) {
+      toastr.warning('变量未初始化，请先发一条消息让 AI 回复后再植入');
+      console.warn('[秦璐重置版] stat_data 或角色状态不存在，无法植入');
+      return;
+    }
     const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     if (!d[key].念头列表) d[key].念头列表 = {};
     d[key].念头列表[id] = {
