@@ -13,7 +13,9 @@
           <span class="divider">✦</span>
           <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
+        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">
+          「 {{ safeWorld.环境氛围 }} 」
+        </div>
       </header>
 
       <!-- 角色切换 -->
@@ -37,7 +39,9 @@
           <span class="decor-line"></span>
         </div>
         <div class="input-group">
-          <div class="target-hint">植入对象：<strong>{{ activeCharacter }}</strong></div>
+          <div class="target-hint">
+            植入对象：<strong>{{ activeCharacter }}</strong>
+          </div>
           <div class="input-wrapper">
             <input
               v-model="thoughtContent"
@@ -65,8 +69,15 @@
           <div class="stage-card">
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
-                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path
+                  class="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  class="circle"
+                  :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
               </svg>
               <div class="stage-text">
                 <span class="label">阶段</span>
@@ -82,21 +93,33 @@
                 <span class="name">🔥 堕落度</span>
                 <span class="num">{{ char?.堕落度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💕 主角依存</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-desire"
+                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💔 苏文依存</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-husband"
+                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
           </div>
 
@@ -136,16 +159,16 @@
               <span class="label">情绪</span>
               <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
             </div>
-            <div v-if="isVulnerable" class="vulnerable-hint">
-              <span>⚡</span><span>心防松动 · 可植入越级念头</span>
-            </div>
+            <div v-if="isVulnerable" class="vulnerable-hint"><span>⚡</span><span>心防松动 · 可植入越级念头</span></div>
             <div class="thought-bubble" v-if="char?.当前心理想法">「 {{ char.当前心理想法 }} 」</div>
             <div class="temperament" v-if="char?.气质描述">— {{ char.气质描述 }}</div>
           </div>
 
           <!-- 念头列表 -->
           <div class="detail-card">
-            <div class="section-title">🌱 念头 <span class="count">({{ thoughtList.length }})</span></div>
+            <div class="section-title">
+              🌱 念头 <span class="count">({{ thoughtList.length }})</span>
+            </div>
             <div v-if="thoughtList.length === 0" class="empty">暂无念头</div>
             <div v-for="t in thoughtList" :key="t.id" class="thought-item">
               <div class="thought-head">
@@ -155,7 +178,9 @@
               </div>
               <div class="thought-content">{{ t.内容 }}</div>
               <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track"><div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div></div>
+                <div class="progress-track">
+                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
+                </div>
                 <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
               </div>
               <div v-if="t.状态 === '未达标'" class="thought-reject">
@@ -167,7 +192,9 @@
 
           <!-- 习惯 -->
           <div class="detail-card">
-            <div class="section-title">💚 习惯 <span class="count">({{ habitList.length }}/5)</span></div>
+            <div class="section-title">
+              💚 习惯 <span class="count">({{ habitList.length }}/5)</span>
+            </div>
             <div v-if="habitList.length === 0" class="empty">暂无习惯</div>
             <div v-for="(h, i) in habitList" :key="i" class="habit-item">
               <span class="habit-text">{{ h.内容 }}</span>
@@ -234,9 +261,7 @@ const char = computed(() => {
   return data.value?.[key] ?? null;
 });
 
-const safeWorld = computed(
-  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' },
-);
+const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' });
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -259,9 +284,7 @@ const isAccelerating = computed(() => {
 });
 
 const suspicion = computed(() =>
-  activeCharacter.value === '秦璐'
-    ? suwen.value?.对秦璐疑心值 ?? 0
-    : suwen.value?.对苏梦疑心值 ?? 0,
+  activeCharacter.value === '秦璐' ? (suwen.value?.对秦璐疑心值 ?? 0) : (suwen.value?.对苏梦疑心值 ?? 0),
 );
 
 const isVulnerable = computed(() => char.value?.当前情绪 === VULNERABLE_EMOTION);
@@ -393,7 +416,9 @@ $c-border: #333;
   background-image:
     radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.3) 1px, transparent 1px),
     radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.2) 1px, transparent 1px);
-  background-size: 30px 30px, 25px 25px;
+  background-size:
+    30px 30px,
+    25px 25px;
   pointer-events: none;
 }
 .main-panel {
@@ -830,7 +855,8 @@ $c-border: #333;
   animation: vuln-pulse 1.5s ease-in-out infinite;
 }
 @keyframes vuln-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
   }
