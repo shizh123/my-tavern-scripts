@@ -269,10 +269,10 @@ $(() => {
     // 读阶段：注入状态快照（对标云霜凝 Phase 3.5）
     // ─────────────────────────────────────────────────────
     eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, (event_data: any) => {
-      // dryRun 只是酒馆预热请求，不真正生成 AI 回复，直接跳过（对标云霜凝）
+      // 不再用 dryRun 守卫：某些酒馆版本 dryRun 永远为 true，加守卫会导致快照永不注入
+      // 注入 system message 是幂等的（有清理旧快照逻辑），重复注入无副作用
       if (event_data?.dryRun) {
-        console.info('[秦璐重置版] dryRun=true，跳过注入');
-        return;
+        console.info('[秦璐重置版] dryRun=true，仍继续注入（酒馆版本兼容）');
       }
       _isInAiCycle = true;
       try {
