@@ -164,51 +164,71 @@ function buildStatusSnapshot(data: SchemaType): string {
     lines.push(`⚡【心防松动】此刻可植入越级念头`);
   }
 
-  // 念头培育中（只显示在场角色的）+ 相关度判定请求
-  const thoughts = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
-  if (thoughts.length > 0) {
-    lines.push(`【培育中念头】本轮请判定哪些念头与本轮剧情相关，写入 系统.本轮相关念头`);
-    for (const [id, t] of thoughts) {
-      lines.push(`  ${id}：「${t.内容}」${t.难度} ${t.开发进度}/${t.需要楼数}楼`);
+  // ━━━━ 念头/习惯对角色的动态影响 baseline（对标云霜凝性癖 baseline） ━━━━
+  //   培育中念头 = 想法层（会浮现、会脱口聊，不做）
+  //   已成熟习惯 = 行为层（不自觉主动做，无心理障碍）
+  const growing = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
+  const habits = char.习惯列表;
+  if (growing.length > 0 || habits.length > 0) {
+    lines.push('');
+    lines.push(`【${currentChar}当下受这些念头/习惯的影响，请在演绎中自然体现】`);
+    for (const [, t] of growing) {
+      lines.push(`  · 念头「${t.内容}」正在她心中萌芽——相关想法会不自觉浮现，她甚至会在聊天中脱口聊到，但不会付诸行动（仍是"想"，不到"做"）。`);
     }
-    lines.push(`  相关度写入格式：replace /系统/本轮相关念头 值为 {"${thoughts[0][0]}": 2} （2=高度相关,+2楼; 1=轻微相关,+1楼; 不相关不写）`);
+    for (const h of habits) {
+      lines.push(`  · 习惯「${h.内容}」已刻入本能——她会自然主动地做出与之相关的行为，不假思索，无心理障碍。`);
+    }
+    lines.push(`  注意：不要主动提及"念头/习惯/培育/堕落度"等元系统词，只表现为自然的心理与行为变化。`);
   }
 
-  // 已成熟但习惯满待变卖的念头（提示玩家需腾位）
+  // 已成熟但习惯满待变卖的念头（提示玩家需腾位，AI 不需处理）
   const maturedWaiting = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '已成熟');
   if (maturedWaiting.length > 0) {
-    lines.push(`【已成熟待腾位念头】习惯已满5，需在界面变卖习惯腾位后补转入：`);
-    for (const [id, t] of maturedWaiting) {
-      lines.push(`  ${id}：「${t.内容}」`);
+    lines.push('');
+    lines.push(`【已成熟待腾位念头】习惯已满5，需在界面变卖腾位后补转入（AI 无需处理）：`);
+    for (const [, t] of maturedWaiting) {
+      lines.push(`  · 「${t.内容}」`);
     }
   }
 
-  // 习惯（上限5，满了提示变卖）
-  if (char.习惯列表.length > 0) {
-    lines.push(`【习惯】(${char.习惯列表.length}/5)`);
-    for (const h of char.习惯列表) {
-      lines.push(`  · ${h.内容}`);
-    }
-    if (char.习惯列表.length >= 5) {
-      lines.push(`  ⚠ 习惯已满，需在界面变卖腾位`);
+  // 习惯栏容量提示
+  if (habits.length > 0) {
+    lines.push(`【习惯栏】(${habits.length}/5)`);
+    if (habits.length >= 5) {
+      lines.push(`  ⚠ 已满，需在界面变卖腾位`);
     }
   }
 
   // 货币
   lines.push(`【货币】${data.系统.货币}`);
 
-  // 待判定念头 → 植入后3楼内动态注入 AI 判定请求；AI只判类型，越级拒绝由脚本处理为未达标
+  // ━━━━ AI 判定通道 1：待判定念头 → 类型判定（植入后≤3楼动态注入） ━━━━
+  //   AI 只写"类型"，脚本拿到后按阶段判定合格/越级
   const pending = Object.entries(char.念头列表).filter(
     ([, t]) => t.状态 === '判定中' && floor - t.植入楼层 <= 3,
   );
   if (pending.length > 0) {
     lines.push('');
-    lines.push('【念头判定规则】以下是植入后3楼内的新念头，请为每个念头判定类型并写入对应字段。');
-    lines.push('只写“类型”字段；不要改内容/状态/难度/进度。脚本会根据当前阶段判定是否接纳，越级念头会被标记为未达标。');
-    lines.push('可选类型：陪伴交流/情感依赖/肢体亲近/暧昧互动/亲密接触/身体开放/性行为/身份认同/绝对服从/家庭替代');
+    lines.push(`━━━ 判定任务 A：新念头类型判定 ━━━`);
+    lines.push(`以下是最近植入的新念头（状态=判定中）。请【只做类型判定】，不要判定相关度、不要修改内容/状态/难度/进度。`);
+    lines.push(`可选类型（10大类，越往后越越界）：陪伴交流/情感依赖/肢体亲近/暧昧互动/亲密接触/身体开放/性行为/身份认同/绝对服从/家庭替代`);
+    lines.push(`脚本会根据当前阶段判定是否接纳——越级念头会被标记为未达标（AI 不用管，也不要在正文里"帮她拒绝"）。`);
     for (const [id, t] of pending) {
-      lines.push(`  ${charKey}.念头列表.${id}.类型 ← 判定「${t.内容}」`);
+      lines.push(`  ${id}：「${t.内容}」 → 只需在 JSONPatch 写入：{ "op": "replace", "path": "/${charKey}/念头列表/${id}/类型", "value": "从10大类中选一个" }`);
     }
+  }
+
+  // ━━━━ AI 判定通道 2：培育中念头 → 相关度判定（仅培育中） ━━━━
+  //   AI 判定本轮剧情与已在培育的念头的相关度，写入 系统.本轮相关念头
+  if (growing.length > 0) {
+    lines.push('');
+    lines.push(`━━━ 判定任务 B：培育中念头相关度 ━━━`);
+    lines.push(`以下念头正在培育中（不是新植入念头，不要判类型）。请判定本轮剧情与它们的相关度：`);
+    for (const [id, t] of growing) {
+      lines.push(`  ${id}：「${t.内容}」（${t.难度} ${t.开发进度}/${t.需要楼数}楼）`);
+    }
+    lines.push(`写入路径：/系统/本轮相关念头 = { "念头ID": 2 或 1 } （2=高度相关；1=轻微相关；不相关的念头不列入）`);
+    lines.push(`示例：replace /系统/本轮相关念头 值为 {"${growing[0][0]}": 2}`);
   }
 
   lines.push('══════════════════════════');
@@ -316,8 +336,10 @@ $(() => {
 
       // 5. 写回
       _.set(新变量, 'stat_data', newData);
+      _isInAiCycle = false;
     } catch (err) {
       console.error('[秦璐重置版] VARIABLE_UPDATE_ENDED 处理失败:', err);
+      _isInAiCycle = false;
     }
   });
 
@@ -325,7 +347,6 @@ $(() => {
   // 后处理：刷新快照 + 结束 AI 周期（对标云霜凝 MESSAGE_RECEIVED）
   // ─────────────────────────────────────────────────────
   eventOn(tavern_events.MESSAGE_RECEIVED, async () => {
-    _isInAiCycle = false;
     try {
       // 刷新保护快照（AI 回复后数据已落地）
       const messageId = getCurrentFloor();

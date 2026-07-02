@@ -415,8 +415,8 @@ async function sellHabit(index: number) {
 }
 
 refreshData();
-eventOn(tavern_events.MESSAGE_RECEIVED, () => refreshData());
-eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, () => refreshData());
+eventOn(tavern_events.MESSAGE_RECEIVED, () => setTimeout(() => refreshData(), 50));
+eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, () => setTimeout(() => refreshData(), 50));
 </script>
 
 <style scoped lang="scss">
