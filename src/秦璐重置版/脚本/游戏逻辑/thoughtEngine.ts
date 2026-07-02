@@ -168,19 +168,17 @@ export function resolveThoughtType(
   thought.难度 = 难度;
   thought.需要楼数 = 需要楼数;
 
-  // 检查是否合格（越级闸门）
+  // v0.14 测试期：暂停越级闸门，任何念头都直接进培育中，不做退回
+  // 待整体流程验证完毕后（数值/AI相关度加速/念头成熟结算）再恢复越级检查
   const effectiveStage = getEffectiveStage(data, characterKey, currentFloor);
   const catStage = CATEGORY_STAGE[category];
-  if (catStage <= effectiveStage) {
-    // 合格 → 培育中
-    thought.状态 = '培育中';
-    console.info(`[念头判定] ${thoughtId} 类型=${category} 难度=${难度} 需${需要楼数}楼 → 培育中`);
-  } else {
-    // 不合格 → 未达标（标红、可退回/保留）
-    thought.状态 = '未达标';
+  thought.状态 = '培育中';
+  if (catStage > effectiveStage) {
     console.info(
-      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 未达标`,
+      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 培育中（测试期跳过越级闸门）`,
     );
+  } else {
+    console.info(`[念头判定] ${thoughtId} 类型=${category} 难度=${难度} 需${需要楼数}楼 → 培育中`);
   }
 }
 
