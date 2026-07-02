@@ -49,9 +49,21 @@ const FLOORS_BY_DIFFICULTY = {
   困难: 6,
 };
 
+/** 保留楼数上限：培育中/未达标念头超过 植入楼层+此值 仍未成熟 → 已过期 */
+const RETENTION_FLOORS = 30;
+
 /** 心防松动窗口：楼层 % 10 <= 3 即处于窗口（10-13楼、20-23楼…） */
 export function isInVulnerableWindow(currentFloor: number): boolean {
   return currentFloor % 10 <= 3;
+}
+
+/**
+ * 念头过期判定：培育中/未达标念头超过保留楼数上限 → 已过期
+ * 判定中念头不参与过期（等 AI 判定，下一轮重试）
+ */
+export function isThoughtExpired(thought: { 状态: string; 植入楼层: number }, currentFloor: number): boolean {
+  if (thought.状态 === '判定中' || thought.状态 === '已成熟' || thought.状态 === '已过期') return false;
+  return currentFloor - thought.植入楼层 >= RETENTION_FLOORS;
 }
 
 /**
@@ -182,12 +194,19 @@ export function tickThoughtProgress(
   data: SchemaType,
   characterKey: '秦璐状态' | '苏梦状态',
   currentFloor: number,
+  relevanceMap: Record<string, number>,
 ): void {
   const character = data[characterKey];
   const thoughts = character.念头列表;
   const accelerating = isSuwenInAccelerationRoom(data.系统._苏文作息游标);
 
   for (const [id, thought] of Object.entries(thoughts)) {
+    // 过期判定：培育中/未达标超保留楼数 → 已过期（判定中不参与，等 AI 重试）
+    if (isThoughtExpired(thought, currentFloor)) {
+      thought.状态 = '已过期' as any;
+      console.info(`[念头过期] ${characterKey} ${id} 超${RETENTION_FLOORS}楼未成熟 → 已过期`);
+      continue;
+    }
     if (thought.状态 !== '培育中') continue;
 
     // 保底 +1
@@ -196,10 +215,17 @@ export function tickThoughtProgress(
     if (accelerating) {
       progress += 0.5;
     }
+    // AI 相关性加速：高度相关 +2 / 轻微相关 +1
+    const relevance = relevanceMap[id];
+    if (relevance === 2) {
+      progress += 2;
+    } else if (relevance === 1) {
+      progress += 1;
+    }
 
     thought.开发进度 += progress;
     console.info(
-      `[念头培育] ${characterKey} ${id} +${progress} (加速:${accelerating ? '是' : '否'}) → ${thought.开发进度}/${thought.需要楼数}`,
+      `[念头培育] ${characterKey} ${id} +${progress} (加速:${accelerating ? '是' : '否'}, 相关:${relevance ?? 0}) → ${thought.开发进度}/${thought.需要楼数}`,
     );
 
     // 成熟判定
@@ -226,12 +252,30 @@ function matureThought(
   const thought = character.念头列表[thoughtId];
   if (!thought) return;
 
-  // 习惯上限 5：满了不自动转，标记状态等界面变卖
+  // 习惯上限 5：满了不自动转，标记状态等界面变卖腾位后补转入
   if (character.习惯列表.length >= 5) {
-    thought.状态 = '已成熟' as any; // 标记已成熟但习惯栏满，待界面变卖
+    thought.状态 = '已成熟' as any; // 标记已成熟但习惯栏满，待变卖
     console.info(`[念头成熟] ${characterKey} ${thoughtId} 成熟但习惯已满5，待变卖腾位`);
     return;
   }
+
+  // 转习惯 + 数值结算（抽取为公共函数，补转入复用）
+  transferThoughtToHabit(data, characterKey, thoughtId, currentFloor);
+}
+
+/**
+ * 把已成熟念头转入习惯 + 执行数值结算 + 删除念头
+ * matureThought 与补转入（变卖腾位后）共用
+ */
+function transferThoughtToHabit(
+  data: SchemaType,
+  characterKey: '秦璐状态' | '苏梦状态',
+  thoughtId: string,
+  currentFloor: number,
+): void {
+  const character = data[characterKey];
+  const thought = character.念头列表[thoughtId];
+  if (!thought) return;
 
   // 转习惯
   character.习惯列表.push({
@@ -260,11 +304,11 @@ function matureThought(
     console.info(`[念头成熟] ${characterKey} 阶段提升 → ${newStage}`);
   }
 
-  // 删除已成熟的念头
+  // 删除已转入习惯的念头
   delete character.念头列表[thoughtId];
 
   console.info(
-    `[念头成熟] ${characterKey} "${thought.内容}" → 习惯 ` +
+    `[念头转习惯] ${characterKey} "${thought.内容}" → 习惯 ` +
       `(堕落度${character.堕落度}, 主角依存${character.对主角依存度}, 苏文依存${character.对苏文依存度})`,
   );
 }

@@ -13,9 +13,7 @@
           <span class="divider">✦</span>
           <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">
-          「 {{ safeWorld.环境氛围 }} 」
-        </div>
+        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
       </header>
 
       <!-- 角色切换 -->
@@ -39,9 +37,7 @@
           <span class="decor-line"></span>
         </div>
         <div class="input-group">
-          <div class="target-hint">
-            植入对象：<strong>{{ activeCharacter }}</strong>
-          </div>
+          <div class="target-hint">植入对象：<strong>{{ activeCharacter }}</strong></div>
           <div class="input-wrapper">
             <input
               v-model="thoughtContent"
@@ -69,15 +65,8 @@
           <div class="stage-card">
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
-                <path
-                  class="circle-bg"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  class="circle"
-                  :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
+                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               </svg>
               <div class="stage-text">
                 <span class="label">阶段</span>
@@ -93,33 +82,21 @@
                 <span class="name">🔥 堕落度</span>
                 <span class="num">{{ char?.堕落度 ?? 0 }}</span>
               </div>
-              <div class="progress-track">
-                <div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div>
-              </div>
+              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div></div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💕 {{ activeCharacter === '秦璐' ? '儿子依存' : '弟弟依存' }}</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track">
-                <div
-                  class="progress-bar stat-desire"
-                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
-                ></div>
-              </div>
+              <div class="progress-track"><div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div></div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💔 {{ activeCharacter === '秦璐' ? '丈夫依存' : '爸爸依存' }}</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track">
-                <div
-                  class="progress-bar stat-husband"
-                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
-                ></div>
-              </div>
+              <div class="progress-track"><div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div></div>
             </div>
           </div>
 
@@ -159,16 +136,16 @@
               <span class="label">情绪</span>
               <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
             </div>
-            <div v-if="isVulnerable" class="vulnerable-hint"><span>⚡</span><span>心防松动 · 可植入越级念头</span></div>
+            <div v-if="isVulnerable" class="vulnerable-hint">
+              <span>⚡</span><span>心防松动 · 可植入越级念头</span>
+            </div>
             <div class="thought-bubble" v-if="char?.当前心理想法">「 {{ char.当前心理想法 }} 」</div>
             <div class="temperament" v-if="char?.气质描述">— {{ char.气质描述 }}</div>
           </div>
 
           <!-- 念头列表 -->
           <div class="detail-card">
-            <div class="section-title">
-              🌱 念头 <span class="count">({{ thoughtList.length }})</span>
-            </div>
+            <div class="section-title">🌱 念头 <span class="count">({{ thoughtList.length }})</span></div>
             <div v-if="thoughtList.length === 0" class="empty">暂无念头</div>
             <div v-for="t in thoughtList" :key="t.id" class="thought-item">
               <div class="thought-head">
@@ -178,9 +155,7 @@
               </div>
               <div class="thought-content">{{ t.内容 }}</div>
               <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track">
-                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
-                </div>
+                <div class="progress-track"><div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div></div>
                 <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
               </div>
               <div v-if="t.状态 === '未达标'" class="thought-reject">
@@ -192,9 +167,7 @@
 
           <!-- 习惯 -->
           <div class="detail-card">
-            <div class="section-title">
-              💚 习惯 <span class="count">({{ habitList.length }}/5)</span>
-            </div>
+            <div class="section-title">💚 习惯 <span class="count">({{ habitList.length }}/5)</span></div>
             <div v-if="habitList.length === 0" class="empty">暂无习惯</div>
             <div v-for="(h, i) in habitList" :key="i" class="habit-item">
               <span class="habit-text">{{ h.内容 }}</span>
@@ -230,6 +203,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import type { SchemaType } from '../../schema';
+import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 
 const MAX_LEN = 20;
 const VULNERABLE_EMOTION = '心防松动';
@@ -263,7 +237,9 @@ const char = computed(() => {
   return data.value?.[key] ?? null;
 });
 
-const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' });
+const safeWorld = computed(
+  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' },
+);
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -286,7 +262,9 @@ const isAccelerating = computed(() => {
 });
 
 const suspicion = computed(() =>
-  activeCharacter.value === '秦璐' ? (suwen.value?.对秦璐疑心值 ?? 0) : (suwen.value?.对苏梦疑心值 ?? 0),
+  activeCharacter.value === '秦璐'
+    ? suwen.value?.对秦璐疑心值 ?? 0
+    : suwen.value?.对苏梦疑心值 ?? 0,
 );
 
 const isVulnerable = computed(() => char.value?.当前情绪 === VULNERABLE_EMOTION);
@@ -373,6 +351,36 @@ async function sellHabit(index: number) {
     }
     d[key].习惯列表.splice(index, 1);
     d.系统.货币 += 100;
+
+    // 腾位后补转入：把标记"已成熟"的待转念头按植入楼层补转入习惯
+    const pending = Object.entries(d[key].念头列表)
+      .filter(([, t]) => t.状态 === '已成熟')
+      .sort((a, b) => a[1].植入楼层 - b[1].植入楼层);
+    for (const [pid, pt] of pending) {
+      if (d[key].习惯列表.length >= 5) break;
+      const isHard = pt.难度 === '困难';
+      d[key].习惯列表.push({ 内容: pt.内容, 形成楼层: getMessageId() });
+      d[key].堕落度 += isHard ? 8 : 6;
+      d[key].对主角依存度 += isHard ? 4 : 3;
+      const dep = d[key].对主角依存度;
+      let sd = -2;
+      if (dep >= 80) sd = -5;
+      else if (dep >= 60) sd = -4;
+      else if (dep >= 30) sd = -3;
+      if (isHard) sd = Math.floor(sd * 1.2);
+      d[key].对苏文依存度 += sd;
+      delete d[key].念头列表[pid];
+      console.info(`[习惯腾位补转] ${key} ${pid} 补转入习惯`);
+    }
+
+    // 补转入后阶段校正（由堕落度派生）
+    const ns = getStageByCorruption(d[key].堕落度);
+    if (ns > d[key].当前阶段) {
+      d[key].当前阶段 = ns;
+      d[key].阶段标题 = getStageTitle(ns) as any;
+      console.info(`[习惯腾位补转] ${key} 阶段提升 → ${ns}`);
+    }
+
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     showMsg('变卖习惯 +100货币', 'success');
     await refreshData();
@@ -418,9 +426,7 @@ $c-border: #333;
   background-image:
     radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.3) 1px, transparent 1px),
     radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.2) 1px, transparent 1px);
-  background-size:
-    30px 30px,
-    25px 25px;
+  background-size: 30px 30px, 25px 25px;
   pointer-events: none;
 }
 .main-panel {
@@ -857,8 +863,7 @@ $c-border: #333;
   animation: vuln-pulse 1.5s ease-in-out infinite;
 }
 @keyframes vuln-pulse {
-  0%,
-  100% {
+  0%, 100% {
     opacity: 1;
     text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
   }

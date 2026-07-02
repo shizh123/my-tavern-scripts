@@ -164,12 +164,22 @@ function buildStatusSnapshot(data: SchemaType): string {
     lines.push(`⚡【心防松动】此刻可植入越级念头`);
   }
 
-  // 念头培育中（只显示在场角色的）
+  // 念头培育中（只显示在场角色的）+ 相关度判定请求
   const thoughts = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
   if (thoughts.length > 0) {
-    lines.push(`【培育中念头】`);
+    lines.push(`【培育中念头】本轮请判定哪些念头与本轮剧情相关，写入 系统.本轮相关念头`);
     for (const [id, t] of thoughts) {
       lines.push(`  ${id}：「${t.内容}」${t.难度} ${t.开发进度}/${t.需要楼数}楼`);
+    }
+    lines.push(`  相关度写入格式：replace /系统/本轮相关念头 值为 {"${thoughts[0][0]}": 2} （2=高度相关,+2楼; 1=轻微相关,+1楼; 不相关不写）`);
+  }
+
+  // 已成熟但习惯满待变卖的念头（提示玩家需腾位）
+  const maturedWaiting = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '已成熟');
+  if (maturedWaiting.length > 0) {
+    lines.push(`【已成熟待腾位念头】习惯已满5，需在界面变卖习惯腾位后补转入：`);
+    for (const [id, t] of maturedWaiting) {
+      lines.push(`  ${id}：「${t.内容}」`);
     }
   }
 
@@ -293,10 +303,13 @@ $(() => {
         }
       }
 
-      // 4. 推进念头培育进度（含苏文加速）+ 成熟结算
+      // 4. 推进念头培育进度（含苏文加速 + AI相关度加速）+ 成熟结算
+      //    relevanceMap 只读一次，两个角色共用（念头ID全局唯一），处理完再清空
+      const relevanceMap = newData.系统.本轮相关念头 ?? {};
       for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
-        tickThoughtProgress(newData, charKey, currentFloor);
+        tickThoughtProgress(newData, charKey, currentFloor, relevanceMap);
       }
+      newData.系统.本轮相关念头 = {};
 
       // 5. 写回
       _.set(新变量, 'stat_data', newData);

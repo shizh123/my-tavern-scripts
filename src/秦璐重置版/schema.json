@@ -158,6 +158,17 @@
             ]
           }
         },
+        "本轮相关念头": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "default": 0,
+            "type": "number"
+          }
+        },
         "_待发送道具事件": {
           "default": "",
           "type": "string"

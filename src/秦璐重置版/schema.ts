@@ -257,6 +257,12 @@ const SystemState = z.object({
   /** 念头植入日志（解决 ROLL 后注入丢失） */
   念头植入日志: z.array(ThoughtImplantLog).default([]),
 
+  /** 本轮相关念头加速（AI 写入，脚本读取后清空）
+   *  格式：{ "念头ID": 相关度 } 相关度 ∈ {2:高度相关, 1:轻微相关}
+   *  AI 通过 JSONPatch insert/replace 写入；脚本在 VARIABLE_UPDATE_ENDED 据此给培育中念头加进度
+   */
+  本轮相关念头: z.record(z.string(), z.coerce.number().default(0)).prefault({}),
+
   // ━━━━ 内部标志（脚本管理，AI 不要修改） ━━━━
   /** 待发送道具事件（| 分隔，脚本写、下一轮 AI 演绎，注入后清空） */
   _待发送道具事件: z.string().default(''),
