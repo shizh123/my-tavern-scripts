@@ -277,7 +277,7 @@ $(() => {
       _isInAiCycle = true;
       try {
         const messageId = getCurrentFloor();
-        const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
+        const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
 
         // 1. 心防松动窗口：脚本后写覆盖当前情绪
@@ -376,7 +376,7 @@ $(() => {
       try {
         // 刷新保护快照（AI 回复后数据已落地）
         const messageId = getCurrentFloor();
-        const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
+        const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
         captureProtectionSnapshot(data);
         console.info('[秦璐重置版] MESSAGE_RECEIVED 快照已刷新');
