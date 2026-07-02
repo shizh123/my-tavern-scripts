@@ -190,19 +190,22 @@ function buildStatusSnapshot(data: SchemaType): string {
       lines.push(`  · ${h.内容}`);
     }
     if (char.习惯列表.length >= 5) {
-      lines.push(`  ⚠ 习惯已满，需变卖腾位（变卖+100货币）`);
+      lines.push(`  ⚠ 习惯已满，需在界面变卖腾位`);
     }
   }
 
   // 货币
   lines.push(`【货币】${data.系统.货币}`);
 
-  // 待判定念头 → 注入 AI 判定请求
-  const pending = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '判定中');
+  // 待判定念头 → 植入后3楼内动态注入 AI 判定请求；AI只判类型，越级拒绝由脚本处理为未达标
+  const pending = Object.entries(char.念头列表).filter(
+    ([, t]) => t.状态 === '判定中' && floor - t.植入楼层 <= 3,
+  );
   if (pending.length > 0) {
     lines.push('');
-    lines.push('【请判定以下念头的类型】从10大类中选一个，写入对应字段：');
-    lines.push('可选：陪伴交流/情感依赖/肢体亲近/暧昧互动/亲密接触/身体开放/性行为/身份认同/绝对服从/家庭替代');
+    lines.push('【念头判定规则】以下是植入后3楼内的新念头，请为每个念头判定类型并写入对应字段。');
+    lines.push('只写“类型”字段；不要改内容/状态/难度/进度。脚本会根据当前阶段判定是否接纳，越级念头会被标记为未达标。');
+    lines.push('可选类型：陪伴交流/情感依赖/肢体亲近/暧昧互动/亲密接触/身体开放/性行为/身份认同/绝对服从/家庭替代');
     for (const [id, t] of pending) {
       lines.push(`  ${charKey}.念头列表.${id}.类型 ← 判定「${t.内容}」`);
     }

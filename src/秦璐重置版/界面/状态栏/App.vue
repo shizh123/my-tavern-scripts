@@ -14,9 +14,6 @@
           <span class="divider">✦</span>
           <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">
-          「 {{ safeWorld.环境氛围 }} 」
-        </div>
       </header>
 
       <!-- 角色切换 -->
@@ -233,7 +230,7 @@ import { ref, computed } from 'vue';
 import type { SchemaType } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 
-const MAX_LEN = 20;
+const MAX_LEN = 10;
 const VULNERABLE_EMOTION = '心防松动';
 
 const data = ref<SchemaType | null>(null);
@@ -266,7 +263,7 @@ const char = computed(() => {
 });
 
 const safeWorld = computed(
-  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' },
+  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '' },
 );
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
@@ -625,27 +622,6 @@ $c-orange: #ff9800;
   opacity: 0.4;
   font-size: 0.7em;
 }
-.environment {
-  margin-top: 6px;
-  font-size: 13px;
-  letter-spacing: 1.5px;
-  color: var(--acc);
-  text-shadow: 0 0 10px var(--glow);
-  animation: env-breathe 4s ease-in-out infinite;
-}
-
-@keyframes env-breathe {
-  0%,
-  100% {
-    opacity: 0.85;
-    text-shadow: 0 0 8px var(--glow);
-  }
-  50% {
-    opacity: 1;
-    text-shadow: 0 0 16px var(--glow);
-  }
-}
-
 // ══════════════════════════════════════════════════════════
 // 角色切换 Tabs
 // ══════════════════════════════════════════════════════════

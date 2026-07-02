@@ -8,21 +8,18 @@
       "properties": {
         "时间": {
           "default": "清晨",
-          "description": "仅氛围显示，AI 自由维护，脚本不参与计算",
+          "description": "仅氛围显示，AI 按剧情自由维护，脚本不参与计算",
           "$ref": "#/$defs/__schema0"
         },
         "日期": {
           "default": "",
-          "description": "仅氛围显示，AI 自由维护",
+          "description": "仅氛围显示，剧情跨天时由 AI 更新",
           "$ref": "#/$defs/__schema1"
         },
         "地点": {
-          "default": "家 - 客厅",
-          "type": "string"
-        },
-        "环境氛围": {
-          "default": "日常",
-          "type": "string"
+          "default": "客厅",
+          "description": "AI 从固定地点枚举中选择当前场景",
+          "$ref": "#/$defs/__schema2"
         }
       }
     },
@@ -30,7 +27,7 @@
       "default": {
         "当前心理想法": "今天也是平平淡淡的一天，晚饭做好了等他们回来。儿子最近好像长大了些，不用我太操心了。"
       },
-      "$ref": "#/$defs/__schema2"
+      "$ref": "#/$defs/__schema3"
     },
     "苏梦状态": {
       "default": {
@@ -56,7 +53,7 @@
         "气质描述": "活泼开朗的大学生",
         "当前位置": "苏梦房间"
       },
-      "$ref": "#/$defs/__schema2"
+      "$ref": "#/$defs/__schema3"
     },
     "苏文状态": {
       "default": {},
@@ -74,7 +71,7 @@
         "当前位置": {
           "default": "客厅",
           "description": "脚本按楼层作息算出，AI 不要改",
-          "$ref": "#/$defs/__schema4"
+          "$ref": "#/$defs/__schema2"
         },
         "当前情绪": {
           "default": "平静",
@@ -195,6 +192,20 @@
       "type": "string"
     },
     "__schema2": {
+      "type": "string",
+      "enum": [
+        "客厅",
+        "餐厅",
+        "厨房",
+        "主卧",
+        "浴室",
+        "秦璐房间",
+        "苏梦房间",
+        "主角房间",
+        "外面"
+      ]
+    },
+    "__schema3": {
       "type": "object",
       "properties": {
         "堕落度": {
@@ -226,7 +237,7 @@
         "当前心理想法": {
           "default": "",
           "description": "内心独白，AI 每轮更新",
-          "$ref": "#/$defs/__schema3"
+          "$ref": "#/$defs/__schema4"
         },
         "当前情绪": {
           "default": "平静",
@@ -234,7 +245,7 @@
         },
         "当前位置": {
           "default": "客厅",
-          "$ref": "#/$defs/__schema4"
+          "$ref": "#/$defs/__schema2"
         },
         "服装细节": {
           "default": {},
@@ -516,22 +527,8 @@
         }
       }
     },
-    "__schema3": {
-      "type": "string"
-    },
     "__schema4": {
-      "type": "string",
-      "enum": [
-        "客厅",
-        "餐厅",
-        "厨房",
-        "主卧",
-        "浴室",
-        "秦璐房间",
-        "苏梦房间",
-        "主角房间",
-        "外面"
-      ]
+      "type": "string"
     },
     "__schema5": {
       "type": "string"

@@ -222,10 +222,9 @@ const SuwenState = z.object({
 // ============================================
 
 const WorldState = z.object({
-  时间: z.string().default('清晨').describe('仅氛围显示，AI 自由维护，脚本不参与计算'),
-  日期: z.string().default('').describe('仅氛围显示，AI 自由维护'),
-  地点: z.string().default('家 - 客厅'),
-  环境氛围: z.string().default('日常'),
+  时间: z.string().default('清晨').describe('仅氛围显示，AI 按剧情自由维护，脚本不参与计算'),
+  日期: z.string().default('').describe('仅氛围显示，剧情跨天时由 AI 更新'),
+  地点: Location.default('客厅').describe('AI 从固定地点枚举中选择当前场景'),
 });
 
 // ============================================
