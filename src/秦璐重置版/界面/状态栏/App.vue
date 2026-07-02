@@ -227,34 +227,29 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { SchemaType } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
+import { useDataStore } from './store';
 
 const MAX_LEN = 10;
 const VULNERABLE_EMOTION = '心防松动';
 
-const data = ref<SchemaType | null>(null);
+// 用 defineMvuDataStore：每个楼层 iframe 显示自己那一楼的变量（对标云霜凝）
+// 修好"旧楼层显示新状态"的 bug
+const store = useDataStore();
+const data = computed(() => store.data);
+
 const activeCharacter = ref<'秦璐' | '苏梦'>('秦璐');
 const thoughtContent = ref('');
 const implantMsg = ref('');
 const implantMsgType = ref<'success' | 'error' | 'warn'>('error');
 
+/** 当前 iframe 所在楼层（旧楼层的 iframe 会返回自己那楼的 id） */
 function getMessageId(): number {
-  return SillyTavern.chat?.length ?? 0;
-}
-
-async function refreshData() {
-  try {
-    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-    data.value = (_.get(vars, 'stat_data') as SchemaType) ?? null;
-  } catch (e) {
-    console.warn('[秦璐重置版] 刷新数据失败', e);
-  }
+  return getCurrentMessageId();
 }
 
 function selectCharacter(c: '秦璐' | '苏梦') {
   activeCharacter.value = c;
-  refreshData();
 }
 
 const char = computed(() => {
@@ -262,9 +257,7 @@ const char = computed(() => {
   return data.value?.[key] ?? null;
 });
 
-const safeWorld = computed(
-  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '' },
-);
+const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '' });
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -297,7 +290,7 @@ const isVulnerable = computed(() => char.value?.当前情绪 === VULNERABLE_EMOT
 const thoughtList = computed(() => {
   const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
   const thoughts = data.value?.[key]?.念头列表 ?? {};
-  return Object.entries(thoughts).map(([id, t]) => ({ id, ...t }));
+  return Object.entries(thoughts).map(([id, t]) => ({ id, ...(t as any) }));
 });
 
 const habitList = computed(() => char.value?.习惯列表 ?? []);
@@ -325,8 +318,9 @@ async function implantThought() {
   if (!content) return;
   try {
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+    // 植入总是写到"最新楼"（AI 未来会基于最新变量判定），不写到当前浏览的旧楼
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-    const d = _.get(vars, 'stat_data') as SchemaType | undefined;
+    const d = _.get(vars, 'stat_data') as any;
     if (!d || !d[key]) {
       showMsg('变量未初始化，请先发一条消息让 AI 回复后再植入', 'warn');
       return;
@@ -340,12 +334,12 @@ async function implantThought() {
       难度: '待定',
       需要楼数: 0,
       开发进度: 0,
-      植入楼层: getMessageId(),
+      植入楼层: SillyTavern.chat?.length ?? 0,
     };
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     thoughtContent.value = '';
     showMsg(`已植入：${content}`, 'success');
-    await refreshData();
+    // store 会通过 500ms 轮询自动更新
   } catch (e) {
     console.error('[秦璐重置版] 植入失败', e);
     showMsg('植入失败：' + (e instanceof Error ? e.message : String(e)), 'error');
@@ -356,10 +350,9 @@ async function discardThought(id: string) {
   try {
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-    const d = _.get(vars, 'stat_data') as SchemaType;
+    const d = _.get(vars, 'stat_data') as any;
     delete d[key].念头列表[id];
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
-    await refreshData();
   } catch (e) {
     console.error('[秦璐重置版] 退回失败', e);
   }
@@ -369,7 +362,7 @@ async function sellHabit(index: number) {
   try {
     const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-    const d = _.get(vars, 'stat_data') as SchemaType;
+    const d = _.get(vars, 'stat_data') as any;
     if (d[key].习惯列表.length < 5) {
       showMsg('习惯未满5，不可出售', 'warn');
       return;
@@ -379,12 +372,12 @@ async function sellHabit(index: number) {
 
     // 腾位后补转入：把标记"已成熟"的待转念头按植入楼层补转入习惯
     const pending = Object.entries(d[key].念头列表)
-      .filter(([, t]) => t.状态 === '已成熟')
-      .sort((a, b) => a[1].植入楼层 - b[1].植入楼层);
-    for (const [pid, pt] of pending) {
+      .filter(([, t]: any) => t.状态 === '已成熟')
+      .sort((a: any, b: any) => a[1].植入楼层 - b[1].植入楼层);
+    for (const [pid, pt] of pending as any) {
       if (d[key].习惯列表.length >= 5) break;
       const isHard = pt.难度 === '困难';
-      d[key].习惯列表.push({ 内容: pt.内容, 形成楼层: getMessageId() });
+      d[key].习惯列表.push({ 内容: pt.内容, 形成楼层: SillyTavern.chat?.length ?? 0 });
       d[key].堕落度 += isHard ? 8 : 6;
       d[key].对主角依存度 += isHard ? 4 : 3;
       const dep = d[key].对主角依存度;
@@ -408,15 +401,10 @@ async function sellHabit(index: number) {
 
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     showMsg('变卖习惯 +100货币', 'success');
-    await refreshData();
   } catch (e) {
     console.error('[秦璐重置版] 变卖失败', e);
   }
 }
-
-refreshData();
-eventOn(tavern_events.MESSAGE_RECEIVED, () => setTimeout(() => refreshData(), 50));
-eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, () => setTimeout(() => refreshData(), 50));
 </script>
 
 <style scoped lang="scss">

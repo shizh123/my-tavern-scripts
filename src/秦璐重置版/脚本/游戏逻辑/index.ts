@@ -17,6 +17,7 @@ import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 import { advanceSuwenRoutine, isInVulnerableWindow } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
+import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 
 // ────────────────────────────────────────────────────────
 // 初始化
@@ -240,124 +241,150 @@ function buildStatusSnapshot(data: SchemaType): string {
 // ────────────────────────────────────────────────────────
 
 $(() => {
-  console.info('[秦璐重置版] 游戏逻辑主入口启动');
+  (async () => {
+    console.info('[秦璐重置版] 游戏逻辑主入口启动');
 
-  // 清理本 iframe 累积的旧 listener（防 reload 累积爆炸——云霜凝踩坑经验）
-  eventClearEvent(tavern_events.MESSAGE_RECEIVED);
-  eventClearEvent(tavern_events.CHAT_CHANGED);
-  eventClearEvent(tavern_events.CHAT_COMPLETION_PROMPT_READY);
-  eventClearEvent(Mvu.events.VARIABLE_UPDATE_ENDED);
-  eventClearEvent(Mvu.events.COMMAND_PARSED);
-  reloadOnChatChange();
-
-  // ─────────────────────────────────────────────────────
-  // 读阶段：注入状态快照（对标云霜凝 Phase 3.5）
-  // ─────────────────────────────────────────────────────
-  eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, (event_data: any) => {
-    _isInAiCycle = true;
+    // 等 Mvu 就绪 + 注册 schema（对标云霜凝，否则 getMvuData 拿不到 stat_data / 默认值）
     try {
-      const messageId = getCurrentFloor();
-      const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
-      const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
-
-      // 1. 心防松动窗口：脚本后写覆盖当前情绪
-      //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
-      if (isInVulnerableWindow(messageId)) {
-        const ck = `${data.系统.当前角色}状态` as '秦璐状态' | '苏梦状态';
-        if (data[ck].当前情绪 !== '心防松动') {
-          data[ck].当前情绪 = '心防松动';
-          console.info(`[心防松动] 楼层${messageId} 覆写${data.系统.当前角色}情绪→心防松动`);
-        }
-      }
-
-      // 2. 捕获硬保护快照（含前端写入：念头植入、习惯变卖、道具购买等）
-      captureProtectionSnapshot(data);
-
-      // 3. 构建快照 + 注入（幂等 marker 防重复）
-      const snapshot = SNAPSHOT_MARKER + ']\n' + buildStatusSnapshot(data);
-      const chat = event_data.chat ?? [];
-      // 清理旧快照
-      for (let i = chat.length - 1; i >= 0; i--) {
-        if (chat[i].role === 'system' && (chat[i].content ?? '').includes(SNAPSHOT_MARKER)) {
-          chat.splice(i, 1);
-        }
-      }
-      // push 新快照
-      chat.push({ role: 'system', content: snapshot });
+      const mvuInitTimeout = new Promise<never>((_r, reject) =>
+        setTimeout(() => reject(new Error('等待 Mvu 初始化超时（>10s）')), 10000),
+      );
+      await Promise.race([waitGlobalInitialized('Mvu'), mvuInitTimeout]);
+      registerMvuSchema(Schema);
+      console.info('[秦璐重置版] Mvu 已就绪，Schema 已注册');
     } catch (err) {
-      console.error('[秦璐重置版] PROMPT_READY 处理失败:', err);
+      console.error('[秦璐重置版] Mvu 初始化失败：', err);
+      return;
     }
-  });
 
-  // ─────────────────────────────────────────────────────
-  // 写阶段：派生计算 + 推进（对标云霜凝 VARIABLE_UPDATE_ENDED）
-  // ─────────────────────────────────────────────────────
-  eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (新变量: object, 旧变量: object) => {
-    try {
-      // 守卫：仅在 AI 生成周期内处理
-      if (!_isInAiCycle || !_protSnapshot) return;
+    // 清理本 iframe 累积的旧 listener（防 reload 累积爆炸——云霜凝踩坑经验）
+    eventClearEvent(tavern_events.MESSAGE_RECEIVED);
+    eventClearEvent(tavern_events.CHAT_CHANGED);
+    eventClearEvent(tavern_events.CHAT_COMPLETION_PROMPT_READY);
+    eventClearEvent(Mvu.events.VARIABLE_UPDATE_ENDED);
+    eventClearEvent(Mvu.events.COMMAND_PARSED);
+    reloadOnChatChange();
 
-      const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
-      const oldData = Schema.parse(_.get(旧变量, 'stat_data') ?? {}) as SchemaType;
-      const currentFloor = getCurrentFloor();
-      const playerInput = getLastUserMessage();
+    // ─────────────────────────────────────────────────────
+    // 读阶段：注入状态快照（对标云霜凝 Phase 3.5）
+    // ─────────────────────────────────────────────────────
+    eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, (event_data: any) => {
+      // dryRun 只是酒馆预热请求，不真正生成 AI 回复，直接跳过（对标云霜凝）
+      if (event_data?.dryRun) {
+        console.info('[秦璐重置版] dryRun=true，跳过注入');
+        return;
+      }
+      _isInAiCycle = true;
+      try {
+        const messageId = getCurrentFloor();
+        const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
+        const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
 
-      // 1. 回滚脚本管理字段（防 AI 乱改）
-      rollbackProtectedFields(newData);
-
-      // 2. 推进苏文作息游标（楼层驱动黑盒节律）
-      advanceSuwenRoutine(newData, currentFloor, playerInput);
-
-      // 3. 解析 AI 写入的念头类型（待判定→具体类型）
-      for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
-        const char = newData[charKey];
-        for (const [id, thought] of Object.entries(char.念头列表)) {
-          if (thought.状态 === '判定中' && thought.类型 !== '待判定') {
-            // AI 已判出类型 → 脚本处理（定难度、判合格）
-            resolveThoughtType(newData, charKey, id, thought.类型 as ThoughtCategoryValue, currentFloor);
+        // 1. 心防松动窗口：脚本后写覆盖当前情绪
+        //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
+        if (isInVulnerableWindow(messageId)) {
+          const ck = `${data.系统.当前角色}状态` as '秦璐状态' | '苏梦状态';
+          if (data[ck].当前情绪 !== '心防松动') {
+            data[ck].当前情绪 = '心防松动';
+            console.info(`[心防松动] 楼层${messageId} 覆写${data.系统.当前角色}情绪→心防松动`);
           }
         }
-        // 阶段校正（由堕落度派生）
-        const newStage = getStageByCorruption(char.堕落度);
-        if (newStage !== char.当前阶段) {
-          char.当前阶段 = newStage;
-          char.阶段标题 = getStageTitle(newStage) as any;
-          console.info(`[秦璐重置版] ${charKey} 阶段校正 → ${newStage}「${getStageTitle(newStage)}」`);
+
+        // 2. 捕获硬保护快照（含前端写入：念头植入、习惯变卖、道具购买等）
+        captureProtectionSnapshot(data);
+
+        // 3. 构建快照 + 注入（幂等 marker 防重复）
+        const snapshot = SNAPSHOT_MARKER + ']\n' + buildStatusSnapshot(data);
+        const chat = event_data.chat ?? [];
+        // 清理旧快照
+        for (let i = chat.length - 1; i >= 0; i--) {
+          if (chat[i].role === 'system' && (chat[i].content ?? '').includes(SNAPSHOT_MARKER)) {
+            chat.splice(i, 1);
+          }
         }
+        // 注入策略（对标云霜凝）：末尾若为 assistant prefill（Gemini），插到它之前；否则 push 到末尾
+        const lastMsg = chat[chat.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant') {
+          chat.splice(chat.length - 1, 0, { role: 'system', content: snapshot });
+          console.info('[秦璐重置版] 状态快照: 插入到 prefill 之前');
+        } else {
+          chat.push({ role: 'system', content: snapshot });
+          console.info('[秦璐重置版] 状态快照: push 到末尾');
+        }
+      } catch (err) {
+        console.error('[秦璐重置版] PROMPT_READY 处理失败:', err);
       }
+    });
 
-      // 4. 推进念头培育进度（含苏文加速 + AI相关度加速）+ 成熟结算
-      //    relevanceMap 只读一次，两个角色共用（念头ID全局唯一），处理完再清空
-      const relevanceMap = newData.系统.本轮相关念头 ?? {};
-      for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
-        tickThoughtProgress(newData, charKey, currentFloor, relevanceMap);
+    // ─────────────────────────────────────────────────────
+    // 写阶段：派生计算 + 推进（对标云霜凝 VARIABLE_UPDATE_ENDED）
+    // ─────────────────────────────────────────────────────
+    eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (新变量: object, _旧变量: object) => {
+      try {
+        // 守卫：仅在 AI 生成周期内处理
+        if (!_isInAiCycle || !_protSnapshot) return;
+
+        const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
+        const currentFloor = getCurrentFloor();
+        const playerInput = getLastUserMessage();
+
+        // 1. 回滚脚本管理字段（防 AI 乱改）
+        rollbackProtectedFields(newData);
+
+        // 2. 推进苏文作息游标（楼层驱动黑盒节律）
+        advanceSuwenRoutine(newData, currentFloor, playerInput);
+
+        // 3. 解析 AI 写入的念头类型（待判定→具体类型）
+        for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
+          const char = newData[charKey];
+          for (const [id, thought] of Object.entries(char.念头列表)) {
+            if (thought.状态 === '判定中' && thought.类型 !== '待判定') {
+              // AI 已判出类型 → 脚本处理（定难度、判合格）
+              resolveThoughtType(newData, charKey, id, thought.类型 as ThoughtCategoryValue, currentFloor);
+            }
+          }
+          // 阶段校正（由堕落度派生）
+          const newStage = getStageByCorruption(char.堕落度);
+          if (newStage !== char.当前阶段) {
+            char.当前阶段 = newStage;
+            char.阶段标题 = getStageTitle(newStage) as any;
+            console.info(`[秦璐重置版] ${charKey} 阶段校正 → ${newStage}「${getStageTitle(newStage)}」`);
+          }
+        }
+
+        // 4. 推进念头培育进度（含苏文加速 + AI相关度加速）+ 成熟结算
+        //    relevanceMap 只读一次，两个角色共用（念头ID全局唯一），处理完再清空
+        const relevanceMap = newData.系统.本轮相关念头 ?? {};
+        for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
+          tickThoughtProgress(newData, charKey, currentFloor, relevanceMap);
+        }
+        newData.系统.本轮相关念头 = {};
+
+        // 5. 写回
+        _.set(新变量, 'stat_data', newData);
+        _isInAiCycle = false;
+      } catch (err) {
+        console.error('[秦璐重置版] VARIABLE_UPDATE_ENDED 处理失败:', err);
+        _isInAiCycle = false;
       }
-      newData.系统.本轮相关念头 = {};
+    });
 
-      // 5. 写回
-      _.set(新变量, 'stat_data', newData);
-      _isInAiCycle = false;
-    } catch (err) {
-      console.error('[秦璐重置版] VARIABLE_UPDATE_ENDED 处理失败:', err);
-      _isInAiCycle = false;
-    }
-  });
+    // ─────────────────────────────────────────────────────
+    // 后处理：刷新快照 + 结束 AI 周期（对标云霜凝 MESSAGE_RECEIVED）
+    // ─────────────────────────────────────────────────────
+    eventOn(tavern_events.MESSAGE_RECEIVED, async () => {
+      try {
+        // 刷新保护快照（AI 回复后数据已落地）
+        const messageId = getCurrentFloor();
+        const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
+        const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
+        captureProtectionSnapshot(data);
+        console.info('[秦璐重置版] MESSAGE_RECEIVED 快照已刷新');
+      } catch (err) {
+        console.error('[秦璐重置版] MESSAGE_RECEIVED 处理失败:', err);
+      }
+    });
 
-  // ─────────────────────────────────────────────────────
-  // 后处理：刷新快照 + 结束 AI 周期（对标云霜凝 MESSAGE_RECEIVED）
-  // ─────────────────────────────────────────────────────
-  eventOn(tavern_events.MESSAGE_RECEIVED, async () => {
-    try {
-      // 刷新保护快照（AI 回复后数据已落地）
-      const messageId = getCurrentFloor();
-      const vars = Mvu.getMvuData({ type: 'message', message_id: messageId });
-      const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
-      captureProtectionSnapshot(data);
-      console.info('[秦璐重置版] MESSAGE_RECEIVED 快照已刷新');
-    } catch (err) {
-      console.error('[秦璐重置版] MESSAGE_RECEIVED 处理失败:', err);
-    }
-  });
-
-  console.info('[秦璐重置版] 事件监听注册完成');
+    console.info('[秦璐重置版] 事件监听注册完成');
+  })();
 });
