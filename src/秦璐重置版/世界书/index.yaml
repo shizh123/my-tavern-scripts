@@ -52,6 +52,12 @@ entries:
     insertion_order: 50
     case_sensitive: false
 
+  - keys: [选项, 行动, options]
+    content: !include 系统设定/行动选项.yaml
+    enabled: true
+    insertion_order: 51
+    case_sensitive: false
+
   - keys: ['[initvar]', 变量初始化勿开]
     content: !include initvar.yaml
     enabled: false

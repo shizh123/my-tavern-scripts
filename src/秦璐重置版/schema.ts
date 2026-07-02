@@ -278,7 +278,9 @@ const SystemState = z.object({
 
 export const Schema = z.object({
   世界: WorldState.prefault({}),
-  秦璐状态: CharacterState.prefault({}),
+  秦璐状态: CharacterState.prefault({
+    当前心理想法: '今天也是平平淡淡的一天，晚饭做好了等他们回来。儿子最近好像长大了些，不用我太操心了。',
+  }),
   苏梦状态: CharacterState.prefault({
     堕落度: 0,
     对主角依存度: 25,
@@ -293,6 +295,7 @@ export const Schema = z.object({
       整体风格: '青春休闲',
     },
     妆容细节: { 浓淡程度: '素颜' },
+    当前心理想法: '在家有点无聊，弟弟今天也在，偶尔说说话也还行吧。',
     气质描述: '活泼开朗的大学生',
     当前位置: '苏梦房间',
   }),

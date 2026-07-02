@@ -1,6 +1,7 @@
 <template>
-  <div class="mystic-container">
+  <div :class="['mystic-container', 'th-stage-' + (char?.当前阶段 ?? 1)]">
     <div class="bg-pattern"></div>
+    <div class="bg-glow"></div>
     <div class="main-panel">
       <div class="panel-decor top"></div>
 
@@ -13,7 +14,9 @@
           <span class="divider">✦</span>
           <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
+        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">
+          「 {{ safeWorld.环境氛围 }} 」
+        </div>
       </header>
 
       <!-- 角色切换 -->
@@ -33,11 +36,13 @@
       <section class="implant-control">
         <div class="control-header">
           <span class="decor-line"></span>
-          <span class="title">念头植入</span>
+          <span class="title">✦ 念头植入 ✦</span>
           <span class="decor-line"></span>
         </div>
         <div class="input-group">
-          <div class="target-hint">植入对象：<strong>{{ activeCharacter }}</strong></div>
+          <div class="target-hint">
+            植入对象：<strong>{{ activeCharacter }}</strong>
+          </div>
           <div class="input-wrapper">
             <input
               v-model="thoughtContent"
@@ -65,8 +70,15 @@
           <div class="stage-card">
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
-                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path
+                  class="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  class="circle"
+                  :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
               </svg>
               <div class="stage-text">
                 <span class="label">阶段</span>
@@ -82,21 +94,33 @@
                 <span class="name">🔥 堕落度</span>
                 <span class="num">{{ char?.堕落度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💕 {{ activeCharacter === '秦璐' ? '儿子依存' : '弟弟依存' }}</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-desire"
+                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💔 {{ activeCharacter === '秦璐' ? '丈夫依存' : '爸爸依存' }}</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-husband"
+                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
           </div>
 
@@ -131,21 +155,21 @@
         <div class="col-right">
           <!-- 心境 -->
           <div class="detail-card">
-            <div class="section-title">💭 心境</div>
+            <div class="section-title"><span class="st-mark">✦</span> 心境</div>
             <div class="emotion-row">
               <span class="label">情绪</span>
               <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
             </div>
-            <div v-if="isVulnerable" class="vulnerable-hint">
-              <span>⚡</span><span>心防松动 · 可植入越级念头</span>
-            </div>
+            <div v-if="isVulnerable" class="vulnerable-hint"><span class="vh-icon">⚡</span><span>心防松动 · 可植入越级念头</span></div>
             <div class="thought-bubble" v-if="char?.当前心理想法">「 {{ char.当前心理想法 }} 」</div>
             <div class="temperament" v-if="char?.气质描述">— {{ char.气质描述 }}</div>
           </div>
 
           <!-- 念头列表 -->
           <div class="detail-card">
-            <div class="section-title">🌱 念头 <span class="count">({{ thoughtList.length }})</span></div>
+            <div class="section-title">
+              <span class="st-mark">✦</span> 念头 <span class="count">({{ thoughtList.length }})</span>
+            </div>
             <div v-if="thoughtList.length === 0" class="empty">暂无念头</div>
             <div v-for="t in thoughtList" :key="t.id" class="thought-item">
               <div class="thought-head">
@@ -155,7 +179,9 @@
               </div>
               <div class="thought-content">{{ t.内容 }}</div>
               <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track"><div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div></div>
+                <div class="progress-track">
+                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
+                </div>
                 <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
               </div>
               <div v-if="t.状态 === '未达标'" class="thought-reject">
@@ -167,7 +193,9 @@
 
           <!-- 习惯 -->
           <div class="detail-card">
-            <div class="section-title">💚 习惯 <span class="count">({{ habitList.length }}/5)</span></div>
+            <div class="section-title">
+              <span class="st-mark">✦</span> 习惯 <span class="count">({{ habitList.length }}/5)</span>
+            </div>
             <div v-if="habitList.length === 0" class="empty">暂无习惯</div>
             <div v-for="(h, i) in habitList" :key="i" class="habit-item">
               <span class="habit-text">{{ h.内容 }}</span>
@@ -178,7 +206,7 @@
 
           <!-- 仪容（外观，后续接道具系统） -->
           <div class="detail-card">
-            <div class="section-title">👗 仪容</div>
+            <div class="section-title"><span class="st-mark">✦</span> 仪容</div>
             <div class="attire-tags">
               <span class="mini-tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
               <span class="mini-tag outline">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
@@ -395,145 +423,334 @@ eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, () => refreshData());
 </script>
 
 <style scoped lang="scss">
-$c-bg: #0d0d0d;
-$c-panel: #1a1a1a;
-$c-panel-light: #222;
-$c-gold: #d4af37;
-$c-gold-dim: #8a7326;
-$c-gold-bright: #f0d060;
-$c-text: #e0e0e0;
-$c-text-dim: #888;
+// ══════════════════════════════════════════════════════════
+// 主题色彩系统：随阶段切换主题色（CSS 变量驱动）
+// 阶段1 保守居家(暗金) → 阶段5 彻底沦陷(艳粉/品红光晕)
+// ══════════════════════════════════════════════════════════
+.th-stage-1 {
+  --pri: #c9a84c; // 暗金
+  --sec: #8a7026;
+  --acc: #f0d060;
+  --bg1: #100c08;
+  --bg2: #1c1410;
+  --glow: rgba(212, 175, 55, 0.25);
+  --glow-soft: rgba(240, 208, 96, 0.12);
+}
+.th-stage-2 {
+  --pri: #b888d8; // 动摇紫
+  --sec: #7a5a9a;
+  --acc: #d8a8f0;
+  --bg1: #120a18;
+  --bg2: #1d1228;
+  --glow: rgba(184, 136, 216, 0.28);
+  --glow-soft: rgba(216, 168, 240, 0.14);
+}
+.th-stage-3 {
+  --pri: #e070a0; // 沉溺粉
+  --sec: #a04070;
+  --acc: #ff9ec4;
+  --bg1: #180a14;
+  --bg2: #261220;
+  --glow: rgba(224, 112, 160, 0.32);
+  --glow-soft: rgba(255, 158, 196, 0.16);
+}
+.th-stage-4 {
+  --pri: #e0409a; // 疯狂品红
+  --sec: #a02060;
+  --acc: #ff60c0;
+  --bg1: #1a0614;
+  --bg2: #2a0a22;
+  --glow: rgba(224, 64, 154, 0.4);
+  --glow-soft: rgba(255, 96, 192, 0.2);
+}
+.th-stage-5 {
+  --pri: #c060e8; // 圆满紫蓝艳丽
+  --sec: #8040a8;
+  --acc: #ff80f0;
+  --bg1: #100818;
+  --bg2: #1c0a2c;
+  --glow: rgba(192, 96, 232, 0.42);
+  --glow-soft: rgba(255, 128, 240, 0.22);
+}
+
 $c-red: #c54b4b;
 $c-green: #4caf50;
 $c-cyan: #4fc3f7;
 $c-orange: #ff9800;
-$c-pink: #ff5d8f;
-$c-border: #333;
 
+// ══════════════════════════════════════════════════════════
+// 容器 + 背景氛围
+// ══════════════════════════════════════════════════════════
 .mystic-container {
   width: 100%;
-  background: $c-bg;
-  color: $c-text;
-  font-family: 'Noto Serif SC', 'STSong', serif;
   position: relative;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
+  color: #e8e0d4;
+  font-family: 'Noto Serif SC', 'STSong', 'SimSun', serif;
+  font-size: 14px;
+  line-height: 1.55;
+  background: linear-gradient(165deg, var(--bg1) 0%, var(--bg2) 60%, var(--bg1) 100%);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 12% -8%, var(--glow), transparent 55%),
+      radial-gradient(ellipse at 88% 108%, var(--glow-soft), transparent 55%),
+      radial-gradient(circle at 50% 50%, var(--glow-soft), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    transition: background 0.6s ease;
+  }
 }
+
+// 羊皮纸/网格纹理：双向叠加极淡白线
 .bg-pattern {
   position: absolute;
   inset: 0;
-  opacity: 0.04;
   background-image:
-    radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.3) 1px, transparent 1px),
-    radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.2) 1px, transparent 1px);
-  background-size: 30px 30px, 25px 25px;
+    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255, 255, 255, 0.018) 28px, rgba(255, 255, 255, 0.018) 29px),
+    repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(255, 255, 255, 0.013) 28px, rgba(255, 255, 255, 0.013) 29px);
   pointer-events: none;
-}
-.main-panel {
-  position: relative;
-  padding: 14px;
-  background: linear-gradient(135deg, rgba(26, 26, 26, 0.6) 0%, rgba(13, 13, 13, 0.9) 100%);
-  backdrop-filter: blur(4px);
-}
-.panel-decor {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, $c-gold, transparent);
-  margin: 10px 0;
+  z-index: 0;
 }
 
+// 第二层氛围光晕(径向斑点)
+.bg-glow {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--glow-soft), transparent 25%),
+    radial-gradient(circle at 75% 65%, var(--glow-soft), transparent 28%);
+  pointer-events: none;
+  z-index: 0;
+  animation: glow-drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes glow-drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(8px, -6px) scale(1.06);
+    opacity: 1;
+  }
+}
+
+.main-panel {
+  position: relative;
+  z-index: 1;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--pri) 22%, transparent);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.55) 100%);
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    0 0 40px color-mix(in srgb, var(--pri) 6%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.6s,
+    box-shadow 0.6s;
+}
+
+// ══════════════════════════════════════════════════════════
+// 装饰横线（带 ✦ 符号）
+// ══════════════════════════════════════════════════════════
+.panel-decor {
+  height: 2px;
+  background: linear-gradient(90deg, transparent 2%, var(--sec) 20%, var(--acc) 50%, var(--sec) 80%, transparent 98%);
+  margin: 10px 0;
+  position: relative;
+  opacity: 0.85;
+
+  &.top::before,
+  &.top::after,
+  &.bottom::before,
+  &.bottom::after {
+    content: '✦';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: var(--acc);
+    background: var(--bg1);
+    padding: 0 5px;
+    z-index: 2;
+  }
+  &.top::before,
+  &.bottom::before {
+    left: 10px;
+  }
+  &.top::after,
+  &.bottom::after {
+    right: 10px;
+  }
+
+  &.bottom {
+    background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--pri) 35%, transparent) 30%, color-mix(in srgb, var(--acc) 22%, transparent) 50%, color-mix(in srgb, var(--pri) 35%, transparent) 70%, transparent 95%);
+    height: 1px;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // 头部
+// ══════════════════════════════════════════════════════════
 .header {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--pri) 18%, transparent);
 }
 .world-info {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   font-size: 12px;
-  color: $c-gold-dim;
+  color: color-mix(in srgb, var(--pri) 70%, #fff 10%);
+  letter-spacing: 0.5px;
 }
 .info-item i {
-  margin-right: 3px;
+  margin-right: 4px;
   font-style: normal;
+  opacity: 0.85;
 }
 .divider {
-  color: $c-gold-dim;
-  opacity: 0.5;
+  color: var(--acc);
+  opacity: 0.4;
+  font-size: 0.7em;
 }
 .environment {
-  color: $c-gold;
+  margin-top: 6px;
   font-size: 13px;
-  margin-top: 5px;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  color: var(--acc);
+  text-shadow: 0 0 10px var(--glow);
+  animation: env-breathe 4s ease-in-out infinite;
 }
 
-// 角色切换
+@keyframes env-breathe {
+  0%,
+  100% {
+    opacity: 0.85;
+    text-shadow: 0 0 8px var(--glow);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 16px var(--glow);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 角色切换 Tabs
+// ══════════════════════════════════════════════════════════
 .char-tabs {
   display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .tab-item {
   flex: 1;
   text-align: center;
-  padding: 10px;
-  border: 1px solid $c-border;
-  border-radius: 8px;
+  padding: 12px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.25s;
-  background: $c-panel;
-}
-.tab-item.active {
-  border-color: $c-gold;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.03) 100%);
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
-}
-.tab-item:hover {
-  border-color: $c-gold-dim;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--acc), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--pri) 45%, transparent);
+    transform: translateY(-2px);
+  }
+
+  &.active {
+    border-color: color-mix(in srgb, var(--pri) 70%, transparent);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--pri) 16%, transparent) 0%, color-mix(in srgb, var(--acc) 6%, transparent) 100%);
+    box-shadow:
+      0 0 18px color-mix(in srgb, var(--pri) 25%, transparent),
+      inset 0 0 14px color-mix(in srgb, var(--acc) 6%, transparent);
+
+    &::before {
+      opacity: 1;
+    }
+  }
 }
 .char-name {
   display: block;
-  color: $c-gold;
-  font-size: 16px;
-  font-weight: 600;
+  color: var(--acc);
+  font-size: 17px;
+  font-weight: 700;
+  text-shadow: 0 0 10px var(--glow-soft);
+  letter-spacing: 1px;
 }
 .char-role {
   display: block;
   font-size: 11px;
-  color: $c-text-dim;
-  margin-top: 2px;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
+  margin-top: 3px;
+  letter-spacing: 1.5px;
 }
 
-// 植入
+// ══════════════════════════════════════════════════════════
+// 念头植入
+// ══════════════════════════════════════════════════════════
 .implant-control {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, var(--pri) 16%, transparent);
+  border-radius: 8px;
+  position: relative;
 }
 .control-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 .decor-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, $c-gold-dim, transparent);
+  background: linear-gradient(90deg, transparent, var(--sec), transparent);
 }
 .control-header .title {
-  color: $c-gold-bright;
+  color: var(--acc);
   font-size: 14px;
-  letter-spacing: 2px;
-  font-weight: 600;
+  letter-spacing: 3px;
+  font-weight: 700;
+  text-shadow: 0 0 10px var(--glow-soft);
+  white-space: nowrap;
 }
 .target-hint {
   font-size: 12px;
-  color: $c-text-dim;
-  margin-bottom: 8px;
+  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
 }
 .target-hint strong {
-  color: $c-gold;
+  color: var(--acc);
+  font-weight: 700;
+  text-shadow: 0 0 6px var(--glow-soft);
 }
 .input-wrapper {
   display: flex;
@@ -542,103 +759,125 @@ $c-border: #333;
 }
 .input-wrapper input {
   flex: 1;
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 5px;
-  padding: 7px 10px;
-  color: $c-text;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid color-mix(in srgb, var(--pri) 22%, transparent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #e8e0d4;
   font-size: 13px;
   font-family: inherit;
-  transition: border-color 0.2s;
-}
-.input-wrapper input:focus {
-  border-color: $c-gold-dim;
-  outline: none;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+
+  &:focus {
+    border-color: var(--acc);
+    outline: none;
+    box-shadow: 0 0 10px var(--glow-soft);
+  }
+  &::placeholder {
+    color: color-mix(in srgb, var(--pri) 40%, transparent);
+  }
 }
 .char-count {
   font-size: 10px;
   color: #555;
+  white-space: nowrap;
 }
 .char-count.at-limit {
   color: $c-red;
+  font-weight: 700;
 }
 .submit-btn {
-  padding: 7px 18px;
-  background: linear-gradient(135deg, $c-gold-dim, $c-gold);
+  padding: 8px 20px;
+  background: linear-gradient(135deg, var(--sec), var(--pri));
   border: none;
-  border-radius: 5px;
-  color: #000;
+  border-radius: 6px;
+  color: #1a0a08;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
+  letter-spacing: 2px;
   transition: all 0.2s;
-}
-.submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, $c-gold, $c-gold-bright);
-}
-.submit-btn:disabled {
-  opacity: 0.35;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--pri) 30%, transparent);
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--pri), var(--acc));
+    box-shadow: 0 0 18px var(--glow);
+    transform: translateY(-1px);
+  }
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
 }
 .implant-msg {
   font-size: 12px;
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  letter-spacing: 0.5px;
 }
 .implant-msg.success {
   color: $c-green;
-  background: rgba(76, 175, 80, 0.1);
+  background: rgba(76, 175, 80, 0.12);
+  border-left: 2px solid $c-green;
 }
 .implant-msg.error {
   color: $c-red;
-  background: rgba(196, 75, 75, 0.1);
+  background: rgba(196, 75, 75, 0.12);
+  border-left: 2px solid $c-red;
 }
 .implant-msg.warn {
   color: $c-orange;
-  background: rgba(255, 152, 0, 0.1);
+  background: rgba(255, 152, 0, 0.12);
+  border-left: 2px solid $c-orange;
 }
 
-// 状态展示
+// ══════════════════════════════════════════════════════════
+// 状态展示两栏布局
+// ══════════════════════════════════════════════════════════
 .status-display {
   display: grid;
   grid-template-columns: 1fr 1.15fr;
+  gap: 16px;
+}
+.col-left,
+.col-right {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
 }
 
-.col-left {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
+// ══════════════════════════════════════════════════════════
 // 阶段圆环
+// ══════════════════════════════════════════════════════════
 .stage-card {
   text-align: center;
-  padding: 4px 0;
+  padding: 8px 0 4px;
 }
 .stage-ring {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 110px;
+  height: 110px;
   margin: 0 auto;
 }
 .circular-chart {
   width: 100%;
   height: 100%;
-  transform: rotate(0deg);
+  filter: drop-shadow(0 0 8px var(--glow));
 }
 .circle-bg {
   fill: none;
-  stroke: #2a2a2a;
-  stroke-width: 2;
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 2.4;
 }
 .circle {
   fill: none;
-  stroke: $c-gold;
+  stroke: var(--acc);
   stroke-width: 2.8;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
-  transition: stroke-dasharray 0.5s;
+  filter: drop-shadow(0 0 5px var(--acc));
+  transition: stroke-dasharray 0.6s ease;
 }
 .stage-text {
   position: absolute;
@@ -650,102 +889,151 @@ $c-border: #333;
 }
 .stage-text .label {
   font-size: 10px;
-  color: $c-text-dim;
-  letter-spacing: 1px;
+  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
+  letter-spacing: 2px;
 }
 .stage-text .value {
-  font-size: 15px;
-  color: $c-gold-bright;
-  font-weight: 600;
-  margin-top: 2px;
+  font-size: 17px;
+  color: var(--acc);
+  font-weight: 700;
+  margin-top: 3px;
+  text-shadow: 0 0 12px var(--glow);
+  letter-spacing: 2px;
 }
 
-// 数值条
+// ══════════════════════════════════════════════════════════
+// 通用卡片基类
+// ══════════════════════════════════════════════════════════
+%card-base {
+  position: relative;
+  background: linear-gradient(160deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.5) 100%);
+  border: 1px solid color-mix(in srgb, var(--pri) 16%, transparent);
+  border-radius: 9px;
+  padding: 12px 14px;
+  backdrop-filter: blur(3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acc) 50%, transparent), transparent);
+    pointer-events: none;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 三维数值
+// ══════════════════════════════════════════════════════════
 .stats-group {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .stat-item {
-  background: $c-panel;
-  border-radius: 6px;
-  padding: 8px 10px;
+  @extend %card-base;
+  padding: 10px 12px;
 }
 .stat-header {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font-size: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
 }
 .stat-header .name {
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
 }
 .stat-header .num {
-  color: $c-gold;
-  font-weight: 600;
+  color: var(--acc);
+  font-weight: 800;
+  font-size: 15px;
+  text-shadow: 0 0 8px var(--glow-soft);
 }
 .progress-track {
-  height: 6px;
-  background: #1a1a1a;
-  border-radius: 3px;
+  position: relative;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .progress-bar {
+  position: relative;
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
+  border-radius: 4px;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 60%);
+    border-radius: 4px;
+  }
 }
 .stat-corruption {
   background: linear-gradient(90deg, $c-orange, $c-red);
-  box-shadow: 0 0 6px rgba(196, 75, 75, 0.3);
+  box-shadow: 0 0 8px rgba(196, 75, 75, 0.4);
 }
 .stat-desire {
-  background: linear-gradient(90deg, #c54b8f, $c-pink);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--sec) 80%, #ff5d8f), var(--acc));
+  box-shadow: 0 0 8px var(--glow-soft);
 }
 .stat-husband {
   background: linear-gradient(90deg, #555, #999);
 }
 
-// 苏文卡
+// ══════════════════════════════════════════════════════════
+// 苏文状态卡
+// ══════════════════════════════════════════════════════════
 .suwen-card {
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px;
+  @extend %card-base;
 }
 .suwen-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 .suwen-header .name {
-  color: $c-gold;
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--acc);
+  font-size: 15px;
+  font-weight: 700;
+  text-shadow: 0 0 8px var(--glow-soft);
+  letter-spacing: 1px;
 }
 .status-tag {
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: $c-panel-light;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  letter-spacing: 0.5px;
+  font-weight: 600;
 }
 .status-tag.home {
-  background: rgba(196, 75, 75, 0.25);
-  color: $c-red;
+  background: rgba(196, 75, 75, 0.22);
+  color: #e07070;
+  border-color: rgba(196, 75, 75, 0.35);
 }
 .status-tag.away {
-  background: rgba(76, 175, 80, 0.25);
-  color: $c-green;
+  background: rgba(76, 175, 80, 0.22);
+  color: #80d080;
+  border-color: rgba(76, 175, 80, 0.35);
 }
 .status-tag.sleeping {
-  background: rgba(79, 195, 247, 0.25);
+  background: rgba(79, 195, 247, 0.22);
   color: $c-cyan;
+  border-color: rgba(79, 195, 247, 0.35);
 }
 .suwen-location {
   font-size: 12px;
-  color: $c-text-dim;
-  margin-bottom: 8px;
+  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
+  margin-bottom: 9px;
 }
 .suspicion-row {
   display: flex;
@@ -754,318 +1042,495 @@ $c-border: #333;
   font-size: 11px;
 }
 .suspicion-row .label {
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
+  letter-spacing: 1px;
 }
 .suspicion-track {
   flex: 1;
+  position: relative;
   height: 6px;
-  background: #1a1a1a;
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 3px;
   overflow: hidden;
 }
 .suspicion-fill {
   height: 100%;
-  background: $c-orange;
+  background: linear-gradient(90deg, $c-orange, #ffb040);
   border-radius: 3px;
   transition: width 0.4s;
 }
 .suspicion-fill.danger {
-  background: $c-red;
-  box-shadow: 0 0 6px rgba(196, 75, 75, 0.5);
+  background: linear-gradient(90deg, $c-red, #ff6060);
+  box-shadow: 0 0 8px rgba(196, 75, 75, 0.6);
+  animation: sus-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sus-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(196, 75, 75, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(196, 75, 75, 0.85);
+  }
 }
 .suspicion-row .val {
-  color: $c-gold;
-  font-weight: 600;
+  color: var(--acc);
+  font-weight: 800;
+  min-width: 26px;
+  text-align: right;
 }
 .accel-hint {
   font-size: 12px;
   color: $c-orange;
-  margin-top: 8px;
-  padding: 4px 8px;
+  margin-top: 9px;
+  padding: 5px 9px;
   background: rgba(255, 152, 0, 0.1);
   border-left: 2px solid $c-orange;
   border-radius: 3px;
+  text-shadow: 0 0 6px rgba(255, 152, 0, 0.25);
 }
 .safe-indicator {
   font-size: 12px;
   color: $c-green;
-  margin-top: 8px;
+  margin-top: 9px;
   display: flex;
-  gap: 5px;
+  gap: 6px;
   align-items: center;
 }
-
-// 货币
-.currency-card {
-  display: flex;
-  justify-content: space-between;
+.safe-icon {
+  display: inline-flex;
   align-items: center;
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px 14px;
-}
-.currency-card .label {
-  color: $c-text-dim;
-  font-size: 13px;
-}
-.currency-card .val {
-  color: $c-gold-bright;
-  font-size: 18px;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(76, 175, 80, 0.25);
+  border: 1px solid $c-green;
+  font-size: 10px;
   font-weight: 700;
 }
 
-// 右栏
-.col-right {
+// ══════════════════════════════════════════════════════════
+// 货币
+// ══════════════════════════════════════════════════════════
+.currency-card {
+  @extend %card-base;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
 }
-.detail-card {
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.section-title {
-  color: $c-gold;
+.currency-card .label {
+  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
   font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  border-bottom: 1px solid $c-border;
-  padding-bottom: 4px;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
-.section-title .count {
-  color: $c-text-dim;
-  font-weight: 400;
-  font-size: 11px;
+.currency-card .val {
+  color: var(--acc);
+  font-size: 20px;
+  font-weight: 800;
+  text-shadow: 0 0 12px var(--glow);
+  font-family: 'Noto Serif SC', serif;
 }
 
+// ══════════════════════════════════════════════════════════
+// 右栏详情卡
+// ══════════════════════════════════════════════════════════
+.detail-card {
+  @extend %card-base;
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--acc);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--pri) 18%, transparent);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px var(--glow-soft);
+}
+.st-mark {
+  color: var(--pri);
+  font-size: 11px;
+  opacity: 0.85;
+}
+.section-title .count {
+  margin-left: auto;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+// ══════════════════════════════════════════════════════════
 // 心境
+// ══════════════════════════════════════════════════════════
 .emotion-row {
   display: flex;
   gap: 8px;
   align-items: center;
   font-size: 13px;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  letter-spacing: 0.5px;
 }
 .emotion-row .label {
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
 }
 .emotion-val {
-  color: $c-gold;
+  color: var(--acc);
+  font-weight: 600;
+  text-shadow: 0 0 6px var(--glow-soft);
 }
 .emotion-val.vulnerable-glow {
-  color: $c-pink;
-  font-weight: 700;
-  text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
-  animation: vuln-pulse 1.5s ease-in-out infinite;
+  color: #ff5d8f;
+  font-weight: 800;
+  animation: vuln-pulse 1.4s ease-in-out infinite;
+  font-size: 15px;
+  letter-spacing: 1px;
 }
 @keyframes vuln-pulse {
-  0%, 100% {
-    opacity: 1;
-    text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
+  0%,
+  100% {
+    text-shadow: 0 0 8px rgba(255, 93, 143, 0.6), 0 0 16px rgba(255, 93, 143, 0.3);
   }
   50% {
-    opacity: 0.75;
-    text-shadow: 0 0 14px rgba(255, 93, 143, 0.9);
+    text-shadow: 0 0 14px rgba(255, 93, 143, 0.95), 0 0 28px rgba(255, 93, 143, 0.5);
+  }
+}
+// 心防松动整体卡片脉冲发光特效
+.detail-card:has(.vulnerable-hint) {
+  animation: card-vuln-pulse 1.6s ease-in-out infinite;
+  border-color: rgba(255, 93, 143, 0.45);
+}
+@keyframes card-vuln-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 0 8px rgba(255, 93, 143, 0.18);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 18px rgba(255, 93, 143, 0.45),
+      0 0 36px rgba(255, 93, 143, 0.15);
   }
 }
 .vulnerable-hint {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
-  padding: 5px 8px;
-  background: rgba(255, 93, 143, 0.1);
-  border: 1px solid rgba(255, 93, 143, 0.35);
-  border-radius: 5px;
+  padding: 6px 10px;
+  background: linear-gradient(90deg, rgba(255, 93, 143, 0.14), rgba(255, 93, 143, 0.06));
+  border: 1px solid rgba(255, 93, 143, 0.4);
+  border-radius: 6px;
   font-size: 11px;
-  color: $c-pink;
-  margin-bottom: 6px;
+  color: #ff7fa8;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.vh-icon {
+  animation: vh-shake 0.6s ease-in-out infinite alternate;
+}
+@keyframes vh-shake {
+  0% {
+    transform: rotate(-8deg);
+  }
+  100% {
+    transform: rotate(8deg);
+  }
 }
 .thought-bubble {
   font-size: 12px;
-  color: #bbb;
+  color: #c8c0b4;
   font-style: italic;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  padding: 5px 9px;
+  background: rgba(0, 0, 0, 0.22);
+  border-left: 2px solid color-mix(in srgb, var(--pri) 40%, transparent);
+  border-radius: 0 4px 4px 0;
+  letter-spacing: 0.3px;
 }
 .temperament {
   font-size: 11px;
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
+  font-style: italic;
+  letter-spacing: 0.5px;
 }
 
-// 念头
+// ══════════════════════════════════════════════════════════
+// 念头列表
+// ══════════════════════════════════════════════════════════
 .empty {
   font-size: 12px;
-  color: #444;
+  color: color-mix(in srgb, var(--pri) 40%, transparent);
   text-align: center;
-  padding: 8px 0;
+  padding: 10px 0;
+  letter-spacing: 1px;
+  font-style: italic;
 }
 .thought-item {
-  background: $c-panel-light;
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 7px;
-  border-left: 2px solid transparent;
-  transition: border-color 0.2s;
-}
-.thought-item:hover {
-  border-left-color: $c-gold-dim;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 7px;
+  padding: 9px 11px;
+  margin-bottom: 8px;
+  border-left: 3px solid transparent;
+  transition: all 0.25s;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+  &:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-left-color: var(--pri);
+    transform: translateX(2px);
+  }
 }
 .thought-head {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   flex-wrap: wrap;
 }
 .status-tag.growing {
-  background: rgba(76, 175, 80, 0.25);
-  color: $c-green;
+  background: rgba(76, 175, 80, 0.22);
+  color: #80d080;
+  border-color: rgba(76, 175, 80, 0.35);
 }
 .status-tag.pending {
-  background: rgba(79, 195, 247, 0.25);
+  background: rgba(79, 195, 247, 0.22);
   color: $c-cyan;
+  border-color: rgba(79, 195, 247, 0.35);
 }
 .status-tag.rejected {
-  background: rgba(196, 75, 75, 0.25);
-  color: $c-red;
+  background: rgba(196, 75, 75, 0.22);
+  color: #e07070;
+  border-color: rgba(196, 75, 75, 0.35);
 }
 .status-tag.mature {
-  background: rgba(212, 175, 55, 0.25);
-  color: $c-gold;
+  background: color-mix(in srgb, var(--pri) 22%, transparent);
+  color: var(--acc);
+  border-color: color-mix(in srgb, var(--pri) 50%, transparent);
+  text-shadow: 0 0 6px var(--glow-soft);
 }
 .thought-type {
   font-size: 11px;
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
+  letter-spacing: 0.5px;
 }
 .thought-diff {
   font-size: 10px;
   color: $c-orange;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 3px;
-  background: rgba(255, 152, 0, 0.1);
+  background: rgba(255, 152, 0, 0.12);
+  border: 1px solid rgba(255, 152, 0, 0.25);
+  font-weight: 600;
 }
 .thought-content {
   font-size: 13px;
-  color: #ddd;
-  margin-bottom: 5px;
+  color: #ddd5c8;
+  margin-bottom: 6px;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
 }
 .thought-progress {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.thought-progress .progress-track {
+  flex: 1;
+}
 .thought-progress .progress-bar {
-  background: linear-gradient(90deg, $c-gold-dim, $c-gold);
+  background: linear-gradient(90deg, var(--sec), var(--acc));
+  box-shadow: 0 0 6px var(--glow-soft);
 }
 .progress-text {
   font-size: 10px;
-  color: $c-text-dim;
+  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
   white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 .thought-reject {
   font-size: 11px;
-  color: $c-red;
+  color: #e07070;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  letter-spacing: 0.3px;
 }
 .mini-btn {
   font-size: 10px;
-  padding: 2px 10px;
+  padding: 3px 11px;
   background: transparent;
   border: 1px solid $c-red;
-  border-radius: 3px;
-  color: $c-red;
+  border-radius: 4px;
+  color: #e07070;
   cursor: pointer;
   transition: all 0.2s;
-}
-.mini-btn:hover {
-  background: rgba(196, 75, 75, 0.2);
+  letter-spacing: 0.5px;
+
+  &:hover {
+    background: rgba(196, 75, 75, 0.22);
+    box-shadow: 0 0 8px rgba(196, 75, 75, 0.3);
+  }
 }
 
+// ══════════════════════════════════════════════════════════
 // 习惯
+// ══════════════════════════════════════════════════════════
 .habit-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: $c-panel-light;
-  border-radius: 5px;
-  padding: 6px 10px;
-  margin-bottom: 5px;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 6px;
+  padding: 7px 11px;
+  margin-bottom: 6px;
   font-size: 13px;
+  border-left: 2px solid color-mix(in srgb, var(--pri) 30%, transparent);
+  transition: all 0.2s;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+  &:hover {
+    background: rgba(0, 0, 0, 0.4);
+    border-left-color: var(--acc);
+  }
 }
 .habit-text {
-  color: $c-green;
+  color: #80d080;
+  letter-spacing: 0.3px;
 }
 .sell-btn {
   font-size: 10px;
-  padding: 3px 10px;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid $c-gold-dim;
-  border-radius: 4px;
-  color: $c-gold;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pri) 25%, transparent), color-mix(in srgb, var(--acc) 12%, transparent));
+  border: 1px solid var(--acc);
+  border-radius: 5px;
+  color: var(--acc);
   cursor: pointer;
   transition: all 0.2s;
-}
-.sell-btn:hover {
-  background: rgba(212, 175, 55, 0.25);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 6px var(--glow-soft);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pri) 18%, transparent);
+
+  &:hover {
+    background: linear-gradient(135deg, var(--pri), var(--acc));
+    color: #1a0a08;
+    box-shadow: 0 0 16px var(--glow);
+    transform: translateY(-1px);
+  }
 }
 .habit-full-tip {
   font-size: 11px;
   color: $c-orange;
-  margin-top: 6px;
-  padding: 4px 8px;
-  background: rgba(255, 152, 0, 0.08);
+  margin-top: 8px;
+  padding: 5px 9px;
+  background: rgba(255, 152, 0, 0.1);
   border-radius: 4px;
+  border-left: 2px solid $c-orange;
+  letter-spacing: 0.3px;
 }
 
+// ══════════════════════════════════════════════════════════
 // 仪容
+// ══════════════════════════════════════════════════════════
 .attire-tags {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 7px;
+  margin-bottom: 9px;
   flex-wrap: wrap;
 }
 .mini-tag {
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(212, 175, 55, 0.1);
-  color: $c-gold;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--pri) 14%, transparent);
+  color: var(--acc);
+  border: 1px solid color-mix(in srgb, var(--pri) 30%, transparent);
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 5px var(--glow-soft);
 }
 .mini-tag.outline {
   background: transparent;
-  border: 1px solid $c-gold-dim;
+  border: 1px solid var(--pri);
 }
 .clothing-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: 5px;
+  margin-bottom: 7px;
 }
 .clothing-item {
+  display: flex;
+  gap: 8px;
   font-size: 12px;
-  color: #ccc;
+  color: #c8c0b4;
+  padding: 2px 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--pri) 10%, transparent);
+  letter-spacing: 0.3px;
 }
 .clothing-item .cl {
   display: inline-block;
-  width: 30px;
-  color: $c-text-dim;
+  min-width: 32px;
+  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
   font-size: 11px;
+  letter-spacing: 1px;
+}
+.clothing-item:last-child {
+  border-bottom: none;
 }
 .makeup-line {
   font-size: 12px;
-  color: $c-text-dim;
-  padding-top: 4px;
-  border-top: 1px solid #2a2a2a;
+  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
+  padding-top: 6px;
+  margin-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--pri) 14%, transparent);
+  letter-spacing: 0.5px;
 }
 
-@media (max-width: 480px) {
+// ══════════════════════════════════════════════════════════
+// 移动端响应式
+// ══════════════════════════════════════════════════════════
+@media (max-width: 600px) {
+  .main-panel {
+    padding: 12px;
+  }
   .status-display {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .world-info {
+    gap: 6px;
+    font-size: 11px;
+  }
+  .char-tabs {
+    gap: 8px;
+  }
+  .char-name {
+    font-size: 15px;
+  }
+  .stage-ring {
+    width: 92px;
+    height: 92px;
+  }
+}
+
+@media (max-width: 380px) {
+  .control-header .title {
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+  .currency-card .val {
+    font-size: 18px;
   }
 }
 </style>
