@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
-import waitUntil from 'async-wait-until';
+import { createPinia } from 'pinia';
+import { waitUntil } from 'async-wait-until';
 import App from './App.vue';
 
 $(async () => {
@@ -34,7 +35,9 @@ $(async () => {
     // 超时也继续挂载，后续自动刷新
   }
 
+  // 关键：Pinia 必须挂到 Vue app，否则 defineMvuDataStore（基于 defineStore）会崩溃 → Vue 挂载失败 → 前端空白
   const app = createApp(App);
+  app.use(createPinia());
   app.config.errorHandler = (err, _instance, info) => {
     console.error('[秦璐重置版] Vue 错误:', err, info);
   };
