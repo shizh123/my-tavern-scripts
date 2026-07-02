@@ -14,8 +14,8 @@
 import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
-import { advanceSuwenRoutine, isInVulnerableWindow } from './suwenRoutine';
-import { tickThoughtProgress, resolveThoughtType, type ThoughtCategoryValue } from './thoughtEngine';
+import { advanceSuwenRoutine } from './suwenRoutine';
+import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
 
@@ -269,10 +269,10 @@ $(() => {
     // 读阶段：注入状态快照（对标云霜凝 Phase 3.5）
     // ─────────────────────────────────────────────────────
     eventOn(tavern_events.CHAT_COMPLETION_PROMPT_READY, (event_data: any) => {
-      // 不再用 dryRun 守卫：某些酒馆版本 dryRun 永远为 true，加守卫会导致快照永不注入
-      // 注入 system message 是幂等的（有清理旧快照逻辑），重复注入无副作用
+      // dryRun=true 是预热请求，跳过注入（对标云霜凝）；dryRun=false 才是真实生成
       if (event_data?.dryRun) {
-        console.info('[秦璐重置版] dryRun=true，仍继续注入（酒馆版本兼容）');
+        console.info('[秦璐重置版] dryRun=true，跳过注入');
+        return;
       }
       _isInAiCycle = true;
       try {
