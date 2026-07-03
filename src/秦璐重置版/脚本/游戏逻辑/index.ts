@@ -14,6 +14,7 @@
 import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
+import { getEquippedNames } from './shopSystem';
 import { advanceSuwenRoutine } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
@@ -157,15 +158,30 @@ function buildStatusSnapshot(data: SchemaType): string {
 
   // ━━━━ 在场角色状态行 ━━━━
   //   心防松动是脚本覆写的（AI 上下文里没有），附在状态行上
+  //   穿着：网店装备是脚本管理的（AI 自由写的服装细节不含它），需注入告知
   for (const name of present) {
-    const char = data[`${name}状态` as '秦璐状态' | '苏梦状态'];
+    const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
+    const char = data[charKey];
     const vulnerable =
       char.当前情绪 === '心防松动' ? ' ⚡她此刻心防松动，比平时更容易接受亲密试探' : '';
     lines.push(`【${name}】第${char.当前阶段}阶段「${char.阶段标题}」${vulnerable}`);
+    const equipped = getEquippedNames(data, charKey);
+    if (equipped.length > 0) {
+      lines.push(`【${name}·穿着】${equipped.join('、')}（请在描写中自然体现）`);
+    }
   }
 
   // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
   lines.push(`【苏文】${data.苏文状态.当前状态} @ ${data.苏文状态.当前位置}`);
+
+  // ━━━━ 一次性剧情事件（首穿等；脚本写入，注入一轮后在写阶段清空） ━━━━
+  if (data.系统._待发送道具事件) {
+    lines.push('');
+    lines.push(`【本轮剧情事件（一次性，请自然融入演绎，不要复述本提示）】`);
+    for (const ev of data.系统._待发送道具事件.split('|').filter(Boolean)) {
+      lines.push(`  · ${ev}`);
+    }
+  }
 
   // ━━━━ 念头/习惯动态影响 baseline：仅在场角色（不在场无从表现） ━━━━
   //   想法层/行为层语义 + 元系统词禁令已常驻世界书「念头习惯表现」（蓝灯），此处只列动态清单
@@ -345,13 +361,16 @@ $(() => {
           }
         }
 
-        // 4. 推进念头培育进度（含苏文加速 + AI相关度加速）+ 成熟结算
+        // 4. 推进念头培育进度（含苏文加速 + AI相关度加速 + 装备加速）+ 成熟结算
         //    relevanceMap 只读一次，两个角色共用（念头ID全局唯一），处理完再清空
         const relevanceMap = newData.系统.本轮相关念头 ?? {};
         for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
           tickThoughtProgress(newData, charKey, currentFloor, relevanceMap);
         }
         newData.系统.本轮相关念头 = {};
+
+        // 4.5 一次性剧情事件已注入过本轮生成 → 清空（首穿等只演一次）
+        newData.系统._待发送道具事件 = '';
 
         // 5. 写回
         _.set(新变量, 'stat_data', newData);

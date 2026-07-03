@@ -74,20 +74,20 @@
         <div class="implant-head">
           <span class="ttl">念头植入</span>
           <span class="target">→ {{ activeCharacter }}</span>
-          <span class="quota" :title="`本轮已植入 ${quotaUsed}/${MAX_IMPLANTS_PER_FLOOR}`">
-            <i v-for="n in MAX_IMPLANTS_PER_FLOOR" :key="n" :class="{ used: n <= quotaUsed }"></i>
+          <span class="quota" :title="`本轮已植入 ${quotaUsed}/${quotaLimit}`">
+            <i v-for="n in quotaLimit" :key="n" :class="{ used: n <= quotaUsed }"></i>
           </span>
         </div>
         <div class="implant-row">
           <input
             v-model="thoughtContent"
             type="text"
-            :maxlength="MAX_LEN"
-            :placeholder="`简短念头（${MAX_LEN}字内）…`"
+            :maxlength="maxLen"
+            :placeholder="`简短念头（${maxLen}字内）…`"
             @keyup.enter="implantThought"
           />
-          <span :class="['count', { max: thoughtContent.length >= MAX_LEN }]"
-            >{{ thoughtContent.length }}/{{ MAX_LEN }}</span
+          <span :class="['count', { max: thoughtContent.length >= maxLen }]"
+            >{{ thoughtContent.length }}/{{ maxLen }}</span
           >
           <button class="go" :disabled="!thoughtContent.trim()" @click="implantThought">植入</button>
         </div>
@@ -165,6 +165,41 @@
           </section>
         </div>
       </main>
+
+      <!-- 网店 -->
+      <section class="shop">
+        <button type="button" class="shop-toggle" @click="shopOpen = !shopOpen">
+          <span class="st-ttl">网 店</span>
+          <span class="st-sub">为 {{ activeCharacter }} 选购 · 装备各买各的</span>
+          <em>{{ shopOpen ? '收起 ▲' : '展开 ▼' }}</em>
+        </button>
+        <div v-if="shopOpen" class="shop-body">
+          <div v-for="g in shopGroups" :key="g.title" class="shop-group">
+            <h4>{{ g.title }}</h4>
+            <div
+              v-for="item in g.items"
+              :key="item.名称"
+              :class="['shop-item', { on: item.分类 === '装备' && equipStateOf(item) === '装备中' }]"
+            >
+              <div class="si-head">
+                <span class="si-name">{{ item.名称 }}</span>
+                <span v-if="item.槽位" class="si-tag">{{ item.槽位 }}</span>
+                <span v-if="item.分类 === '装备' && item.阶段门槛 > 1" class="si-tag dim">阶{{ item.阶段门槛 }}</span>
+                <span class="si-price">◈{{ item.价格 }}</span>
+              </div>
+              <div class="si-desc">{{ item.简介 }}</div>
+              <button
+                type="button"
+                :class="['si-btn', itemUi(item).kind]"
+                :disabled="itemUi(item).disabled"
+                @click="shopAction(item)"
+              >
+                {{ itemUi(item).label }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -172,10 +207,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
-import { MAX_IMPLANTS_PER_FLOOR, countImplantsAtFloor } from '../../脚本/游戏逻辑/thoughtEngine';
+import {
+  SHOP_ITEMS,
+  buyEquipment,
+  toggleEquip,
+  useConsumable,
+  buyPrivilege,
+  getImplantLimit,
+  getThoughtMaxLen,
+  type ShopItem,
+} from '../../脚本/游戏逻辑/shopSystem';
+import { countImplantsAtFloor } from '../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from './store';
 
-const MAX_LEN = 10;
 const VULNERABLE_EMOTION = '心防松动';
 const charNames = ['秦璐', '苏梦'] as const;
 
@@ -210,12 +254,83 @@ const presence = computed(
   () => data.value?.系统?.在场角色 ?? ({ 秦璐: true, 苏梦: false } as Record<'秦璐' | '苏梦', boolean>),
 );
 
-/** 本楼已用植入额度（两角色合计，上限 MAX_IMPLANTS_PER_FLOOR） */
+/** 本楼已用植入额度（两角色合计） */
 const quotaUsed = computed(() => {
   const d = data.value;
   if (!d) return 0;
   return countImplantsAtFloor(d as any, SillyTavern.chat?.length ?? 0);
 });
+
+/** 植入上限/字数上限（受网店特权影响） */
+const quotaLimit = computed(() => (data.value ? getImplantLimit(data.value as any) : 3));
+const maxLen = computed(() => (data.value ? getThoughtMaxLen(data.value as any) : 10));
+
+// ━━━━ 网店 ━━━━
+const shopOpen = ref(false);
+
+const shopGroups = computed(() => [
+  { title: '装备（同槽互斥，装备中生效）', items: SHOP_ITEMS.filter(i => i.分类 === '装备') },
+  { title: '消耗品（即买即用，作用于当前角色）', items: SHOP_ITEMS.filter(i => i.分类 === '消耗品') },
+  { title: '特权（全局永久）', items: SHOP_ITEMS.filter(i => i.分类 === '特权') },
+]);
+
+function equipStateOf(item: ShopItem): '未购买' | '已购买' | '装备中' {
+  const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+  return (data.value?.[key]?.装备状态?.[item.名称] as '已购买' | '装备中' | undefined) ?? '未购买';
+}
+
+function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy' | 'equip' | 'unequip' | 'use' | 'none' } {
+  const money = data.value?.系统?.货币 ?? 0;
+  if (item.分类 === '特权') {
+    if (item.未上架) return { label: '未上架', disabled: true, kind: 'none' };
+    if (data.value?.系统?.道具状态?.[item.名称] === '已购买') return { label: '已生效', disabled: true, kind: 'none' };
+    return { label: '购买', disabled: money < item.价格, kind: 'buy' };
+  }
+  if (item.分类 === '消耗品') {
+    return { label: '使用', disabled: money < item.价格, kind: 'use' };
+  }
+  const st = equipStateOf(item);
+  if (st === '未购买') return { label: '购买', disabled: money < item.价格, kind: 'buy' };
+  if (st === '装备中') return { label: '卸下', disabled: false, kind: 'unequip' };
+  if ((char.value?.当前阶段 ?? 1) < item.阶段门槛) return { label: `需阶段${item.阶段门槛}`, disabled: true, kind: 'none' };
+  return { label: '装备', disabled: false, kind: 'equip' };
+}
+
+async function shopAction(item: ShopItem) {
+  const ui = itemUi(item);
+  if (ui.disabled || ui.kind === 'none') return;
+  try {
+    const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) {
+      showMsg('变量未初始化，请先发一条消息让 AI 回复', 'warn');
+      return;
+    }
+    let err: string | null = null;
+    let extra = '';
+    if (item.分类 === '特权') {
+      err = buyPrivilege(d, item.名称);
+    } else if (item.分类 === '消耗品') {
+      err = useConsumable(d, key, item.名称, SillyTavern.chat?.length ?? 0);
+    } else if (ui.kind === 'buy') {
+      err = buyEquipment(d, key, item.名称);
+    } else {
+      const r = toggleEquip(d, key, item.名称);
+      err = r.error ?? null;
+      if (r.firstWear) extra = '，她第一次穿上它——下一轮会有反应';
+    }
+    if (err) {
+      showMsg(err, 'warn');
+      return;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`「${item.名称}」操作成功${extra}`, 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 网店操作失败', e);
+    showMsg('操作失败：' + (e instanceof Error ? e.message : String(e)), 'error');
+  }
+}
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -283,11 +398,12 @@ async function implantThought() {
       showMsg('变量未初始化，请先发一条消息让 AI 回复后再植入', 'warn');
       return;
     }
-    // 每楼植入上限：秦璐+苏梦合计最多 3 条，AI 回复后额度刷新
+    // 每楼植入上限：秦璐+苏梦合计（基础3，植入扩容特权+1），AI 回复后额度刷新
     const floorNow = SillyTavern.chat?.length ?? 0;
+    const limit = getImplantLimit(d);
     const implanted = countImplantsAtFloor(d, floorNow);
-    if (implanted >= MAX_IMPLANTS_PER_FLOOR) {
-      showMsg(`本轮已植入${MAX_IMPLANTS_PER_FLOOR}条念头，等她回应后再继续`, 'warn');
+    if (implanted >= limit) {
+      showMsg(`本轮已植入${limit}条念头，等她回应后再继续`, 'warn');
       return;
     }
     const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -303,7 +419,7 @@ async function implantThought() {
     };
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     thoughtContent.value = '';
-    showMsg(`已植入（本轮 ${implanted + 1}/${MAX_IMPLANTS_PER_FLOOR}）：${content}`, 'success');
+    showMsg(`已植入（本轮 ${implanted + 1}/${limit}）：${content}`, 'success');
     // store 会通过 500ms 轮询自动更新
   } catch (e) {
     console.error('[秦璐重置版] 植入失败', e);
@@ -1180,6 +1296,158 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   dd {
     margin: 0;
     color: #c4bbae;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 网店
+// ══════════════════════════════════════════════════════════
+.shop {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.shop-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 13px;
+  background: none;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+
+  .st-ttl {
+    font-family: $serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--acc);
+    letter-spacing: 3px;
+  }
+  .st-sub {
+    font-size: 11px;
+    color: color-mix(in srgb, var(--acc) 45%, #888);
+  }
+  em {
+    margin-left: auto;
+    font-style: normal;
+    font-size: 10.5px;
+    color: color-mix(in srgb, var(--acc) 50%, #999);
+  }
+}
+.shop-body {
+  padding: 0 13px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.shop-group h4 {
+  margin: 0 0 7px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--acc) 55%, #999);
+  letter-spacing: 1px;
+}
+.shop-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'head btn'
+    'desc btn';
+  gap: 2px 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  border-left: 2px solid transparent;
+
+  & + .shop-item {
+    margin-top: 6px;
+  }
+  &.on {
+    border-left-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 7%, rgba(0, 0, 0, 0.22));
+  }
+}
+.si-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.si-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ddd5c8;
+}
+.si-tag {
+  font-size: 9.5px;
+  padding: 0 6px;
+  border-radius: 8px;
+  color: var(--acc);
+  background: color-mix(in srgb, var(--acc) 13%, transparent);
+
+  &.dim {
+    color: $warn;
+    background: rgba(232, 169, 79, 0.12);
+  }
+}
+.si-price {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--acc);
+  font-variant-numeric: tabular-nums;
+}
+.si-desc {
+  grid-area: desc;
+  font-size: 10.5px;
+  color: #9a917f;
+  letter-spacing: 0.3px;
+}
+.si-btn {
+  grid-area: btn;
+  padding: 5px 13px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--acc) 50%, transparent);
+  background: transparent;
+  color: var(--acc);
+  font-size: 11px;
+  font-family: inherit;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s, filter 0.2s;
+
+  &.buy {
+    border: none;
+    background: linear-gradient(135deg, var(--acc2), var(--acc));
+    color: #16100a;
+    font-weight: 700;
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.12);
+    }
+  }
+  &.equip:hover,
+  &.use:hover {
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+  }
+  &.unequip {
+    border-color: rgba(224, 104, 104, 0.5);
+    color: $danger;
+
+    &:hover {
+      background: rgba(224, 104, 104, 0.12);
+    }
+  }
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
   }
 }
 

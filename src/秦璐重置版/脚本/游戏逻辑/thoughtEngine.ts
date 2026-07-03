@@ -13,6 +13,7 @@
 
 import type { SchemaType } from '../../schema';
 import { getStageByCorruption } from '../../stageConfig';
+import { getEquipBoost, getImplantLimit } from './shopSystem';
 import { isSuwenInAccelerationRoom } from './suwenRoutine';
 
 /** 念头类型（10大类 + 待判定），沿用旧版 */
@@ -106,17 +107,20 @@ export function calcDifficultyAndFloors(
  * 返回有效阶段（用于判断该类型是否合法）
  */
 function getEffectiveStage(data: SchemaType, characterKey: '秦璐状态' | '苏梦状态', currentFloor: number): number {
-  const stage = data[characterKey].当前阶段;
+  const char = data[characterKey];
+  let stage = char.当前阶段;
 
-  // 心防松动窗口：阶段+1，封顶5
+  // 心防松动窗口：阶段+1
   if (isInVulnerableWindow(currentFloor)) {
-    return Math.min(stage + 1, 5);
+    stage += 1;
   }
 
-  // 道具越级（安神药/头孢酒）—— 道具系统细化后接入
-  // TODO: 读 data.系统.道具状态 判断是否使用越级道具
+  // 道具越级药效（安神药+1/头孢酒+2，消耗品使用后在有效楼数内生效）
+  if (char._越级加成 > 0 && currentFloor <= char._越级加成至楼层) {
+    stage += char._越级加成;
+  }
 
-  return stage;
+  return Math.min(stage, 5);
 }
 
 /**
@@ -130,8 +134,9 @@ export function implantThought(
   content: string,
   currentFloor: number,
 ): string | null {
-  if (countImplantsAtFloor(data, currentFloor) >= MAX_IMPLANTS_PER_FLOOR) {
-    console.warn(`[念头植入] 本楼已植入${MAX_IMPLANTS_PER_FLOOR}条念头，拒绝："${content}"`);
+  const limit = getImplantLimit(data);
+  if (countImplantsAtFloor(data, currentFloor) >= limit) {
+    console.warn(`[念头植入] 本楼已植入${limit}条念头，拒绝："${content}"`);
     return null;
   }
   const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -245,10 +250,16 @@ export function tickThoughtProgress(
     } else if (relevance === 1) {
       progress += 1;
     }
+    // 装备加速：装备中且类型倾向匹配的仪容装备
+    let equipBoost = 0;
+    if (thought.类型 !== '待判定') {
+      equipBoost = getEquipBoost(data, characterKey, thought.类型);
+      progress += equipBoost;
+    }
 
     thought.开发进度 += progress;
     console.info(
-      `[念头培育] ${characterKey} ${id} +${progress} (加速:${accelerating ? '是' : '否'}, 相关:${relevance ?? 0}) → ${thought.开发进度}/${thought.需要楼数}`,
+      `[念头培育] ${characterKey} ${id} +${progress} (加速:${accelerating ? '是' : '否'}, 相关:${relevance ?? 0}, 装备:${equipBoost}) → ${thought.开发进度}/${thought.需要楼数}`,
     );
 
     // 成熟判定

@@ -183,6 +183,16 @@
             "type": "number"
           }
         },
+        "_已首穿": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
         "_待发送道具事件": {
           "default": "",
           "type": "string"
@@ -538,6 +548,28 @@
               "内容"
             ]
           }
+        },
+        "装备状态": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "已购买",
+              "装备中"
+            ]
+          }
+        },
+        "_越级加成": {
+          "default": 0,
+          "type": "number"
+        },
+        "_越级加成至楼层": {
+          "default": -1,
+          "type": "number"
         }
       }
     },

@@ -185,6 +185,13 @@ const CharacterState = z.object({
   念头列表: z.record(z.string(), Thought).prefault({}),
   /** 习惯列表：上限 5，满了变卖换货币 */
   习惯列表: z.array(Habit).default([]),
+
+  // ━━━━ 网店装备（界面/脚本管理，AI 不要改） ━━━━
+  /** 装备状态：key=物品名，缺省=未购买；装备各买各的（对标云霜凝但对称化） */
+  装备状态: z.record(z.string(), z.enum(['已购买', '装备中'])).prefault({}),
+  /** 越级药效（安神药+1/头孢酒+2，消耗品使用后写入；脚本管理） */
+  _越级加成: z.coerce.number().default(0),
+  _越级加成至楼层: z.coerce.number().default(-1),
 });
 
 // ============================================
@@ -274,6 +281,9 @@ const SystemState = z.object({
    *  AI 通过 JSONPatch insert/replace 写入；脚本在 VARIABLE_UPDATE_ENDED 据此给培育中念头加进度
    */
   本轮相关念头: z.record(z.string(), z.coerce.number().default(0)).prefault({}),
+
+  /** 首穿记录：key="角色状态:物品名"，首次装备事件只发一次（对标云霜凝 _已觉醒性癖） */
+  _已首穿: z.record(z.string(), z.boolean()).prefault({}),
 
   // ━━━━ 内部标志（脚本管理，AI 不要修改） ━━━━
   /** 待发送道具事件（| 分隔，脚本写、下一轮 AI 演绎，注入后清空） */
