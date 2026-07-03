@@ -1,5 +1,6 @@
 <template>
   <div class="char-panel">
+    <div class="col">
     <!-- 阶段 · 情绪 -->
     <section class="hero">
       <div class="hero-top">
@@ -66,7 +67,9 @@
       </div>
       <p v-if="implantMsg" :class="['msg', implantMsgType]">{{ implantMsg }}</p>
     </section>
+    </div>
 
+    <div class="col">
     <!-- 念头 -->
     <section class="card">
       <h3>念头 <em>{{ thoughtList.length }}</em></h3>
@@ -120,6 +123,7 @@
         <div><dt>袜</dt><dd>{{ char?.服装细节?.袜裤 ?? '—' }}</dd></div>
       </dl>
     </section>
+    </div>
   </div>
 </template>
 
@@ -286,10 +290,24 @@ $danger: #e06868;
 $info: #6fb9dc;
 $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
 
+// 移动端单列；宽屏两列并排（左：状态+植入，右：念头/习惯/仪容），压缩整体高度
 .char-panel {
   display: flex;
   flex-direction: column;
   gap: 11px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+}
+@media (min-width: 560px) {
+  .char-panel {
+    display: grid;
+    grid-template-columns: 1.02fr 0.98fr;
+    align-items: start;
+  }
 }
 
 // ━━━ hero ━━━

@@ -17,7 +17,17 @@
         <div class="coin" title="货币">◈ {{ data?.系统?.货币 ?? 0 }}</div>
       </header>
 
-      <!-- 标签页：角色（含在场点）+ 苏文 + 网店 -->
+      <!-- 苏文一行速览（常驻，不单独占页） -->
+      <div class="suwen-strip">
+        <span class="sw-name">苏文</span>
+        <span :class="['sw-chip', suwenStatusClass]">{{ suwenStatusDisplay }}</span>
+        <span class="sw-loc">@ {{ suwenPos }}</span>
+        <span v-if="suwenAccel" class="sw-hint accel">⚡念头加速中</span>
+        <span v-else-if="suwenSafe" class="sw-hint safe">✓ {{ suwenSafe }}</span>
+        <span class="sw-sus">疑心 秦 {{ susQin }} · 梦 {{ susMeng }}<i v-if="hasFreeze" title="疑心冻结中">❄</i></span>
+      </div>
+
+      <!-- 标签页：角色（含在场点）+ 网店 -->
       <nav class="tabs">
         <button
           v-for="t in tabs"
@@ -34,7 +44,6 @@
       <!-- 内容区（老楼层默认折叠，点 tab 临时展开——对标云霜凝 v2.0.31 性能优化） -->
       <div v-if="activeTab" class="content-area">
         <CharPanel v-if="activeTab === '秦璐' || activeTab === '苏梦'" :key="activeTab" :name="activeTab" />
-        <SuwenPanel v-else-if="activeTab === '苏文'" />
         <ShopPanel v-else-if="activeTab === '网店'" />
       </div>
 
@@ -48,7 +57,6 @@ import { useLocalStorage } from '@vueuse/core';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import CharPanel from './components/CharPanel.vue';
 import ShopPanel from './components/ShopPanel.vue';
-import SuwenPanel from './components/SuwenPanel.vue';
 import { useDataStore } from './store';
 
 const store = useDataStore();
@@ -62,9 +70,36 @@ const presence = computed(
 const tabs = computed(() => [
   { id: '秦璐' as const, label: '秦璐', presence: presence.value.秦璐 },
   { id: '苏梦' as const, label: '苏梦', presence: presence.value.苏梦 },
-  { id: '苏文' as const, label: '苏文', presence: undefined },
   { id: '网店' as const, label: '网店', presence: undefined },
 ]);
+
+// ━━━ 苏文速览条 ━━━
+const suwen = computed(() => data.value?.苏文状态 ?? null);
+const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
+const suwenStatusDisplay = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? '外出' : s === '睡眠' ? '睡眠' : '在家';
+});
+const suwenStatusClass = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? 'away' : s === '睡眠' ? 'sleeping' : 'home';
+});
+const suwenAccel = computed(() => {
+  const p = suwen.value?.当前位置;
+  return p === '餐厅' || p === '客厅' || p === '主卧';
+});
+const suwenSafe = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? '安全期' : s === '睡眠' ? '熟睡中' : '';
+});
+const susQin = computed(() => suwen.value?.对秦璐疑心值 ?? 0);
+const susMeng = computed(() => suwen.value?.对苏梦疑心值 ?? 0);
+const hasFreeze = computed(() => {
+  const floor = SillyTavern.chat?.length ?? 0;
+  const fq = suwen.value?.对秦璐疑心值冻结;
+  const fm = suwen.value?.对苏梦疑心值冻结;
+  return (fq?.是否冻结 && floor < fq.冻结结束楼层) || (fm?.是否冻结 && floor < fm.冻结结束楼层);
+});
 
 // ━━━ 老楼层折叠：最新楼共享 localStorage tab；老楼独立 local tab（默认收起） ━━━
 const storedTab = useLocalStorage<string | null>('秦璐重置版:status_bar:active_tab', '秦璐');
@@ -287,6 +322,67 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   background: var(--panel);
   backdrop-filter: blur(4px);
   font-variant-numeric: tabular-nums;
+}
+
+// ━━━ 苏文速览条 ━━━
+.suwen-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--acc) 8%, transparent);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 11px;
+  color: color-mix(in srgb, var(--acc) 50%, #998);
+}
+.sw-name {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--acc) 70%, #ba9);
+  letter-spacing: 1px;
+}
+.sw-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 8px;
+  border-radius: 9px;
+
+  &.home {
+    color: #e06868;
+    background: rgba(224, 104, 104, 0.14);
+  }
+  &.away {
+    color: #79c48a;
+    background: rgba(121, 196, 138, 0.14);
+  }
+  &.sleeping {
+    color: #6fb9dc;
+    background: rgba(111, 185, 220, 0.14);
+  }
+}
+.sw-loc {
+  letter-spacing: 0.5px;
+}
+.sw-hint {
+  font-size: 10px;
+
+  &.accel {
+    color: #e8a94f;
+  }
+  &.safe {
+    color: #79c48a;
+  }
+}
+.sw-sus {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+
+  i {
+    font-style: normal;
+    color: #6fb9dc;
+    margin-left: 4px;
+  }
 }
 
 // ━━━ 标签页 ━━━

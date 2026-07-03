@@ -65,22 +65,24 @@
           :class="['item-card', { selected: selected?.名称 === entry.item!.名称, on: isEquippedByTarget(entry.item!) }]"
           @click="selected = entry.item!"
         >
-          <div class="card-main">
+          <div class="card-top">
             <span class="card-name">{{ entry.item!.名称 }}</span>
+            <span class="card-price">◈{{ entry.item!.价格 }}</span>
+          </div>
+          <div class="card-bot">
             <span v-if="entry.item!.分类 === '装备'" class="owners">
               <span v-if="ownerState('秦璐状态', entry.item!.名称)" :class="['owner', { using: ownerState('秦璐状态', entry.item!.名称) === '装备中' }]">秦</span>
               <span v-if="ownerState('苏梦状态', entry.item!.名称)" :class="['owner', 'meng', { using: ownerState('苏梦状态', entry.item!.名称) === '装备中' }]">梦</span>
             </span>
-            <span class="card-price">◈{{ entry.item!.价格 }}</span>
+            <button
+              type="button"
+              :class="['card-btn', itemUi(entry.item!).kind]"
+              :disabled="itemUi(entry.item!).disabled"
+              @click.stop="shopAction(entry.item!)"
+            >
+              {{ itemUi(entry.item!).label }}
+            </button>
           </div>
-          <button
-            type="button"
-            :class="['card-btn', itemUi(entry.item!).kind]"
-            :disabled="itemUi(entry.item!).disabled"
-            @click.stop="shopAction(entry.item!)"
-          >
-            {{ itemUi(entry.item!).label }}
-          </button>
         </div>
       </template>
     </div>
@@ -366,17 +368,25 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   padding: 8px 0;
 }
 
-// ━━━ 列表 ━━━
+// ━━━ 列表：双列网格 + 固定最小高度（切类目不跳高） ━━━
 .item-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+  align-content: start;
+  min-height: 210px;
+}
+@media (min-width: 640px) {
+  .item-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .group-header {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
 
   .group-label {
     font-size: 10.5px;
@@ -391,9 +401,9 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
 }
 .item-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 9px;
   border-radius: 8px;
   border: 1px solid transparent;
   border-left: 2px solid transparent;
@@ -412,15 +422,20 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     background: color-mix(in srgb, var(--acc) 7%, rgba(0, 0, 0, 0.24));
   }
 }
-.card-main {
-  flex: 1;
+.card-top {
   display: flex;
   align-items: center;
   gap: 7px;
   min-width: 0;
 }
+.card-bot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .card-name {
-  font-size: 12.5px;
+  flex: 1;
+  font-size: 12px;
   font-weight: 700;
   color: #e0d8ca;
   white-space: nowrap;
@@ -454,16 +469,15 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   }
 }
 .card-price {
-  margin-left: auto;
   flex: none;
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--acc);
   font-variant-numeric: tabular-nums;
 }
 .card-btn {
-  flex: none;
-  min-width: 62px;
-  padding: 5px 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
   border-radius: 7px;
   border: 1px solid color-mix(in srgb, var(--acc) 50%, transparent);
   background: transparent;
