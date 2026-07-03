@@ -243,7 +243,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     风险: 0,
     越级钥匙: false,
     价格: 800,
-    简介: '每楼植入上限 3 → 4',
+    简介: '每名角色培育槽 3 → 4',
   },
   {
     名称: '精确植入',
@@ -406,8 +406,8 @@ export function buyPrivilege(data: SchemaType, name: string): string | null {
   return null;
 }
 
-/** 每楼植入上限（基础3 + 植入扩容特权） */
-export function getImplantLimit(data: { 系统: { 道具状态: Record<string, string> } }): number {
+/** 每名角色培育槽上限（基础3 + 植入扩容特权；判定中+培育中计槽） */
+export function getCultivationSlots(data: { 系统: { 道具状态: Record<string, string> } }): number {
   return 3 + (data.系统.道具状态['植入扩容'] === '已购买' ? 1 : 0);
 }
 
