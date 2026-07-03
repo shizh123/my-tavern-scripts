@@ -75,7 +75,13 @@
         },
         "当前情绪": {
           "default": "平静",
-          "type": "string"
+          "description": "AI 每轮更新",
+          "$ref": "#/$defs/__schema18"
+        },
+        "当前心理想法": {
+          "default": "家里最近挺平静的，璐璐把家里打理得很好，孩子们也懂事。",
+          "description": "60-100字第一人称内心独白，AI 每轮更新",
+          "$ref": "#/$defs/__schema19"
         },
         "对秦璐疑心值": {
           "type": "number"
@@ -85,11 +91,11 @@
         },
         "对秦璐疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema18"
+          "$ref": "#/$defs/__schema20"
         },
         "对苏梦疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema18"
+          "$ref": "#/$defs/__schema20"
         }
       }
     },
@@ -641,6 +647,12 @@
       "type": "number"
     },
     "__schema18": {
+      "type": "string"
+    },
+    "__schema19": {
+      "type": "string"
+    },
+    "__schema20": {
       "type": "object",
       "properties": {
         "是否冻结": {
@@ -654,11 +666,11 @@
         "冻结结束楼层": {
           "default": -1,
           "description": "当前楼层 >= 此值则解冻",
-          "$ref": "#/$defs/__schema19"
+          "$ref": "#/$defs/__schema21"
         }
       }
     },
-    "__schema19": {
+    "__schema21": {
       "type": "number"
     }
   }

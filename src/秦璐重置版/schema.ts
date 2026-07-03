@@ -209,7 +209,12 @@ const SuwenState = z.object({
   /** 当前状态/位置：由脚本按楼层黑盒作息游标算出（见 苏文系统.md §四） */
   当前状态: SuwenStatus.default('在家'),
   当前位置: Location.default('客厅').describe('脚本按楼层作息算出，AI 不要改'),
-  当前情绪: z.string().default('平静'),
+  当前情绪: z.string().default('平静').describe('AI 每轮更新'),
+  /** 心理活动（v0.19）：被瞒在鼓里的丈夫视角，AI 每轮更新（不论在不在场，维持心理轨迹） */
+  当前心理想法: z
+    .string()
+    .default('家里最近挺平静的，璐璐把家里打理得很好，孩子们也懂事。')
+    .describe('60-100字第一人称内心独白，AI 每轮更新'),
 
   // 疑心值（保留，玩家可用道具降；完整规则测试中再设计）
   对秦璐疑心值: z.coerce

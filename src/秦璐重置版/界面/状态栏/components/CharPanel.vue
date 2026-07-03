@@ -67,6 +67,28 @@
       </div>
       <p v-if="implantMsg" :class="['msg', implantMsgType]">{{ implantMsg }}</p>
     </section>
+
+    <!-- 苏文（重要配角：状态 + 心理活动 + 对本页角色的疑心） -->
+    <section class="card">
+      <h3>
+        苏文 <span :class="['chip', suwenStatusClass]">{{ suwenStatusDisplay }}</span>
+      </h3>
+      <div class="sw-meta">
+        <span>📍 {{ suwenPos }}</span>
+        <span class="sw-emo">{{ suwen?.当前情绪 ?? '平静' }}</span>
+      </div>
+      <blockquote v-if="suwen?.当前心理想法" class="inner-voice sw-voice">{{ suwen.当前心理想法 }}</blockquote>
+      <div class="bar">
+        <span class="bl">疑心</span>
+        <div class="track">
+          <i :class="['fill', suspicion > 70 ? 'f-danger' : 'f-warn']" :style="{ width: suspicion + '%' }"></i>
+        </div>
+        <span class="bv">{{ suspicion }}</span>
+      </div>
+      <p v-if="isAccelerating" class="note warn">⚡ 苏文在附近 · 念头加速中</p>
+      <p v-else-if="suwenSafeReason" class="note safe">✓ {{ suwenSafeReason }}</p>
+      <p v-if="freezeUntil > 0" class="note freeze">❄ 对{{ name }}的疑心冻结中（至 {{ freezeUntil }} 楼）</p>
+    </section>
     </div>
 
     <div class="col">
@@ -155,6 +177,34 @@ const slotLimit = computed(() => (data.value ? getCultivationSlots(data.value as
 const slotsUsed = computed(() => (data.value ? countActiveThoughts(data.value as any, charKey.value) : 0));
 
 const equippedNames = computed(() => (data.value ? getEquippedNames(data.value as any, charKey.value) : []));
+
+// ━━━ 苏文卡（对本页角色视角） ━━━
+const suwen = computed(() => data.value?.苏文状态 ?? null);
+const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
+const suwenStatusDisplay = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? '外出工作' : s === '睡眠' ? '睡眠中' : '在家';
+});
+const suwenStatusClass = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? 'away' : s === '睡眠' ? 'sleeping' : 'home';
+});
+const suwenSafeReason = computed(() => {
+  const s = suwen.value?.当前状态 ?? '在家';
+  return s === '外出' ? '苏文外出，可安心进行' : s === '睡眠' ? '苏文熟睡，相对安全' : '';
+});
+const isAccelerating = computed(() => {
+  const p = suwen.value?.当前位置;
+  return p === '餐厅' || p === '客厅' || p === '主卧';
+});
+const suspicion = computed(() =>
+  props.name === '秦璐' ? suwen.value?.对秦璐疑心值 ?? 0 : suwen.value?.对苏梦疑心值 ?? 0,
+);
+const freezeUntil = computed(() => {
+  const f = props.name === '秦璐' ? suwen.value?.对秦璐疑心值冻结 : suwen.value?.对苏梦疑心值冻结;
+  const floor = SillyTavern.chat?.length ?? 0;
+  return f?.是否冻结 && floor < f.冻结结束楼层 ? f.冻结结束楼层 : 0;
+});
 
 const thoughtList = computed(() => {
   const thoughts = data.value?.[charKey.value]?.念头列表 ?? {};
@@ -704,6 +754,78 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     color: $warn;
     background: rgba(232, 169, 79, 0.09);
     border-left: 2px solid $warn;
+  }
+  &.safe {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.08);
+    border-left: 2px solid $safe;
+  }
+  &.freeze {
+    color: $info;
+    background: rgba(111, 185, 220, 0.09);
+    border-left: 2px solid $info;
+  }
+}
+
+// ━━━ 苏文卡 ━━━
+.chip {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 10px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+
+  &.home {
+    color: $danger;
+    background: rgba(224, 104, 104, 0.14);
+  }
+  &.away {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.14);
+  }
+  &.sleeping {
+    color: $info;
+    background: rgba(111, 185, 220, 0.14);
+  }
+}
+.sw-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: color-mix(in srgb, var(--acc) 55%, #998);
+  margin-bottom: 8px;
+
+  .sw-emo {
+    font-size: 11px;
+    padding: 1px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.25);
+    color: #cfc6b8;
+  }
+}
+.sw-voice {
+  margin-bottom: 9px;
+  border-left-color: color-mix(in srgb, var(--acc) 30%, #778);
+  color: #b3aa9c;
+}
+.f-warn {
+  background: linear-gradient(90deg, #c98f3d, $warn);
+}
+.f-danger {
+  background: linear-gradient(90deg, #b34848, $danger);
+  animation: sus-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sus-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(224, 104, 104, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(224, 104, 104, 0.85);
   }
 }
 
