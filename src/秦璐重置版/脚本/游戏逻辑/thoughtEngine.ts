@@ -52,6 +52,26 @@ const FLOORS_BY_DIFFICULTY = {
 /** 保留楼数上限：培育中/未达标念头超过 植入楼层+此值 仍未成熟 → 已过期 */
 const RETENTION_FLOORS = 30;
 
+/** 每楼（两次 AI 回复之间）最多植入的念头数，秦璐+苏梦合计 */
+export const MAX_IMPLANTS_PER_FLOOR = 3;
+
+/**
+ * 统计当前楼层已植入的念头数（两位角色合计）
+ * 依据念头的 植入楼层 === 当前楼层；AI 回复后楼层推进，额度自动刷新
+ */
+export function countImplantsAtFloor(
+  data: { 秦璐状态: { 念头列表: Record<string, { 植入楼层: number }> }; 苏梦状态: { 念头列表: Record<string, { 植入楼层: number }> } },
+  currentFloor: number,
+): number {
+  let count = 0;
+  for (const key of ['秦璐状态', '苏梦状态'] as const) {
+    for (const t of Object.values(data[key]?.念头列表 ?? {})) {
+      if (t.植入楼层 === currentFloor) count++;
+    }
+  }
+  return count;
+}
+
 /** 心防松动窗口：楼层 % 10 <= 3 即处于窗口（10-13楼、20-23楼…） */
 export function isInVulnerableWindow(currentFloor: number): boolean {
   return currentFloor % 10 <= 3;
@@ -102,13 +122,18 @@ function getEffectiveStage(data: SchemaType, characterKey: '秦璐状态' | '苏
 /**
  * 植入念头（前端调用入口）
  * 乐观植入：立即收下，状态=判定中，分配 ID
+ * 每楼上限 MAX_IMPLANTS_PER_FLOOR 条（两角色合计），超限返回 null
  */
 export function implantThought(
   data: SchemaType,
   characterKey: '秦璐状态' | '苏梦状态',
   content: string,
   currentFloor: number,
-): string {
+): string | null {
+  if (countImplantsAtFloor(data, currentFloor) >= MAX_IMPLANTS_PER_FLOOR) {
+    console.warn(`[念头植入] 本楼已植入${MAX_IMPLANTS_PER_FLOOR}条念头，拒绝："${content}"`);
+    return null;
+  }
   const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const thought = {
     内容: content,

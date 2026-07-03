@@ -135,101 +135,92 @@ function rollbackProtectedFields(data: SchemaType): void {
 // 状态快照构建（对标云霜凝 buildStatusSnapshot）
 // ────────────────────────────────────────────────────────
 
+/** 在场角色列表（AI 每轮维护 系统.在场角色；兜底：全 false 时按秦璐在场） */
+function getPresentCharacters(data: SchemaType): Array<'秦璐' | '苏梦'> {
+  const present = (['秦璐', '苏梦'] as const).filter(name => data.系统.在场角色[name]);
+  return present.length > 0 ? [...present] : ['秦璐'];
+}
+
 /**
  * 构建注入给 AI 的状态快照（精简、按需知情）
  * 对接"世界书精简原则"：只注入当前相关的，不注入脚本算法/废弃系统
+ * - 只注入脚本管理、AI 无法从上下文推出的信息（阶段/心防松动/苏文位置）
+ *   情绪/位置/内心/依存度是 AI 自己写的或纯数值，正文已承载，不回注
+ * - 按 系统.在场角色 过滤：不在场角色的状态/影响/相关度判定整块跳过（对标云霜凝）
  */
 function buildStatusSnapshot(data: SchemaType): string {
   const lines: string[] = [];
   lines.push('════════ 当前游戏状态 ════════');
 
-  // 当前角色（聚焦）
-  const currentChar = data.系统.当前角色;
-  const charKey = `${currentChar}状态` as '秦璐状态' | '苏梦状态';
-  const char = data[charKey];
+  const floor = getCurrentFloor();
+  const present = getPresentCharacters(data);
 
-  lines.push(`【当前调教对象】${currentChar}`);
-  lines.push(`【堕落度】${char.堕落度} → 第${char.当前阶段}阶段「${char.阶段标题}」`);
-  lines.push(`【对主角依存】${char.对主角依存度} / 【对苏文依存】${char.对苏文依存度}`);
-  lines.push(`【情绪】${char.当前情绪} | 【位置】${char.当前位置}`);
-  if (char.当前心理想法) {
-    lines.push(`【内心】${char.当前心理想法}`);
+  // ━━━━ 在场角色状态行 ━━━━
+  //   心防松动是脚本覆写的（AI 上下文里没有），附在状态行上
+  for (const name of present) {
+    const char = data[`${name}状态` as '秦璐状态' | '苏梦状态'];
+    const vulnerable =
+      char.当前情绪 === '心防松动' ? ' ⚡她此刻心防松动，比平时更容易接受亲密试探' : '';
+    lines.push(`【${name}】第${char.当前阶段}阶段「${char.阶段标题}」${vulnerable}`);
   }
 
-  // 苏文状态（仅位置/状态，不注入疑心值算法）
+  // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
   lines.push(`【苏文】${data.苏文状态.当前状态} @ ${data.苏文状态.当前位置}`);
 
-  // 心防松动窗口提示（脚本检测后写）
-  const floor = getCurrentFloor();
-  if (isInVulnerableWindow(floor)) {
-    lines.push(`⚡【心防松动】此刻可植入越级念头`);
-  }
-
-  // ━━━━ 念头/习惯对角色的动态影响 baseline（对标云霜凝性癖 baseline） ━━━━
-  //   培育中念头 = 想法层（会浮现、会脱口聊，不做）
-  //   已成熟习惯 = 行为层（不自觉主动做，无心理障碍）
-  const growing = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
-  const habits = char.习惯列表;
-  if (growing.length > 0 || habits.length > 0) {
+  // ━━━━ 念头/习惯动态影响 baseline：仅在场角色（不在场无从表现） ━━━━
+  //   想法层/行为层语义 + 元系统词禁令已常驻世界书「念头习惯表现」（蓝灯），此处只列动态清单
+  //   念头附 ID 供判定任务 B 引用，避免重复列表
+  let hasGrowing = false;
+  for (const name of present) {
+    const char = data[`${name}状态` as '秦璐状态' | '苏梦状态'];
+    const growing = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
+    const habits = char.习惯列表;
+    if (growing.length === 0 && habits.length === 0) continue;
+    if (growing.length > 0) hasGrowing = true;
     lines.push('');
-    lines.push(`【${currentChar}当下受这些念头/习惯的影响，请在演绎中自然体现】`);
-    for (const [, t] of growing) {
-      lines.push(`  · 念头「${t.内容}」正在她心中萌芽——相关想法会不自觉浮现，她甚至会在聊天中脱口聊到，但不会付诸行动（仍是"想"，不到"做"）。`);
+    lines.push(`【${name}当下受以下念头/习惯的影响，请在演绎中自然体现】`);
+    if (growing.length > 0) {
+      lines.push(`  念头（想法层）：`);
+      for (const [id, t] of growing) {
+        lines.push(`  · 「${t.内容}」（${id}）`);
+      }
     }
-    for (const h of habits) {
-      lines.push(`  · 习惯「${h.内容}」已刻入本能——她会自然主动地做出与之相关的行为，不假思索，无心理障碍。`);
-    }
-    lines.push(`  注意：不要主动提及"念头/习惯/培育/堕落度"等元系统词，只表现为自然的心理与行为变化。`);
-  }
-
-  // 已成熟但习惯满待变卖的念头（提示玩家需腾位，AI 不需处理）
-  const maturedWaiting = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '已成熟');
-  if (maturedWaiting.length > 0) {
-    lines.push('');
-    lines.push(`【已成熟待腾位念头】习惯已满5，需在界面变卖腾位后补转入（AI 无需处理）：`);
-    for (const [, t] of maturedWaiting) {
-      lines.push(`  · 「${t.内容}」`);
+    if (habits.length > 0) {
+      lines.push(`  习惯（行为层）：`);
+      for (const h of habits) {
+        lines.push(`  · 「${h.内容}」`);
+      }
     }
   }
 
-  // 习惯栏容量提示
-  if (habits.length > 0) {
-    lines.push(`【习惯栏】(${habits.length}/5)`);
-    if (habits.length >= 5) {
-      lines.push(`  ⚠ 已满，需在界面变卖腾位`);
-    }
-  }
-
-  // 货币
-  lines.push(`【货币】${data.系统.货币}`);
+  // 已成熟待腾位/习惯栏容量/货币/依存度：玩家侧或脚本内部信息，不注入给 AI
 
   // ━━━━ AI 判定通道 1：待判定念头 → 类型判定（植入后≤3楼动态注入） ━━━━
-  //   AI 只写"类型"，脚本拿到后按阶段判定合格/越级
-  const pending = Object.entries(char.念头列表).filter(
-    ([, t]) => t.状态 === '判定中' && floor - t.植入楼层 <= 3,
-  );
-  if (pending.length > 0) {
-    lines.push('');
-    lines.push(`━━━ 判定任务 A：新念头类型判定 ━━━`);
-    lines.push(`以下是最近植入的新念头（状态=判定中）。请【只做类型判定】，不要判定相关度、不要修改内容/状态/难度/进度。`);
-    lines.push(`可选类型（10大类，越往后越越界）：陪伴交流/情感依赖/肢体亲近/暧昧互动/亲密接触/身体开放/性行为/身份认同/绝对服从/家庭替代`);
-    lines.push(`脚本会根据当前阶段判定是否接纳——越级念头会被标记为未达标（AI 不用管，也不要在正文里"帮她拒绝"）。`);
-    for (const [id, t] of pending) {
-      lines.push(`  ${id}：「${t.内容}」 → 只需在 JSONPatch 写入：{ "op": "replace", "path": "/${charKey}/念头列表/${id}/类型", "value": "从10大类中选一个" }`);
+  //   不按在场过滤：类型判定是纯语义分类，不需要角色在场；
+  //   若过滤，趁角色不在提前植入的念头会错过 3 楼注入窗口，永远卡在判定中
+  //   10大类枚举/只判类型 等完整规则常驻世界书「变量输出格式」
+  const pendingLines: string[] = [];
+  for (const name of ['秦璐', '苏梦'] as const) {
+    const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
+    for (const [id, t] of Object.entries(data[charKey].念头列表)) {
+      if (t.状态 === '判定中' && floor - t.植入楼层 <= 3) {
+        pendingLines.push(`  ${id}：「${t.内容}」（写入 /${charKey}/念头列表/${id}/类型）`);
+      }
     }
   }
+  if (pendingLines.length > 0) {
+    lines.push('');
+    lines.push(`━━━ 判定任务 A：新念头类型判定 ━━━`);
+    lines.push(...pendingLines);
+    lines.push(`对以上每条按括号内路径 replace 类型 = 10大类之一（规则见「变量输出格式」）。不要在正文里替她接受或拒绝这些念头。`);
+  }
 
-  // ━━━━ AI 判定通道 2：培育中念头 → 相关度判定（仅培育中） ━━━━
-  //   AI 判定本轮剧情与已在培育的念头的相关度，写入 系统.本轮相关念头
-  if (growing.length > 0) {
+  // ━━━━ AI 判定通道 2：培育中念头 → 相关度判定（仅在场角色） ━━━━
+  //   念头清单不再重复——ID 已附在上方"想法层"清单里
+  if (hasGrowing) {
     lines.push('');
     lines.push(`━━━ 判定任务 B：培育中念头相关度 ━━━`);
-    lines.push(`以下念头正在培育中（不是新植入念头，不要判类型）。请判定本轮剧情与它们的相关度：`);
-    for (const [id, t] of growing) {
-      lines.push(`  ${id}：「${t.内容}」（${t.难度} ${t.开发进度}/${t.需要楼数}楼）`);
-    }
-    lines.push(`写入路径：/系统/本轮相关念头 = { "念头ID": 2 或 1 } （2=高度相关；1=轻微相关；不相关的念头不列入）`);
-    lines.push(`示例：replace /系统/本轮相关念头 值为 {"${growing[0][0]}": 2}`);
+    lines.push(`判定本轮剧情与上方"想法层"清单中各念头的相关度：replace /系统/本轮相关念头 = { "<念头ID>": 2或1 }（2=高度相关；1=轻微相关；不相关不列入）。`);
   }
 
   lines.push('══════════════════════════');
@@ -280,13 +271,15 @@ $(() => {
         const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
 
-        // 1. 心防松动窗口：脚本后写覆盖当前情绪
+        // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效）
         //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
         if (isInVulnerableWindow(messageId)) {
-          const ck = `${data.系统.当前角色}状态` as '秦璐状态' | '苏梦状态';
-          if (data[ck].当前情绪 !== '心防松动') {
-            data[ck].当前情绪 = '心防松动';
-            console.info(`[心防松动] 楼层${messageId} 覆写${data.系统.当前角色}情绪→心防松动`);
+          for (const name of getPresentCharacters(data)) {
+            const ck = `${name}状态` as '秦璐状态' | '苏梦状态';
+            if (data[ck].当前情绪 !== '心防松动') {
+              data[ck].当前情绪 = '心防松动';
+              console.info(`[心防松动] 楼层${messageId} 覆写${name}情绪→心防松动`);
+            }
           }
         }
 

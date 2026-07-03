@@ -250,8 +250,21 @@ const SystemState = z.object({
   /** 道具状态（云霜凝同款 Record） */
   道具状态: z.record(z.string(), z.enum(['未购买', '已购买', '使用中'])).prefault({}),
 
-  /** 当前操作对象（界面/注入聚焦） */
+  /** @deprecated 已由 在场角色 取代（快照不再读它），保留兼容旧存档 */
   当前角色: z.enum(['秦璐', '苏梦']).default('秦璐'),
+
+  /**
+   * 在场角色（对标云霜凝 _当前场景角色）
+   * AI 每轮维护：进场写 true / 离场写 false / 每轮复核
+   * 驱动快照注入过滤：不在场角色的状态/念头影响/相关度判定整块跳过
+   * 脚本兜底：两者皆 false 时按秦璐在场处理
+   */
+  在场角色: z
+    .object({
+      秦璐: z.boolean().default(true),
+      苏梦: z.boolean().default(false),
+    })
+    .prefault({}),
 
   /** 念头植入日志（解决 ROLL 后注入丢失） */
   念头植入日志: z.array(ThoughtImplantLog).default([]),

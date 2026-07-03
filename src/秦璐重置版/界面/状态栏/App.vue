@@ -1,226 +1,170 @@
 <template>
-  <div :class="['mystic-container', 'th-stage-' + (char?.当前阶段 ?? 1)]">
-    <div class="bg-pattern"></div>
-    <div class="bg-glow"></div>
-    <div class="main-panel">
-      <div class="panel-decor top"></div>
-
-      <!-- 头部 -->
-      <header class="header">
-        <div class="world-info">
-          <span class="info-item"><i>📅</i>{{ safeWorld.日期 || '——' }}</span>
-          <span class="divider">✦</span>
-          <span class="info-item"><i>🕐</i>{{ safeWorld.时间 || '——' }}</span>
-          <span class="divider">✦</span>
-          <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
+  <div :class="['ql-root', 'th-stage-' + (char?.当前阶段 ?? 1)]">
+    <div class="panel">
+      <!-- 顶栏：世界信息 + 货币 -->
+      <header class="topbar">
+        <div class="world">
+          <span>{{ safeWorld.日期 || '——' }}</span>
+          <i class="sep"></i>
+          <span>{{ safeWorld.时间 || '——' }}</span>
+          <i class="sep"></i>
+          <span>{{ safeWorld.地点 || '——' }}</span>
         </div>
+        <div class="coin" title="货币">◈ {{ data?.系统?.货币 ?? 0 }}</div>
       </header>
 
-      <!-- 角色切换 -->
-      <nav class="char-tabs">
-        <div
-          v-for="c in ['秦璐', '苏梦']"
+      <!-- 角色切换（含在场标记） -->
+      <nav class="tabs">
+        <button
+          v-for="c in charNames"
           :key="c"
-          :class="['tab-item', { active: activeCharacter === c }]"
+          type="button"
+          :class="['tab', { active: activeCharacter === c }]"
           @click="selectCharacter(c)"
         >
-          <span class="char-name">{{ c }}</span>
-          <span class="char-role">{{ c === '秦璐' ? '母亲' : '姐姐' }}</span>
-        </div>
+          <span :class="['presence', { on: presence[c] }]"></span>
+          <span class="nm">{{ c }}</span>
+          <span class="rl">{{ c === '秦璐' ? '母亲' : '姐姐' }}</span>
+        </button>
       </nav>
 
-      <!-- 念头植入 -->
-      <section class="implant-control">
-        <div class="control-header">
-          <span class="decor-line"></span>
-          <span class="title">✦ 念头植入 ✦</span>
-          <span class="decor-line"></span>
-        </div>
-        <div class="input-group">
-          <div class="target-hint">
-            植入对象：<strong>{{ activeCharacter }}</strong>
+      <!-- 阶段 · 情绪 · 三维 -->
+      <section class="hero">
+        <div class="hero-top">
+          <div class="stage">
+            <span class="stage-no">{{ char?.当前阶段 ?? 1 }}</span>
+            <div class="stage-meta">
+              <b class="stage-title">{{ char?.阶段标题 ?? '抵抗' }}</b>
+              <small>第{{ char?.当前阶段 ?? 1 }}阶段 · {{ presence[activeCharacter] ? '在场' : '不在场' }}</small>
+            </div>
           </div>
-          <div class="input-wrapper">
-            <input
-              v-model="thoughtContent"
-              type="text"
-              :maxlength="MAX_LEN"
-              :placeholder="`简短念头（${MAX_LEN}字内）...`"
-              @keyup.enter="implantThought"
-            />
-            <span class="char-count" :class="{ 'at-limit': thoughtContent.length >= MAX_LEN }">
-              {{ thoughtContent.length }}/{{ MAX_LEN }}
-            </span>
-            <button class="submit-btn" :disabled="!thoughtContent.trim()" @click="implantThought">
-              <span>植入</span>
-            </button>
-          </div>
-          <div v-if="implantMsg" :class="['implant-msg', implantMsgType]">{{ implantMsg }}</div>
+          <span :class="['emotion', { vuln: isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
         </div>
+
+        <div class="bars">
+          <div class="bar">
+            <span class="bl">堕落</span>
+            <div class="track"><i class="fill f-corrupt" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></i></div>
+            <span class="bv">{{ char?.堕落度 ?? 0 }}</span>
+          </div>
+          <div class="bar">
+            <span class="bl">{{ activeCharacter === '秦璐' ? '儿子' : '弟弟' }}</span>
+            <div class="track">
+              <i class="fill f-user" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></i>
+            </div>
+            <span class="bv">{{ char?.对主角依存度 ?? 0 }}</span>
+          </div>
+          <div class="bar">
+            <span class="bl">{{ activeCharacter === '秦璐' ? '丈夫' : '爸爸' }}</span>
+            <div class="track">
+              <i class="fill f-suwen" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></i>
+            </div>
+            <span class="bv">{{ char?.对苏文依存度 ?? 0 }}</span>
+          </div>
+        </div>
+
+        <div v-if="isVulnerable" class="vuln-banner"><i>⚡</i> 心防松动 · 此刻可植入越级念头</div>
+
+        <blockquote v-if="char?.当前心理想法" class="inner-voice">{{ char.当前心理想法 }}</blockquote>
+        <div v-if="char?.气质描述" class="aura">— {{ char.气质描述 }}</div>
       </section>
 
-      <!-- 状态展示 -->
-      <main class="status-display">
-        <!-- 左：数值 + 苏文 -->
-        <div class="col-left">
-          <!-- 阶段圆环 -->
-          <div class="stage-card">
-            <div class="stage-ring">
-              <svg viewBox="0 0 36 36" class="circular-chart">
-                <path
-                  class="circle-bg"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  class="circle"
-                  :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div class="stage-text">
-                <span class="label">阶段</span>
-                <span class="value">{{ char?.阶段标题 ?? '初始' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 三维数值 -->
-          <div class="stats-group">
-            <div class="stat-item">
-              <div class="stat-header">
-                <span class="name">🔥 堕落度</span>
-                <span class="num">{{ char?.堕落度 ?? 0 }}</span>
-              </div>
-              <div class="progress-track">
-                <div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-header">
-                <span class="name">💕 {{ activeCharacter === '秦璐' ? '儿子依存' : '弟弟依存' }}</span>
-                <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
-              </div>
-              <div class="progress-track">
-                <div
-                  class="progress-bar stat-desire"
-                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
-                ></div>
-              </div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-header">
-                <span class="name">💔 {{ activeCharacter === '秦璐' ? '丈夫依存' : '爸爸依存' }}</span>
-                <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
-              </div>
-              <div class="progress-track">
-                <div
-                  class="progress-bar stat-husband"
-                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 苏文状态 -->
-          <div class="suwen-card">
-            <div class="suwen-header">
-              <span class="name">苏文</span>
-              <span :class="['status-tag', suwenStatusClass]">{{ suwenStatusDisplay }}</span>
-            </div>
-            <div class="suwen-location">📍 {{ suwenPos }}</div>
-            <div class="suspicion-row">
-              <span class="label">疑心</span>
-              <div class="suspicion-track">
-                <div :class="['suspicion-fill', { danger: suspicion > 70 }]" :style="{ width: suspicion + '%' }"></div>
-              </div>
-              <span class="val">{{ suspicion }}</span>
-            </div>
-            <div v-if="isAccelerating" class="accel-hint">⚡ 苏文在附近 · 念头加速中</div>
-            <div v-else-if="suwenSafeReason" class="safe-indicator">
-              <span class="safe-icon">✓</span><span>{{ suwenSafeReason }}</span>
-            </div>
-          </div>
-
-          <!-- 货币 -->
-          <div class="currency-card">
-            <span class="label">💰 货币</span>
-            <span class="val">{{ data?.系统?.货币 ?? 0 }}</span>
-          </div>
+      <!-- 念头植入 -->
+      <section class="implant">
+        <div class="implant-head">
+          <span class="ttl">念头植入</span>
+          <span class="target">→ {{ activeCharacter }}</span>
+          <span class="quota" :title="`本轮已植入 ${quotaUsed}/${MAX_IMPLANTS_PER_FLOOR}`">
+            <i v-for="n in MAX_IMPLANTS_PER_FLOOR" :key="n" :class="{ used: n <= quotaUsed }"></i>
+          </span>
         </div>
+        <div class="implant-row">
+          <input
+            v-model="thoughtContent"
+            type="text"
+            :maxlength="MAX_LEN"
+            :placeholder="`简短念头（${MAX_LEN}字内）…`"
+            @keyup.enter="implantThought"
+          />
+          <span :class="['count', { max: thoughtContent.length >= MAX_LEN }]"
+            >{{ thoughtContent.length }}/{{ MAX_LEN }}</span
+          >
+          <button class="go" :disabled="!thoughtContent.trim()" @click="implantThought">植入</button>
+        </div>
+        <p v-if="implantMsg" :class="['msg', implantMsgType]">{{ implantMsg }}</p>
+      </section>
 
-        <!-- 右：详情 -->
-        <div class="col-right">
-          <!-- 心境 -->
-          <div class="detail-card">
-            <div class="section-title"><span class="st-mark">✦</span> 心境</div>
-            <div class="emotion-row">
-              <span class="label">情绪</span>
-              <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
+      <!-- 列表区 -->
+      <main class="grid">
+        <!-- 念头 -->
+        <section class="card">
+          <h3>念头 <em>{{ thoughtList.length }}</em></h3>
+          <p v-if="thoughtList.length === 0" class="empty">尚无念头，去种下第一颗种子</p>
+          <div v-for="t in thoughtList" :key="t.id" class="thought">
+            <div class="t-head">
+              <span :class="['state', thoughtStatusClass(t.状态)]">{{ t.状态 }}</span>
+              <span class="t-type">{{ t.类型 }}</span>
+              <span v-if="t.难度 && t.难度 !== '待定'" class="t-diff">{{ t.难度 }}</span>
             </div>
-            <div v-if="isVulnerable" class="vulnerable-hint"><span class="vh-icon">⚡</span><span>心防松动 · 可植入越级念头</span></div>
-            <div class="thought-bubble" v-if="char?.当前心理想法">「 {{ char.当前心理想法 }} 」</div>
-            <div class="temperament" v-if="char?.气质描述">— {{ char.气质描述 }}</div>
-          </div>
-
-          <!-- 念头列表 -->
-          <div class="detail-card">
-            <div class="section-title">
-              <span class="st-mark">✦</span> 念头 <span class="count">({{ thoughtList.length }})</span>
+            <div class="t-body">{{ t.内容 }}</div>
+            <div v-if="t.状态 === '培育中'" class="t-prog">
+              <div class="track"><i class="fill f-grow" :style="{ width: thoughtProgressPercent(t) + '%' }"></i></div>
+              <span class="pv">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}</span>
             </div>
-            <div v-if="thoughtList.length === 0" class="empty">暂无念头</div>
-            <div v-for="t in thoughtList" :key="t.id" class="thought-item">
-              <div class="thought-head">
-                <span :class="['status-tag', thoughtStatusClass(t.状态)]">{{ t.状态 }}</span>
-                <span class="thought-type">{{ t.类型 }}</span>
-                <span v-if="t.难度 && t.难度 !== '待定'" class="thought-diff">{{ t.难度 }}</span>
-              </div>
-              <div class="thought-content">{{ t.内容 }}</div>
-              <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track">
-                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
-                </div>
-                <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
-              </div>
-              <div v-if="t.状态 === '未达标'" class="thought-reject">
-                <span>她还接受不了，需先推进关系</span>
-                <button class="mini-btn" @click="discardThought(t.id)">退回</button>
-              </div>
+            <div v-if="t.状态 === '未达标'" class="t-reject">
+              <span>她还接受不了，需先推进关系</span>
+              <button class="ghost" @click="discardThought(t.id)">退回</button>
             </div>
           </div>
+        </section>
 
+        <div class="col">
           <!-- 习惯 -->
-          <div class="detail-card">
-            <div class="section-title">
-              <span class="st-mark">✦</span> 习惯 <span class="count">({{ habitList.length }}/5)</span>
+          <section class="card">
+            <h3>习惯 <em>{{ habitList.length }}/5</em></h3>
+            <p v-if="habitList.length === 0" class="empty">暂无习惯</p>
+            <div v-for="(h, i) in habitList" :key="i" class="habit">
+              <span class="h-text">{{ h.内容 }}</span>
+              <button v-if="habitList.length >= 5" class="ghost gold" @click="sellHabit(i)">出售 +100</button>
             </div>
-            <div v-if="habitList.length === 0" class="empty">暂无习惯</div>
-            <div v-for="(h, i) in habitList" :key="i" class="habit-item">
-              <span class="habit-text">{{ h.内容 }}</span>
-              <button v-if="habitList.length >= 5" class="sell-btn" @click="sellHabit(i)">出售+100</button>
-            </div>
-            <div v-if="habitList.length >= 5" class="habit-full-tip">⚠ 习惯已满，出售腾位后可接纳新习惯</div>
-          </div>
+            <p v-if="habitList.length >= 5" class="note warn">习惯已满，出售腾位后可接纳新习惯</p>
+          </section>
 
-          <!-- 仪容（外观，后续接道具系统） -->
-          <div class="detail-card">
-            <div class="section-title"><span class="st-mark">✦</span> 仪容</div>
-            <div class="attire-tags">
-              <span class="mini-tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
-              <span class="mini-tag outline">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
+          <!-- 苏文 -->
+          <section class="card">
+            <h3>
+              苏文 <span :class="['chip', suwenStatusClass]">{{ suwenStatusDisplay }}</span>
+            </h3>
+            <div class="s-loc">📍 {{ suwenPos }}</div>
+            <div class="bar">
+              <span class="bl">疑心</span>
+              <div class="track">
+                <i :class="['fill', suspicion > 70 ? 'f-danger' : 'f-warn']" :style="{ width: suspicion + '%' }"></i>
+              </div>
+              <span class="bv">{{ suspicion }}</span>
             </div>
-            <div class="clothing-list">
-              <span class="clothing-item"><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '米色针织开衫' }}</span>
-              <span class="clothing-item"><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '深灰长裙' }}</span>
-              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '肉色棉质文胸' }}</span>
-              <span class="clothing-item"><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '棉质内裤' }}</span>
-              <span class="clothing-item"><span class="cl">袜</span>{{ char?.服装细节?.袜裤 ?? '肉色丝袜' }}</span>
+            <p v-if="isAccelerating" class="note warn">⚡ 苏文在附近 · 念头加速中</p>
+            <p v-else-if="suwenSafeReason" class="note safe">✓ {{ suwenSafeReason }}</p>
+          </section>
+
+          <!-- 仪容 -->
+          <section class="card">
+            <h3>仪容</h3>
+            <div class="tags">
+              <span class="tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
+              <span class="tag line">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
+              <span class="tag line">{{ char?.妆容细节?.浓淡程度 ?? '淡妆' }}</span>
             </div>
-            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '清新自然' }}</div>
-          </div>
+            <dl class="attire">
+              <div><dt>上装</dt><dd>{{ char?.服装细节?.上装 ?? '—' }}</dd></div>
+              <div><dt>下装</dt><dd>{{ char?.服装细节?.下装 ?? '—' }}</dd></div>
+              <div><dt>内衣</dt><dd>{{ char?.服装细节?.内衣?.上 ?? '—' }}</dd></div>
+              <div><dt>内裤</dt><dd>{{ char?.服装细节?.内衣?.下 ?? '—' }}</dd></div>
+              <div><dt>袜</dt><dd>{{ char?.服装细节?.袜裤 ?? '—' }}</dd></div>
+            </dl>
+          </section>
         </div>
       </main>
-
-      <div class="panel-decor bottom"></div>
     </div>
   </div>
 </template>
@@ -228,10 +172,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
+import { MAX_IMPLANTS_PER_FLOOR, countImplantsAtFloor } from '../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from './store';
 
 const MAX_LEN = 10;
 const VULNERABLE_EMOTION = '心防松动';
+const charNames = ['秦璐', '苏梦'] as const;
 
 // 用 defineMvuDataStore：每个楼层 iframe 显示自己那一楼的变量（对标云霜凝）
 // 修好"旧楼层显示新状态"的 bug
@@ -258,6 +204,18 @@ const char = computed(() => {
 });
 
 const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '' });
+
+/** 在场角色（AI 每轮维护；旧存档无此字段时按默认兜底） */
+const presence = computed(
+  () => data.value?.系统?.在场角色 ?? ({ 秦璐: true, 苏梦: false } as Record<'秦璐' | '苏梦', boolean>),
+);
+
+/** 本楼已用植入额度（两角色合计，上限 MAX_IMPLANTS_PER_FLOOR） */
+const quotaUsed = computed(() => {
+  const d = data.value;
+  if (!d) return 0;
+  return countImplantsAtFloor(d as any, SillyTavern.chat?.length ?? 0);
+});
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -325,6 +283,13 @@ async function implantThought() {
       showMsg('变量未初始化，请先发一条消息让 AI 回复后再植入', 'warn');
       return;
     }
+    // 每楼植入上限：秦璐+苏梦合计最多 3 条，AI 回复后额度刷新
+    const floorNow = SillyTavern.chat?.length ?? 0;
+    const implanted = countImplantsAtFloor(d, floorNow);
+    if (implanted >= MAX_IMPLANTS_PER_FLOOR) {
+      showMsg(`本轮已植入${MAX_IMPLANTS_PER_FLOOR}条念头，等她回应后再继续`, 'warn');
+      return;
+    }
     const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     if (!d[key].念头列表) d[key].念头列表 = {};
     d[key].念头列表[id] = {
@@ -334,11 +299,11 @@ async function implantThought() {
       难度: '待定',
       需要楼数: 0,
       开发进度: 0,
-      植入楼层: SillyTavern.chat?.length ?? 0,
+      植入楼层: floorNow,
     };
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     thoughtContent.value = '';
-    showMsg(`已植入：${content}`, 'success');
+    showMsg(`已植入（本轮 ${implanted + 1}/${MAX_IMPLANTS_PER_FLOOR}）：${content}`, 'success');
     // store 会通过 500ms 轮询自动更新
   } catch (e) {
     console.error('[秦璐重置版] 植入失败', e);
@@ -409,364 +374,477 @@ async function sellHabit(index: number) {
 
 <style scoped lang="scss">
 // ══════════════════════════════════════════════════════════
-// 主题色彩系统：随阶段切换主题色（CSS 变量驱动）
-// 阶段1 保守居家(暗金) → 阶段5 彻底沦陷(艳粉/品红光晕)
+// 阶段主题：随堕落阶段推移，界面从暗金走向艳紫
+// 只定义 5 个变量，其余全部派生——克制是层次的前提
 // ══════════════════════════════════════════════════════════
 .th-stage-1 {
-  --pri: #c9a84c; // 暗金
-  --sec: #8a7026;
-  --acc: #f0d060;
-  --bg1: #100c08;
-  --bg2: #1c1410;
-  --glow: rgba(212, 175, 55, 0.25);
-  --glow-soft: rgba(240, 208, 96, 0.12);
+  --acc: #d2b273; // 暗金 · 保守居家
+  --acc2: #9a7f42;
+  --bg: #131009;
+  --panel: rgba(255, 252, 240, 0.035);
+  --line: rgba(210, 178, 115, 0.16);
 }
 .th-stage-2 {
-  --pri: #b888d8; // 动摇紫
-  --sec: #7a5a9a;
-  --acc: #d8a8f0;
-  --bg1: #120a18;
-  --bg2: #1d1228;
-  --glow: rgba(184, 136, 216, 0.28);
-  --glow-soft: rgba(216, 168, 240, 0.14);
+  --acc: #c39be0; // 动摇紫
+  --acc2: #8f6ab0;
+  --bg: #120d18;
+  --panel: rgba(246, 240, 255, 0.04);
+  --line: rgba(195, 155, 224, 0.16);
 }
 .th-stage-3 {
-  --pri: #e070a0; // 沉溺粉
-  --sec: #a04070;
-  --acc: #ff9ec4;
-  --bg1: #180a14;
-  --bg2: #261220;
-  --glow: rgba(224, 112, 160, 0.32);
-  --glow-soft: rgba(255, 158, 196, 0.16);
+  --acc: #ea8fb4; // 沉溺粉
+  --acc2: #b45f84;
+  --bg: #170d13;
+  --panel: rgba(255, 240, 248, 0.04);
+  --line: rgba(234, 143, 180, 0.18);
 }
 .th-stage-4 {
-  --pri: #e0409a; // 疯狂品红
-  --sec: #a02060;
-  --acc: #ff60c0;
-  --bg1: #1a0614;
-  --bg2: #2a0a22;
-  --glow: rgba(224, 64, 154, 0.4);
-  --glow-soft: rgba(255, 96, 192, 0.2);
+  --acc: #f0559f; // 疯狂品红
+  --acc2: #b32e73;
+  --bg: #1a0a14;
+  --panel: rgba(255, 235, 246, 0.05);
+  --line: rgba(240, 85, 159, 0.2);
 }
 .th-stage-5 {
-  --pri: #c060e8; // 圆满紫蓝艳丽
-  --sec: #8040a8;
-  --acc: #ff80f0;
-  --bg1: #100818;
-  --bg2: #1c0a2c;
-  --glow: rgba(192, 96, 232, 0.42);
-  --glow-soft: rgba(255, 128, 240, 0.22);
+  --acc: #cf7bf5; // 圆满电紫
+  --acc2: #9747c9;
+  --bg: #140a1d;
+  --panel: rgba(248, 238, 255, 0.05);
+  --line: rgba(207, 123, 245, 0.2);
 }
 
-$c-red: #c54b4b;
-$c-green: #4caf50;
-$c-cyan: #4fc3f7;
-$c-orange: #ff9800;
+// 阶段无关的功能色
+$vuln: #ff6b9d; // 心防松动 · 唯一允许高调发光的颜色
+$safe: #79c48a;
+$warn: #e8a94f;
+$danger: #e06868;
+$info: #6fb9dc;
+
+$serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
 
 // ══════════════════════════════════════════════════════════
-// 容器 + 背景氛围
+// 根容器
 // ══════════════════════════════════════════════════════════
-.mystic-container {
+.ql-root {
   width: 100%;
-  position: relative;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  color: #e8e0d4;
-  font-family: 'Noto Serif SC', 'STSong', 'SimSun', serif;
-  font-size: 14px;
-  line-height: 1.55;
-  background: linear-gradient(165deg, var(--bg1) 0%, var(--bg2) 60%, var(--bg1) 100%);
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse at 12% -8%, var(--glow), transparent 55%),
-      radial-gradient(ellipse at 88% 108%, var(--glow-soft), transparent 55%),
-      radial-gradient(circle at 50% 50%, var(--glow-soft), transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-    transition: background 0.6s ease;
-  }
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(130% 80% at 88% -12%, color-mix(in srgb, var(--acc) 9%, transparent), transparent 55%),
+    radial-gradient(100% 60% at 0% 105%, color-mix(in srgb, var(--acc2) 7%, transparent), transparent 50%),
+    var(--bg);
+  color: #d9d2c7;
+  font-family: -apple-system, 'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  transition: border-color 0.5s;
 }
 
-// 羊皮纸/网格纹理：双向叠加极淡白线
-.bg-pattern {
-  position: absolute;
-  inset: 0;
-  background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255, 255, 255, 0.018) 28px, rgba(255, 255, 255, 0.018) 29px),
-    repeating-linear-gradient(90deg, transparent, transparent 28px, rgba(255, 255, 255, 0.013) 28px, rgba(255, 255, 255, 0.013) 29px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-// 第二层氛围光晕(径向斑点)
-.bg-glow {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 30%, var(--glow-soft), transparent 25%),
-    radial-gradient(circle at 75% 65%, var(--glow-soft), transparent 28%);
-  pointer-events: none;
-  z-index: 0;
-  animation: glow-drift 12s ease-in-out infinite alternate;
-}
-
-@keyframes glow-drift {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.7;
-  }
-  100% {
-    transform: translate(8px, -6px) scale(1.06);
-    opacity: 1;
-  }
-}
-
-.main-panel {
-  position: relative;
-  z-index: 1;
-  padding: 16px;
-  border: 1px solid color-mix(in srgb, var(--pri) 22%, transparent);
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.55) 100%);
-  backdrop-filter: blur(6px);
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.4),
-    0 0 40px color-mix(in srgb, var(--pri) 6%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition:
-    border-color 0.6s,
-    box-shadow 0.6s;
-}
-
-// ══════════════════════════════════════════════════════════
-// 装饰横线（带 ✦ 符号）
-// ══════════════════════════════════════════════════════════
-.panel-decor {
-  height: 2px;
-  background: linear-gradient(90deg, transparent 2%, var(--sec) 20%, var(--acc) 50%, var(--sec) 80%, transparent 98%);
-  margin: 10px 0;
-  position: relative;
-  opacity: 0.85;
-
-  &.top::before,
-  &.top::after,
-  &.bottom::before,
-  &.bottom::after {
-    content: '✦';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 10px;
-    color: var(--acc);
-    background: var(--bg1);
-    padding: 0 5px;
-    z-index: 2;
-  }
-  &.top::before,
-  &.bottom::before {
-    left: 10px;
-  }
-  &.top::after,
-  &.bottom::after {
-    right: 10px;
-  }
-
-  &.bottom {
-    background: linear-gradient(90deg, transparent 5%, color-mix(in srgb, var(--pri) 35%, transparent) 30%, color-mix(in srgb, var(--acc) 22%, transparent) 50%, color-mix(in srgb, var(--pri) 35%, transparent) 70%, transparent 95%);
-    height: 1px;
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// 头部
-// ══════════════════════════════════════════════════════════
-.header {
-  text-align: center;
-  margin-bottom: 14px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed color-mix(in srgb, var(--pri) 18%, transparent);
-}
-.world-info {
+.panel {
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  font-size: 12px;
-  color: color-mix(in srgb, var(--pri) 70%, #fff 10%);
-  letter-spacing: 0.5px;
-}
-.info-item i {
-  margin-right: 4px;
-  font-style: normal;
-  opacity: 0.85;
-}
-.divider {
-  color: var(--acc);
-  opacity: 0.4;
-  font-size: 0.7em;
-}
-// ══════════════════════════════════════════════════════════
-// 角色切换 Tabs
-// ══════════════════════════════════════════════════════════
-.char-tabs {
-  display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-bottom: 16px;
+  padding: 12px 14px 16px;
 }
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 12px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--acc), transparent);
-    opacity: 0;
-    transition: opacity 0.25s;
-  }
+// ══════════════════════════════════════════════════════════
+// 顶栏
+// ══════════════════════════════════════════════════════════
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.world {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--acc) 55%, #999);
+  letter-spacing: 0.4px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--acc) 45%, transparent);
+  flex: none;
+}
+.coin {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--acc);
+  letter-spacing: 0.5px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+// ══════════════════════════════════════════════════════════
+// 角色切换
+// ══════════════════════════════════════════════════════════
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--pri) 45%, transparent);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--acc) 40%, transparent);
   }
-
   &.active {
-    border-color: color-mix(in srgb, var(--pri) 70%, transparent);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--pri) 16%, transparent) 0%, color-mix(in srgb, var(--acc) 6%, transparent) 100%);
-    box-shadow:
-      0 0 18px color-mix(in srgb, var(--pri) 25%, transparent),
-      inset 0 0 14px color-mix(in srgb, var(--acc) 6%, transparent);
+    border-color: color-mix(in srgb, var(--acc) 55%, transparent);
+    background: linear-gradient(150deg, color-mix(in srgb, var(--acc) 13%, transparent), transparent 70%);
 
-    &::before {
-      opacity: 1;
+    .nm {
+      color: var(--acc);
     }
   }
 }
-.char-name {
-  display: block;
-  color: var(--acc);
-  font-size: 17px;
+.presence {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  flex: none;
+  transition: background 0.3s, box-shadow 0.3s;
+
+  &.on {
+    background: $safe;
+    box-shadow: 0 0 6px rgba(121, 196, 138, 0.7);
+  }
+}
+.nm {
+  font-size: 15px;
   font-weight: 700;
-  text-shadow: 0 0 10px var(--glow-soft);
+  letter-spacing: 1px;
+  color: #cfc6b8;
+  transition: color 0.25s;
+}
+.rl {
+  font-size: 10.5px;
+  color: color-mix(in srgb, var(--acc) 42%, #888);
   letter-spacing: 1px;
 }
-.char-role {
+
+// ══════════════════════════════════════════════════════════
+// 阶段 · 情绪 · 三维
+// ══════════════════════════════════════════════════════════
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.stage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.stage-no {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--acc) 60%, transparent);
+  color: var(--acc);
+  font-size: 18px;
+  font-weight: 800;
+  font-family: $serif;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acc) 10%, transparent), transparent 70%);
+}
+.stage-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  .stage-title {
+    font-family: $serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--acc);
+    letter-spacing: 3px;
+    line-height: 1.3;
+  }
+  small {
+    font-size: 10.5px;
+    color: color-mix(in srgb, var(--acc) 42%, #888);
+    letter-spacing: 0.6px;
+  }
+}
+.emotion {
+  flex: none;
+  font-size: 12px;
+  color: #cfc6b8;
+  padding: 3px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  letter-spacing: 1px;
+
+  &.vuln {
+    color: $vuln;
+    border-color: rgba(255, 107, 157, 0.5);
+    font-weight: 700;
+    animation: vuln-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes vuln-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(255, 107, 157, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(255, 107, 157, 0.6);
+  }
+}
+
+// 三维数值：一行一条，紧凑
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11.5px;
+}
+.bl {
+  flex: none;
+  width: 34px;
+  color: color-mix(in srgb, var(--acc) 48%, #999);
+  letter-spacing: 1px;
+}
+.track {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.fill {
   display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.f-corrupt {
+  background: linear-gradient(90deg, var(--acc2), var(--acc));
+}
+.f-user {
+  background: linear-gradient(90deg, #b3577e, #e58bab);
+}
+.f-suwen {
+  background: linear-gradient(90deg, #4e5560, #8a93a1);
+}
+.f-grow {
+  background: linear-gradient(90deg, var(--acc2), var(--acc));
+}
+.f-warn {
+  background: linear-gradient(90deg, #c98f3d, $warn);
+}
+.f-danger {
+  background: linear-gradient(90deg, #b34848, $danger);
+}
+.bv {
+  flex: none;
+  min-width: 24px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 12px;
+  color: #cfc6b8;
+  font-variant-numeric: tabular-nums;
+}
+
+// 心防松动横幅：全界面唯一的高调元素
+.vuln-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 107, 157, 0.45);
+  background: linear-gradient(90deg, rgba(255, 107, 157, 0.14), rgba(255, 107, 157, 0.03));
+  color: $vuln;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  animation: vuln-pulse 1.6s ease-in-out infinite;
+
+  i {
+    font-style: normal;
+    animation: vuln-sway 0.7s ease-in-out infinite alternate;
+  }
+}
+@keyframes vuln-sway {
+  from {
+    transform: rotate(-8deg);
+  }
+  to {
+    transform: rotate(8deg);
+  }
+}
+
+// 内心独白：衬线引文，"她的声音"
+.inner-voice {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 2px solid color-mix(in srgb, var(--acc) 50%, transparent);
+  border-radius: 0 6px 6px 0;
+  background: rgba(0, 0, 0, 0.22);
+  font-family: $serif;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #c4bbae;
+  letter-spacing: 0.3px;
+}
+.aura {
   font-size: 11px;
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
-  margin-top: 3px;
-  letter-spacing: 1.5px;
+  font-style: italic;
+  color: color-mix(in srgb, var(--acc) 45%, #888);
+  text-align: right;
+  letter-spacing: 0.5px;
 }
 
 // ══════════════════════════════════════════════════════════
 // 念头植入
 // ══════════════════════════════════════════════════════════
-.implant-control {
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid color-mix(in srgb, var(--pri) 16%, transparent);
-  border-radius: 8px;
-  position: relative;
+.implant {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--acc) 26%, transparent);
+  border-radius: 10px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--acc) 6%, transparent), transparent 60%);
 }
-.control-header {
+.implant-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.decor-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--sec), transparent);
-}
-.control-header .title {
-  color: var(--acc);
-  font-size: 14px;
-  letter-spacing: 3px;
-  font-weight: 700;
-  text-shadow: 0 0 10px var(--glow-soft);
-  white-space: nowrap;
-}
-.target-hint {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
-  margin-bottom: 10px;
-  letter-spacing: 0.5px;
-}
-.target-hint strong {
-  color: var(--acc);
-  font-weight: 700;
-  text-shadow: 0 0 6px var(--glow-soft);
-}
-.input-wrapper {
-  display: flex;
   gap: 8px;
-  align-items: center;
 }
-.input-wrapper input {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid color-mix(in srgb, var(--pri) 22%, transparent);
-  border-radius: 6px;
-  padding: 8px 12px;
-  color: #e8e0d4;
-  font-size: 13px;
-  font-family: inherit;
-  letter-spacing: 0.5px;
-  transition: all 0.2s;
-
-  &:focus {
-    border-color: var(--acc);
-    outline: none;
-    box-shadow: 0 0 10px var(--glow-soft);
-  }
-  &::placeholder {
-    color: color-mix(in srgb, var(--pri) 40%, transparent);
-  }
-}
-.char-count {
-  font-size: 10px;
-  color: #555;
-  white-space: nowrap;
-}
-.char-count.at-limit {
-  color: $c-red;
+.ttl {
+  font-family: $serif;
+  font-size: 13.5px;
   font-weight: 700;
-}
-.submit-btn {
-  padding: 8px 20px;
-  background: linear-gradient(135deg, var(--sec), var(--pri));
-  border: none;
-  border-radius: 6px;
-  color: #1a0a08;
-  cursor: pointer;
-  font-weight: 800;
-  font-size: 13px;
+  color: var(--acc);
   letter-spacing: 2px;
-  transition: all 0.2s;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--pri) 30%, transparent);
+}
+.target {
+  font-size: 11.5px;
+  color: color-mix(in srgb, var(--acc) 55%, #999);
+  letter-spacing: 0.5px;
+}
+.quota {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+
+  i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.14);
+    transition: background 0.3s;
+
+    &.used {
+      background: var(--acc);
+      box-shadow: 0 0 5px color-mix(in srgb, var(--acc) 60%, transparent);
+    }
+  }
+}
+.implant-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #e2dbcf;
+    font-size: 13px;
+    font-family: inherit;
+    letter-spacing: 0.5px;
+    transition: border-color 0.2s;
+
+    &:focus {
+      outline: none;
+      border-color: color-mix(in srgb, var(--acc) 65%, transparent);
+    }
+    &::placeholder {
+      color: color-mix(in srgb, var(--acc) 30%, #666);
+    }
+  }
+}
+.count {
+  flex: none;
+  font-size: 10px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+
+  &.max {
+    color: $danger;
+    font-weight: 700;
+  }
+}
+.go {
+  flex: none;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--acc2), var(--acc));
+  color: #16100a;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.15s;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--pri), var(--acc));
-    box-shadow: 0 0 18px var(--glow);
+    filter: brightness(1.15);
     transform: translateY(-1px);
   }
   &:disabled {
@@ -774,727 +852,350 @@ $c-orange: #ff9800;
     cursor: not-allowed;
   }
 }
-.implant-msg {
-  font-size: 12px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  border-radius: 5px;
-  letter-spacing: 0.5px;
-}
-.implant-msg.success {
-  color: $c-green;
-  background: rgba(76, 175, 80, 0.12);
-  border-left: 2px solid $c-green;
-}
-.implant-msg.error {
-  color: $c-red;
-  background: rgba(196, 75, 75, 0.12);
-  border-left: 2px solid $c-red;
-}
-.implant-msg.warn {
-  color: $c-orange;
-  background: rgba(255, 152, 0, 0.12);
-  border-left: 2px solid $c-orange;
+.msg {
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+
+  &.success {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.1);
+    border-left: 2px solid $safe;
+  }
+  &.error {
+    color: $danger;
+    background: rgba(224, 104, 104, 0.1);
+    border-left: 2px solid $danger;
+  }
+  &.warn {
+    color: $warn;
+    background: rgba(232, 169, 79, 0.1);
+    border-left: 2px solid $warn;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
-// 状态展示两栏布局
+// 列表区布局：移动端单列，≥640px 双列
 // ══════════════════════════════════════════════════════════
-.status-display {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
-  gap: 16px;
-}
-.col-left,
-.col-right {
+.grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .grid {
+    display: grid;
+    grid-template-columns: 1.08fr 0.92fr;
+    align-items: start;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
-// 阶段圆环
+// 卡片
 // ══════════════════════════════════════════════════════════
-.stage-card {
+.card {
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 9px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--line);
+    font-family: $serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--acc);
+    letter-spacing: 2px;
+
+    em {
+      margin-left: auto;
+      font-style: normal;
+      font-size: 11px;
+      font-weight: 400;
+      color: color-mix(in srgb, var(--acc) 45%, #888);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+.empty {
+  margin: 0;
+  padding: 8px 0;
   text-align: center;
-  padding: 8px 0 4px;
-}
-.stage-ring {
-  position: relative;
-  width: 110px;
-  height: 110px;
-  margin: 0 auto;
-}
-.circular-chart {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 8px var(--glow));
-}
-.circle-bg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.06);
-  stroke-width: 2.4;
-}
-.circle {
-  fill: none;
-  stroke: var(--acc);
-  stroke-width: 2.8;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 5px var(--acc));
-  transition: stroke-dasharray 0.6s ease;
-}
-.stage-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-.stage-text .label {
-  font-size: 10px;
-  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
-  letter-spacing: 2px;
-}
-.stage-text .value {
-  font-size: 17px;
-  color: var(--acc);
-  font-weight: 700;
-  margin-top: 3px;
-  text-shadow: 0 0 12px var(--glow);
-  letter-spacing: 2px;
-}
-
-// ══════════════════════════════════════════════════════════
-// 通用卡片基类
-// ══════════════════════════════════════════════════════════
-%card-base {
-  position: relative;
-  background: linear-gradient(160deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.5) 100%);
-  border: 1px solid color-mix(in srgb, var(--pri) 16%, transparent);
-  border-radius: 9px;
-  padding: 12px 14px;
-  backdrop-filter: blur(3px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 8%;
-    right: 8%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acc) 50%, transparent), transparent);
-    pointer-events: none;
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// 三维数值
-// ══════════════════════════════════════════════════════════
-.stats-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.stat-item {
-  @extend %card-base;
-  padding: 10px 12px;
-}
-.stat-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 12px;
-  margin-bottom: 6px;
-  letter-spacing: 0.5px;
-}
-.stat-header .name {
-  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
-}
-.stat-header .num {
-  color: var(--acc);
-  font-weight: 800;
-  font-size: 15px;
-  text-shadow: 0 0 8px var(--glow-soft);
-}
-.progress-track {
-  position: relative;
-  height: 7px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-.progress-bar {
-  position: relative;
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 60%);
-    border-radius: 4px;
-  }
-}
-.stat-corruption {
-  background: linear-gradient(90deg, $c-orange, $c-red);
-  box-shadow: 0 0 8px rgba(196, 75, 75, 0.4);
-}
-.stat-desire {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--sec) 80%, #ff5d8f), var(--acc));
-  box-shadow: 0 0 8px var(--glow-soft);
-}
-.stat-husband {
-  background: linear-gradient(90deg, #555, #999);
-}
-
-// ══════════════════════════════════════════════════════════
-// 苏文状态卡
-// ══════════════════════════════════════════════════════════
-.suwen-card {
-  @extend %card-base;
-}
-.suwen-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-.suwen-header .name {
-  color: var(--acc);
-  font-size: 15px;
-  font-weight: 700;
-  text-shadow: 0 0 8px var(--glow-soft);
+  font-size: 11.5px;
+  font-style: italic;
+  color: color-mix(in srgb, var(--acc) 32%, #666);
   letter-spacing: 1px;
 }
-.status-tag {
-  font-size: 11px;
-  padding: 2px 10px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
-.status-tag.home {
-  background: rgba(196, 75, 75, 0.22);
-  color: #e07070;
-  border-color: rgba(196, 75, 75, 0.35);
-}
-.status-tag.away {
-  background: rgba(76, 175, 80, 0.22);
-  color: #80d080;
-  border-color: rgba(76, 175, 80, 0.35);
-}
-.status-tag.sleeping {
-  background: rgba(79, 195, 247, 0.22);
-  color: $c-cyan;
-  border-color: rgba(79, 195, 247, 0.35);
-}
-.suwen-location {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
-  margin-bottom: 9px;
-}
-.suspicion-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-.suspicion-row .label {
-  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
-  letter-spacing: 1px;
-}
-.suspicion-track {
-  flex: 1;
-  position: relative;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.suspicion-fill {
-  height: 100%;
-  background: linear-gradient(90deg, $c-orange, #ffb040);
-  border-radius: 3px;
-  transition: width 0.4s;
-}
-.suspicion-fill.danger {
-  background: linear-gradient(90deg, $c-red, #ff6060);
-  box-shadow: 0 0 8px rgba(196, 75, 75, 0.6);
-  animation: sus-pulse 1.4s ease-in-out infinite;
-}
-@keyframes sus-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 6px rgba(196, 75, 75, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 14px rgba(196, 75, 75, 0.85);
-  }
-}
-.suspicion-row .val {
-  color: var(--acc);
-  font-weight: 800;
-  min-width: 26px;
-  text-align: right;
-}
-.accel-hint {
-  font-size: 12px;
-  color: $c-orange;
-  margin-top: 9px;
+.note {
+  margin: 8px 0 0;
   padding: 5px 9px;
-  background: rgba(255, 152, 0, 0.1);
-  border-left: 2px solid $c-orange;
-  border-radius: 3px;
-  text-shadow: 0 0 6px rgba(255, 152, 0, 0.25);
-}
-.safe-indicator {
-  font-size: 12px;
-  color: $c-green;
-  margin-top: 9px;
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.safe-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: rgba(76, 175, 80, 0.25);
-  border: 1px solid $c-green;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-// ══════════════════════════════════════════════════════════
-// 货币
-// ══════════════════════════════════════════════════════════
-.currency-card {
-  @extend %card-base;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-}
-.currency-card .label {
-  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
-  font-size: 13px;
-  letter-spacing: 1px;
-}
-.currency-card .val {
-  color: var(--acc);
-  font-size: 20px;
-  font-weight: 800;
-  text-shadow: 0 0 12px var(--glow);
-  font-family: 'Noto Serif SC', serif;
-}
-
-// ══════════════════════════════════════════════════════════
-// 右栏详情卡
-// ══════════════════════════════════════════════════════════
-.detail-card {
-  @extend %card-base;
-}
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--acc);
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid color-mix(in srgb, var(--pri) 18%, transparent);
-  letter-spacing: 1px;
-  text-shadow: 0 0 8px var(--glow-soft);
-}
-.st-mark {
-  color: var(--pri);
-  font-size: 11px;
-  opacity: 0.85;
-}
-.section-title .count {
-  margin-left: auto;
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.5px;
-}
-
-// ══════════════════════════════════════════════════════════
-// 心境
-// ══════════════════════════════════════════════════════════
-.emotion-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  margin-bottom: 7px;
-  letter-spacing: 0.5px;
-}
-.emotion-row .label {
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
-}
-.emotion-val {
-  color: var(--acc);
-  font-weight: 600;
-  text-shadow: 0 0 6px var(--glow-soft);
-}
-.emotion-val.vulnerable-glow {
-  color: #ff5d8f;
-  font-weight: 800;
-  animation: vuln-pulse 1.4s ease-in-out infinite;
-  font-size: 15px;
-  letter-spacing: 1px;
-}
-@keyframes vuln-pulse {
-  0%,
-  100% {
-    text-shadow: 0 0 8px rgba(255, 93, 143, 0.6), 0 0 16px rgba(255, 93, 143, 0.3);
-  }
-  50% {
-    text-shadow: 0 0 14px rgba(255, 93, 143, 0.95), 0 0 28px rgba(255, 93, 143, 0.5);
-  }
-}
-// 心防松动整体卡片脉冲发光特效
-.detail-card:has(.vulnerable-hint) {
-  animation: card-vuln-pulse 1.6s ease-in-out infinite;
-  border-color: rgba(255, 93, 143, 0.45);
-}
-@keyframes card-vuln-pulse {
-  0%,
-  100% {
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 0 8px rgba(255, 93, 143, 0.18);
-  }
-  50% {
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 0 18px rgba(255, 93, 143, 0.45),
-      0 0 36px rgba(255, 93, 143, 0.15);
-  }
-}
-.vulnerable-hint {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  padding: 6px 10px;
-  background: linear-gradient(90deg, rgba(255, 93, 143, 0.14), rgba(255, 93, 143, 0.06));
-  border: 1px solid rgba(255, 93, 143, 0.4);
   border-radius: 6px;
   font-size: 11px;
-  color: #ff7fa8;
-  margin-bottom: 8px;
-  letter-spacing: 0.5px;
-}
-.vh-icon {
-  animation: vh-shake 0.6s ease-in-out infinite alternate;
-}
-@keyframes vh-shake {
-  0% {
-    transform: rotate(-8deg);
-  }
-  100% {
-    transform: rotate(8deg);
-  }
-}
-.thought-bubble {
-  font-size: 12px;
-  color: #c8c0b4;
-  font-style: italic;
-  margin-bottom: 5px;
-  padding: 5px 9px;
-  background: rgba(0, 0, 0, 0.22);
-  border-left: 2px solid color-mix(in srgb, var(--pri) 40%, transparent);
-  border-radius: 0 4px 4px 0;
   letter-spacing: 0.3px;
-}
-.temperament {
-  font-size: 11px;
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
-  font-style: italic;
-  letter-spacing: 0.5px;
+
+  &.warn {
+    color: $warn;
+    background: rgba(232, 169, 79, 0.09);
+    border-left: 2px solid $warn;
+  }
+  &.safe {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.08);
+    border-left: 2px solid $safe;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
-// 念头列表
+// 念头条目
 // ══════════════════════════════════════════════════════════
-.empty {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--pri) 40%, transparent);
-  text-align: center;
-  padding: 10px 0;
-  letter-spacing: 1px;
-  font-style: italic;
-}
-.thought-item {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 7px;
-  padding: 9px 11px;
-  margin-bottom: 8px;
-  border-left: 3px solid transparent;
-  transition: all 0.25s;
+.thought {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  border-left: 2px solid transparent;
+  transition: border-color 0.25s, background 0.25s;
 
-  &:last-child {
-    margin-bottom: 0;
+  & + .thought {
+    margin-top: 7px;
   }
   &:hover {
-    background: rgba(0, 0, 0, 0.4);
-    border-left-color: var(--pri);
-    transform: translateX(2px);
+    background: rgba(0, 0, 0, 0.36);
+    border-left-color: var(--acc);
   }
 }
-.thought-head {
+.t-head {
   display: flex;
-  gap: 7px;
   align-items: center;
-  margin-bottom: 5px;
+  gap: 7px;
   flex-wrap: wrap;
+  margin-bottom: 4px;
 }
-.status-tag.growing {
-  background: rgba(76, 175, 80, 0.22);
-  color: #80d080;
-  border-color: rgba(76, 175, 80, 0.35);
+.state {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+
+  &.growing {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.14);
+  }
+  &.pending {
+    color: $info;
+    background: rgba(111, 185, 220, 0.14);
+  }
+  &.rejected {
+    color: $danger;
+    background: rgba(224, 104, 104, 0.14);
+  }
+  &.mature {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 16%, transparent);
+  }
 }
-.status-tag.pending {
-  background: rgba(79, 195, 247, 0.22);
-  color: $c-cyan;
-  border-color: rgba(79, 195, 247, 0.35);
-}
-.status-tag.rejected {
-  background: rgba(196, 75, 75, 0.22);
-  color: #e07070;
-  border-color: rgba(196, 75, 75, 0.35);
-}
-.status-tag.mature {
-  background: color-mix(in srgb, var(--pri) 22%, transparent);
-  color: var(--acc);
-  border-color: color-mix(in srgb, var(--pri) 50%, transparent);
-  text-shadow: 0 0 6px var(--glow-soft);
-}
-.thought-type {
-  font-size: 11px;
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
+.t-type {
+  font-size: 10.5px;
+  color: color-mix(in srgb, var(--acc) 48%, #999);
   letter-spacing: 0.5px;
 }
-.thought-diff {
+.t-diff {
   font-size: 10px;
-  color: $c-orange;
-  padding: 1px 6px;
-  border-radius: 3px;
-  background: rgba(255, 152, 0, 0.12);
-  border: 1px solid rgba(255, 152, 0, 0.25);
-  font-weight: 600;
+  color: $warn;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(232, 169, 79, 0.35);
 }
-.thought-content {
+.t-body {
+  font-family: $serif;
   font-size: 13px;
   color: #ddd5c8;
-  margin-bottom: 6px;
-  line-height: 1.5;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
 }
-.thought-progress {
+.t-prog {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  .track {
+    flex: 1;
+  }
+  .pv {
+    flex: none;
+    font-size: 10px;
+    color: color-mix(in srgb, var(--acc) 50%, #999);
+    font-variant-numeric: tabular-nums;
+  }
 }
-.thought-progress .progress-track {
-  flex: 1;
-}
-.thought-progress .progress-bar {
-  background: linear-gradient(90deg, var(--sec), var(--acc));
-  box-shadow: 0 0 6px var(--glow-soft);
-}
-.progress-text {
-  font-size: 10px;
-  color: color-mix(in srgb, var(--pri) 55%, #fff 5%);
-  white-space: nowrap;
-  letter-spacing: 0.5px;
-}
-.thought-reject {
-  font-size: 11px;
-  color: #e07070;
+.t-reject {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  letter-spacing: 0.3px;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: $danger;
 }
-.mini-btn {
-  font-size: 10px;
+
+// 通用幽灵按钮
+.ghost {
+  flex: none;
   padding: 3px 11px;
+  border: 1px solid $danger;
+  border-radius: 6px;
   background: transparent;
-  border: 1px solid $c-red;
-  border-radius: 4px;
-  color: #e07070;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: $danger;
+  font-size: 10.5px;
+  font-family: inherit;
   letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.2s;
 
   &:hover {
-    background: rgba(196, 75, 75, 0.22);
-    box-shadow: 0 0 8px rgba(196, 75, 75, 0.3);
+    background: rgba(224, 104, 104, 0.15);
+  }
+  &.gold {
+    border-color: color-mix(in srgb, var(--acc) 60%, transparent);
+    color: var(--acc);
+
+    &:hover {
+      background: color-mix(in srgb, var(--acc) 14%, transparent);
+    }
   }
 }
 
 // ══════════════════════════════════════════════════════════
 // 习惯
 // ══════════════════════════════════════════════════════════
-.habit-item {
+.habit {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: rgba(0, 0, 0, 0.28);
-  border-radius: 6px;
-  padding: 7px 11px;
-  margin-bottom: 6px;
-  font-size: 13px;
-  border-left: 2px solid color-mix(in srgb, var(--pri) 30%, transparent);
-  transition: all 0.2s;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.24);
+  border-left: 2px solid color-mix(in srgb, var(--acc) 35%, transparent);
 
-  &:last-child {
-    margin-bottom: 0;
-  }
-  &:hover {
-    background: rgba(0, 0, 0, 0.4);
-    border-left-color: var(--acc);
+  & + .habit {
+    margin-top: 6px;
   }
 }
-.habit-text {
-  color: #80d080;
+.h-text {
+  font-family: $serif;
+  font-size: 12.5px;
+  color: #cfe3d0;
   letter-spacing: 0.3px;
 }
-.sell-btn {
-  font-size: 10px;
-  padding: 4px 12px;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--pri) 25%, transparent), color-mix(in srgb, var(--acc) 12%, transparent));
-  border: 1px solid var(--acc);
-  border-radius: 5px;
-  color: var(--acc);
-  cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 700;
+
+// ══════════════════════════════════════════════════════════
+// 苏文
+// ══════════════════════════════════════════════════════════
+.chip {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 10px;
+  border-radius: 10px;
   letter-spacing: 0.5px;
-  text-shadow: 0 0 6px var(--glow-soft);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--pri) 18%, transparent);
 
-  &:hover {
-    background: linear-gradient(135deg, var(--pri), var(--acc));
-    color: #1a0a08;
-    box-shadow: 0 0 16px var(--glow);
-    transform: translateY(-1px);
+  &.home {
+    color: $danger;
+    background: rgba(224, 104, 104, 0.14);
+  }
+  &.away {
+    color: $safe;
+    background: rgba(121, 196, 138, 0.14);
+  }
+  &.sleeping {
+    color: $info;
+    background: rgba(111, 185, 220, 0.14);
   }
 }
-.habit-full-tip {
-  font-size: 11px;
-  color: $c-orange;
-  margin-top: 8px;
-  padding: 5px 9px;
-  background: rgba(255, 152, 0, 0.1);
-  border-radius: 4px;
-  border-left: 2px solid $c-orange;
-  letter-spacing: 0.3px;
+.s-loc {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--acc) 55%, #999);
+  margin-bottom: 8px;
+  letter-spacing: 0.4px;
 }
 
 // ══════════════════════════════════════════════════════════
 // 仪容
 // ══════════════════════════════════════════════════════════
-.attire-tags {
+.tags {
   display: flex;
-  gap: 7px;
-  margin-bottom: 9px;
+  gap: 6px;
   flex-wrap: wrap;
+  margin-bottom: 8px;
 }
-.mini-tag {
-  font-size: 11px;
-  padding: 3px 10px;
+.tag {
+  font-size: 10.5px;
+  padding: 2px 10px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--pri) 14%, transparent);
   color: var(--acc);
-  border: 1px solid color-mix(in srgb, var(--pri) 30%, transparent);
+  background: color-mix(in srgb, var(--acc) 12%, transparent);
   letter-spacing: 0.5px;
-  text-shadow: 0 0 5px var(--glow-soft);
+
+  &.line {
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+    color: color-mix(in srgb, var(--acc) 70%, #aaa);
+  }
 }
-.mini-tag.outline {
-  background: transparent;
-  border: 1px solid var(--pri);
-}
-.clothing-list {
+.attire {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 7px;
-}
-.clothing-item {
-  display: flex;
-  gap: 8px;
-  font-size: 12px;
-  color: #c8c0b4;
-  padding: 2px 0;
-  border-bottom: 1px dashed color-mix(in srgb, var(--pri) 10%, transparent);
-  letter-spacing: 0.3px;
-}
-.clothing-item .cl {
-  display: inline-block;
-  min-width: 32px;
-  color: color-mix(in srgb, var(--pri) 60%, #fff 5%);
-  font-size: 11px;
-  letter-spacing: 1px;
-}
-.clothing-item:last-child {
-  border-bottom: none;
-}
-.makeup-line {
-  font-size: 12px;
-  color: color-mix(in srgb, var(--pri) 65%, #fff 5%);
-  padding-top: 6px;
-  margin-top: 2px;
-  border-top: 1px solid color-mix(in srgb, var(--pri) 14%, transparent);
-  letter-spacing: 0.5px;
+
+  > div {
+    display: flex;
+    gap: 10px;
+    padding: 3px 0;
+    font-size: 11.5px;
+
+    & + div {
+      border-top: 1px dashed color-mix(in srgb, var(--acc) 10%, transparent);
+    }
+  }
+  dt {
+    flex: none;
+    width: 30px;
+    color: color-mix(in srgb, var(--acc) 45%, #888);
+    letter-spacing: 1px;
+    font-size: 10.5px;
+    line-height: inherit;
+  }
+  dd {
+    margin: 0;
+    color: #c4bbae;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
-// 移动端响应式
+// 窄屏微调
 // ══════════════════════════════════════════════════════════
-@media (max-width: 600px) {
-  .main-panel {
-    padding: 12px;
-  }
-  .status-display {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  .world-info {
-    gap: 6px;
-    font-size: 11px;
-  }
-  .char-tabs {
-    gap: 8px;
-  }
-  .char-name {
-    font-size: 15px;
-  }
-  .stage-ring {
-    width: 92px;
-    height: 92px;
-  }
-}
-
 @media (max-width: 380px) {
-  .control-header .title {
-    font-size: 12px;
+  .panel {
+    padding: 10px 10px 14px;
+  }
+  .stage-title {
     letter-spacing: 2px;
   }
-  .currency-card .val {
-    font-size: 18px;
+  .go {
+    padding: 8px 14px;
+    letter-spacing: 1px;
   }
 }
 </style>

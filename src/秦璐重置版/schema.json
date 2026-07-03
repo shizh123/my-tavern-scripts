@@ -123,6 +123,20 @@
             "苏梦"
           ]
         },
+        "在场角色": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "秦璐": {
+              "default": true,
+              "type": "boolean"
+            },
+            "苏梦": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        },
         "念头植入日志": {
           "default": [],
           "type": "array",
