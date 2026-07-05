@@ -13,7 +13,7 @@
  */
 
 import type { SchemaType } from '../../schema';
-import { getStageByCorruption, getStageTitle } from '../../stageConfig';
+import { getStageByCorruption, getStageConfig, getStageTitle } from '../../stageConfig';
 import type { ThoughtCategoryValue } from './thoughtEngine';
 
 export type CharKey = '秦璐状态' | '苏梦状态';
@@ -498,6 +498,116 @@ export const SHOP_ITEMS: ShopItem[] = [
 export const ITEM_MAP: Record<string, ShopItem> = Object.fromEntries(SHOP_ITEMS.map(i => [i.名称, i]));
 
 // ────────────────────────────────────────────
+// 装备 ↔ 仪容字段写回（对标云霜凝 syncClothing）
+// 装备时写入服装/妆容显示字段；卸下（含同槽替换）时恢复当前阶段默认外观
+// ────────────────────────────────────────────
+
+type ClothingPart =
+  | '上装'
+  | '下装'
+  | '内衣上'
+  | '内衣下'
+  | '袜裤'
+  | '配饰'
+  | '特殊装饰'
+  | '唇妆'
+  | '眼妆'
+  | '特殊妆容';
+
+/** 物品名 → 写入的仪容字段（未列入的物品不改显示，只走快照穿着行，如香水） */
+const CLOTHING_WRITE: Record<string, Partial<Record<ClothingPart, string>>> = {
+  蕾丝内衣: { 内衣上: '黑色蕾丝文胸', 内衣下: '黑色蕾丝内裤' },
+  无痕丁字裤: { 内衣下: '无痕丁字裤' },
+  情趣三点式: { 内衣上: '情趣三点式·细带束乳', 内衣下: '情趣三点式·细绳裆' },
+  开衩情趣内衣: { 内衣上: '开衩连体情趣内衣' },
+  隐形乳贴: { 内衣上: '隐形乳贴（未穿文胸）' },
+  开裆连裤袜: { 袜裤: '开裆连裤袜' },
+  修身连衣裙: { 上装: '修身连衣裙', 下装: '（连衣裙一体）' },
+  低胸针织衫: { 上装: '低胸针织衫' },
+  露脐短打: { 上装: '露脐短打上衣' },
+  紧身瑜伽套装: { 上装: '紧身瑜伽上衣', 下装: '紧身瑜伽裤' },
+  透视睡裙: { 上装: '透视薄纱睡裙', 下装: '（睡裙一体）' },
+  真空围裙: { 上装: '真空围裙（裸身仅围裙）', 下装: '无' },
+  红绳手链: { 配饰: '红绳手链' },
+  情侣项链: { 配饰: '情侣项链（成对的那条在他身上）' },
+  素圈戒指: { 配饰: '他送的素圈戒指（婚戒已摘下）' },
+  贴颈链: { 特殊装饰: '贴颈链' },
+  肚脐链: { 特殊装饰: '肚脐链' },
+  正红色口红: { 唇妆: '正红色口红' },
+  魅惑晚妆: { 眼妆: '魅惑晚妆·眼尾上挑', 唇妆: '浓艳红唇' },
+  鲜红美甲: { 特殊妆容: '十指鲜红长甲' },
+};
+
+function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart, text: string): void {
+  const c = data[charKey];
+  switch (part) {
+    case '上装':
+      c.服装细节.上装 = text;
+      break;
+    case '下装':
+      c.服装细节.下装 = text;
+      break;
+    case '内衣上':
+      c.服装细节.内衣.上 = text;
+      break;
+    case '内衣下':
+      c.服装细节.内衣.下 = text;
+      break;
+    case '袜裤':
+      c.服装细节.袜裤 = text;
+      break;
+    case '配饰':
+      c.服装细节.配饰 = text;
+      break;
+    case '特殊装饰':
+      c.服装细节.特殊装饰 = text;
+      break;
+    case '唇妆':
+      c.妆容细节.唇妆 = text;
+      break;
+    case '眼妆':
+      c.妆容细节.眼妆 = text;
+      break;
+    case '特殊妆容':
+      c.妆容细节.特殊妆容 = text;
+      break;
+  }
+}
+
+/** 装备时写入该物品的仪容字段 */
+function applyClothingParts(data: SchemaType, charKey: CharKey, itemName: string): void {
+  const write = CLOTHING_WRITE[itemName];
+  if (!write) return;
+  for (const [part, text] of Object.entries(write)) {
+    setClothingPart(data, charKey, part as ClothingPart, text as string);
+  }
+}
+
+/** 卸下时把该物品写过的字段恢复为当前阶段默认外观 */
+function restoreClothingParts(data: SchemaType, charKey: CharKey, itemName: string): void {
+  const write = CLOTHING_WRITE[itemName];
+  if (!write) return;
+  const cfg = getStageConfig(data[charKey].当前阶段);
+  if (!cfg) return;
+  const d = cfg.默认外观;
+  const defaults: Record<ClothingPart, string> = {
+    上装: d.服装.上装,
+    下装: d.服装.下装,
+    内衣上: d.服装.内衣上,
+    内衣下: d.服装.内衣下,
+    袜裤: d.服装.袜裤,
+    配饰: d.服装.配饰,
+    特殊装饰: d.服装.特殊装饰,
+    唇妆: d.妆容.唇妆,
+    眼妆: d.妆容.眼妆,
+    特殊妆容: d.妆容.特殊妆容,
+  };
+  for (const part of Object.keys(write) as ClothingPart[]) {
+    setClothingPart(data, charKey, part, defaults[part]);
+  }
+}
+
+// ────────────────────────────────────────────
 // 购买 / 装备 / 卸下
 // ────────────────────────────────────────────
 
@@ -527,9 +637,10 @@ export function toggleEquip(
   const state = data[charKey].装备状态[name];
   if (!state) return { error: '未购买' };
 
-  // 卸下
+  // 卸下：恢复该件写过的仪容字段为当前阶段默认
   if (state === '装备中') {
     data[charKey].装备状态[name] = '已购买';
+    restoreClothingParts(data, charKey, name);
     console.info(`[网店] ${charKey} 卸下「${name}」`);
     return {};
   }
@@ -538,14 +649,16 @@ export function toggleEquip(
   if (data[charKey].当前阶段 < item.阶段门槛) {
     return { error: `她还接受不了（需阶段${item.阶段门槛}）` };
   }
-  // 槽位即互斥组：同槽自动卸下
+  // 槽位即互斥组：同槽自动卸下（并恢复其仪容字段，随后由新件覆盖）
   for (const [other, s] of Object.entries(data[charKey].装备状态)) {
     if (other !== name && s === '装备中' && ITEM_MAP[other]?.槽位 === item.槽位) {
       data[charKey].装备状态[other] = '已购买';
+      restoreClothingParts(data, charKey, other);
       console.info(`[网店] ${charKey} 同槽卸下「${other}」`);
     }
   }
   data[charKey].装备状态[name] = '装备中';
+  applyClothingParts(data, charKey, name);
 
   // 首穿事件（只发一次，MVU 持久字段防 reload 重置）
   const wearKey = `${charKey}:${name}`;

@@ -107,6 +107,19 @@ function rollbackProtectedFields(data: SchemaType): void {
   if (!_protSnapshot) return;
   const snap = _protSnapshot;
 
+  // 角色核心数值：堕落度/阶段/依存度 强制回滚（v0.21 补缺——此前只捕获未回滚，
+  // AI 私改 当前阶段+堕落度 会造成"第2阶段「抵抗」"这类标题错位）
+  // 脚本自己的结算（念头成熟/体改）发生在回滚之后或写回之前，不受影响
+  for (const charKey of ['秦璐状态', '苏梦状态'] as const) {
+    const sc = snap[charKey];
+    if (!sc) continue;
+    data[charKey].堕落度 = sc.堕落度 as number;
+    data[charKey].当前阶段 = sc.当前阶段 as number;
+    data[charKey].阶段标题 = getStageTitle(sc.当前阶段 as number) as any;
+    data[charKey].对主角依存度 = sc.对主角依存度 as number;
+    data[charKey].对苏文依存度 = sc.对苏文依存度 as number;
+  }
+
   // 苏文状态：脚本管理字段强制回滚
   if (snap.苏文状态) {
     data.苏文状态.当前状态 = snap.苏文状态.当前状态;
@@ -147,6 +160,9 @@ function getPresentCharacters(data: SchemaType): Array<'秦璐' | '苏梦'> {
  * 影响从低阶段就全量存在（走神/脸红/异常举动不设门槛），阶段限制的是行为/话题的出口。
  * 按在场角色动态注入到影响块末尾；通用原则常驻世界书「念头习惯表现」。
  */
+/** v0.21 测试期暂停阶段约束注入（用户要求）；正式版改回 true */
+const ENABLE_STAGE_RESTRAINTS = false;
+
 const STAGE_RESTRAINTS: Record<number, string> = {
   1: '影响只在内部呈现（走神/脸红/视线停留/梦境/对他莫名多一分关注）。禁止：主动谈性或身体话题（被提及会慌乱岔开）、超出母亲/姐姐常态的主动肢体接触、任何暧昧性质的主动行动。',
   2: '允许被动接擦边话题、说出口才惊觉的双关。禁止：露骨字眼、主动制造身体接触（顺势的短暂接触可以，事后心慌）、性质明确的邀约。',
@@ -221,9 +237,12 @@ function buildStatusSnapshot(data: SchemaType): string {
       }
     }
     // 阶段禁区：影响恒在，出口按阶段限幅（念头决定想什么，阶段决定敢什么）
-    lines.push(
-      `  ▷ 阶段约束（第${char.当前阶段}阶段「${char.阶段标题}」）：${STAGE_RESTRAINTS[char.当前阶段] ?? STAGE_RESTRAINTS[1]}`,
-    );
+    // v0.21 测试期由 ENABLE_STAGE_RESTRAINTS 暂停
+    if (ENABLE_STAGE_RESTRAINTS) {
+      lines.push(
+        `  ▷ 阶段约束（第${char.当前阶段}阶段「${char.阶段标题}」）：${STAGE_RESTRAINTS[char.当前阶段] ?? STAGE_RESTRAINTS[1]}`,
+      );
+    }
   }
 
   // 已成熟待腾位/习惯栏容量/货币/依存度：玩家侧或脚本内部信息，不注入给 AI

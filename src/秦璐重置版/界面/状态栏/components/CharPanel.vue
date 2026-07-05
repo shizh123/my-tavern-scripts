@@ -120,7 +120,7 @@
       <p v-if="habitList.length === 0" class="empty">暂无习惯</p>
       <div v-for="(h, i) in habitList" :key="i" class="habit">
         <span class="h-text">{{ h.内容 }}</span>
-        <button v-if="habitList.length >= 5" class="ghost gold" @click="sellHabit(i)">出售 +100</button>
+        <button v-if="habitList.length >= 5" class="ghost gold" @click="sellHabit(i)">出售 +{{ HABIT_SELL_PRICE }}</button>
       </div>
       <p v-if="habitList.length >= 5" class="note warn">习惯已满，出售腾位后可接纳新习惯</p>
     </section>
@@ -157,7 +157,7 @@
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
 import { ITEM_MAP, getCultivationSlots, getThoughtMaxLen, getEquippedNames } from '../../../脚本/游戏逻辑/shopSystem';
-import { countActiveThoughts } from '../../../脚本/游戏逻辑/thoughtEngine';
+import { HABIT_SELL_PRICE, countActiveThoughts } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
 const props = defineProps<{ name: '秦璐' | '苏梦' }>();
@@ -303,7 +303,7 @@ async function sellHabit(index: number) {
       return;
     }
     d[key].习惯列表.splice(index, 1);
-    d.系统.货币 += 100;
+    d.系统.货币 += HABIT_SELL_PRICE;
 
     // 腾位后补转入：把标记"已成熟"的待转念头按植入楼层补转入习惯
     const pending = Object.entries(d[key].念头列表)
@@ -335,7 +335,7 @@ async function sellHabit(index: number) {
     }
 
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
-    showMsg('变卖习惯 +100货币', 'success');
+    showMsg(`变卖习惯 +${HABIT_SELL_PRICE}货币`, 'success');
   } catch (e) {
     console.error('[秦璐重置版] 变卖失败', e);
   }
