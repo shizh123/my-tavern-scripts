@@ -47,6 +47,9 @@
         <div v-if="selected.分类 === '装备'" class="info-effect">
           加速 +{{ selected.加速 }}/楼 · {{ selected.类型倾向.join('/') }}
         </div>
+        <div v-else-if="selected.分类 === '体改'" class="info-effect">
+          永久加速 +{{ selected.加速 }}/楼 · {{ selected.类型倾向.join('/') }} · 堕落度 +{{ selected.堕落度加成 ?? 0 }}
+        </div>
       </template>
       <template v-else>
         <div class="info-placeholder">点击道具查看详情</div>
@@ -70,7 +73,7 @@
             <span class="card-price">◈{{ entry.item!.价格 }}</span>
           </div>
           <div class="card-bot">
-            <span v-if="entry.item!.分类 === '装备'" class="owners">
+            <span v-if="entry.item!.分类 === '装备' || entry.item!.分类 === '体改'" class="owners">
               <span v-if="ownerState('秦璐状态', entry.item!.名称)" :class="['owner', { using: ownerState('秦璐状态', entry.item!.名称) === '装备中' }]">秦</span>
               <span v-if="ownerState('苏梦状态', entry.item!.名称)" :class="['owner', 'meng', { using: ownerState('苏梦状态', entry.item!.名称) === '装备中' }]">梦</span>
             </span>
@@ -96,6 +99,7 @@ import { computed, ref } from 'vue';
 import {
   SHOP_ITEMS,
   buyEquipment,
+  buyBodyMod,
   toggleEquip,
   useConsumable,
   buyPrivilege,
@@ -105,7 +109,7 @@ import {
 import { useDataStore } from '../store';
 
 const charNames = ['秦璐', '苏梦'] as const;
-const categories = ['装备', '消耗品', '特权'] as const;
+const categories = ['装备', '体改', '消耗品', '特权'] as const;
 const SLOT_ORDER: EquipSlot[] = ['内着', '外装', '饰品', '妆容'];
 
 const store = useDataStore();
@@ -156,6 +160,12 @@ function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy'
   if (item.分类 === '消耗品') {
     return { label: `对${targetChar.value}使用`, disabled: money.value < item.价格, kind: 'use' };
   }
+  if (item.分类 === '体改') {
+    if (ownerState(targetKey.value, item.名称)) return { label: '已改造', disabled: true, kind: 'none' };
+    const stage = data.value?.[targetKey.value]?.当前阶段 ?? 1;
+    if (stage < item.阶段门槛) return { label: `需阶段${item.阶段门槛}`, disabled: true, kind: 'none' };
+    return { label: '改造', disabled: money.value < item.价格, kind: 'buy' };
+  }
   const st = ownerState(targetKey.value, item.名称);
   if (!st) return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
   if (st === '装备中') return { label: '卸下', disabled: false, kind: 'unequip' };
@@ -181,6 +191,9 @@ async function shopAction(item: ShopItem) {
       err = buyPrivilege(d, item.名称);
     } else if (item.分类 === '消耗品') {
       err = useConsumable(d, key, item.名称, SillyTavern.chat?.length ?? 0);
+    } else if (item.分类 === '体改') {
+      err = buyBodyMod(d, key, item.名称);
+      if (!err) extra = '，改造完成（永久）——下一轮她会有反应';
     } else if (ui.kind === 'buy') {
       err = buyEquipment(d, key, item.名称);
     } else {

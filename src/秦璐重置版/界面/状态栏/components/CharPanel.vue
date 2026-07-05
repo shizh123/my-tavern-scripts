@@ -137,6 +137,10 @@
         <span class="eq-label">装备中</span>
         <span v-for="n in equippedNames" :key="n" class="tag eq">{{ n }}</span>
       </div>
+      <div v-if="bodyModNames.length > 0" class="equipped-row">
+        <span class="eq-label">改造</span>
+        <span v-for="n in bodyModNames" :key="n" class="tag eq">{{ n }}</span>
+      </div>
       <dl class="attire">
         <div><dt>上装</dt><dd>{{ char?.服装细节?.上装 ?? '—' }}</dd></div>
         <div><dt>下装</dt><dd>{{ char?.服装细节?.下装 ?? '—' }}</dd></div>
@@ -152,7 +156,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
-import { getCultivationSlots, getThoughtMaxLen, getEquippedNames } from '../../../脚本/游戏逻辑/shopSystem';
+import { ITEM_MAP, getCultivationSlots, getThoughtMaxLen, getEquippedNames } from '../../../脚本/游戏逻辑/shopSystem';
 import { countActiveThoughts } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
@@ -177,6 +181,12 @@ const slotLimit = computed(() => (data.value ? getCultivationSlots(data.value as
 const slotsUsed = computed(() => (data.value ? countActiveThoughts(data.value as any, charKey.value) : 0));
 
 const equippedNames = computed(() => (data.value ? getEquippedNames(data.value as any, charKey.value) : []));
+
+/** 已完成的体改（永久，显示在仪容卡） */
+const bodyModNames = computed(() => {
+  const eq = data.value?.[charKey.value]?.装备状态 ?? {};
+  return Object.keys(eq).filter(n => ITEM_MAP[n]?.分类 === '体改');
+});
 
 // ━━━ 苏文卡（对本页角色视角） ━━━
 const suwen = computed(() => data.value?.苏文状态 ?? null);
