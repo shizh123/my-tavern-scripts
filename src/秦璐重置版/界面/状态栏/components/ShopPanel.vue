@@ -166,10 +166,14 @@ function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy'
     if (stage < item.阶段门槛) return { label: `需阶段${item.阶段门槛}`, disabled: true, kind: 'none' };
     return { label: '改造', disabled: money.value < item.价格, kind: 'buy' };
   }
+  // 装备：能买即能穿——购买与装备同吃阶段门槛
   const st = ownerState(targetKey.value, item.名称);
-  if (!st) return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
-  if (st === '装备中') return { label: '卸下', disabled: false, kind: 'unequip' };
   const stage = data.value?.[targetKey.value]?.当前阶段 ?? 1;
+  if (!st) {
+    if (stage < item.阶段门槛) return { label: `需阶段${item.阶段门槛}`, disabled: true, kind: 'none' };
+    return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
+  }
+  if (st === '装备中') return { label: '卸下', disabled: false, kind: 'unequip' };
   if (stage < item.阶段门槛) return { label: `需阶段${item.阶段门槛}`, disabled: true, kind: 'none' };
   return { label: '装备', disabled: false, kind: 'equip' };
 }

@@ -13,7 +13,7 @@
 
 import type { SchemaType } from '../../schema';
 import { getStageByCorruption } from '../../stageConfig';
-import { getEquipBoost, getCultivationSlots } from './shopSystem';
+import { getEquipBoost, getCultivationSlots, getOutfitStars } from './shopSystem';
 import { isSuwenInAccelerationRoom } from './suwenRoutine';
 
 /** 念头类型（10大类 + 待判定），沿用旧版 */
@@ -44,10 +44,16 @@ const CATEGORY_STAGE: Record<Exclude<ThoughtCategoryValue, '待判定'>, number>
   家庭替代: 5,
 };
 
-/** 基础需要楼数（按难度）—— 数值待平衡阶段统一调 */
+/** 基础需要楼数（按难度）—— v0.22 定稿：5/10（原 3/6 为测试期临时值） */
 const FLOORS_BY_DIFFICULTY = {
+  简单: 5,
+  困难: 10,
+};
+
+/** 满配下限：无论加速堆多高，距植入不足此楼数不成熟（简单3/困难4，用户定） */
+const MIN_MATURE_FLOORS = {
   简单: 3,
-  困难: 6,
+  困难: 4,
 };
 
 /** 保留楼数上限：培育中/未达标念头超过 植入楼层+此值 仍未成熟 → 已过期 */
@@ -131,6 +137,10 @@ export function implantThought(
   content: string,
   currentFloor: number,
 ): string | null {
+  if (data.系统._坏结局) {
+    console.warn(`[念头植入] 坏结局已锁定，拒绝："${content}"`);
+    return null;
+  }
   const slots = getCultivationSlots(data);
   if (countActiveThoughts(data, characterKey) >= slots) {
     console.warn(`[念头植入] ${characterKey} 培育槽已满(${slots})，拒绝："${content}"`);
@@ -253,14 +263,20 @@ export function tickThoughtProgress(
       equipBoost = getEquipBoost(data, characterKey, thought.类型);
       progress += equipBoost;
     }
+    // 满星全套加成（v0.22）：4 槽网店装备 + 体改齐备 → 所有培育中念头 +1/楼，无视类型匹配
+    // （代价：满星期间苏文疑心 +1/楼，结算在 index.ts）
+    if (getOutfitStars(data, characterKey).full) {
+      progress += 1;
+    }
 
     thought.开发进度 += progress;
     console.info(
       `[念头培育] ${characterKey} ${id} +${progress} (加速:${accelerating ? '是' : '否'}, 相关:${relevance ?? 0}, 装备:${equipBoost}) → ${thought.开发进度}/${thought.需要楼数}`,
     );
 
-    // 成熟判定
-    if (thought.开发进度 >= thought.需要楼数) {
+    // 成熟判定：进度达标 + 满配下限（距植入至少 简单3/困难4 楼，防满星瞬发）
+    const minFloors = MIN_MATURE_FLOORS[thought.难度 as '简单' | '困难'] ?? 3;
+    if (thought.开发进度 >= thought.需要楼数 && currentFloor - thought.植入楼层 >= minFloors) {
       matureThought(data, characterKey, id, currentFloor);
     }
   }

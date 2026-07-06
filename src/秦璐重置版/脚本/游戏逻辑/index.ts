@@ -14,7 +14,7 @@
 import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
-import { getEquippedNames } from './shopSystem';
+import { getBodyModNames, getDaringEquippedNames, getEquippedNames, getOutfitStars } from './shopSystem';
 import { advanceSuwenRoutine } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
@@ -120,10 +120,12 @@ function rollbackProtectedFields(data: SchemaType): void {
     data[charKey].对苏文依存度 = sc.对苏文依存度 as number;
   }
 
-  // 苏文状态：脚本管理字段强制回滚
+  // 苏文状态：脚本管理字段强制回滚（疑心值 v0.22 起由满星结算脚本管理，回滚后再结算）
   if (snap.苏文状态) {
     data.苏文状态.当前状态 = snap.苏文状态.当前状态;
     data.苏文状态.当前位置 = snap.苏文状态.当前位置;
+    data.苏文状态.对秦璐疑心值 = snap.苏文状态.对秦璐疑心值 as number;
+    data.苏文状态.对苏梦疑心值 = snap.苏文状态.对苏梦疑心值 as number;
   }
   // 系统：游标/货币回滚（货币由变卖习惯管理，AI 不应直改）
   if (snap.系统) {
@@ -148,6 +150,54 @@ function rollbackProtectedFields(data: SchemaType): void {
 // ────────────────────────────────────────────────────────
 // 状态快照构建（对标云霜凝 buildStatusSnapshot）
 // ────────────────────────────────────────────────────────
+
+/**
+ * 满星疑心结算（v0.22，高收益高风险）：
+ * 满星（4槽+体改）期间 苏文对她疑心 +1/楼；不满星每楼回落 0.5；
+ * 借口短信冻结期间不涨不落，到期自动解冻；触顶 100 → 坏结局锁定。
+ * 数值待平衡期统一调。
+ */
+function settleSuspicion(data: SchemaType, currentFloor: number): void {
+  if (data.系统._坏结局) return;
+  for (const name of ['秦璐', '苏梦'] as const) {
+    const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
+    const susKey = `对${name}疑心值` as '对秦璐疑心值' | '对苏梦疑心值';
+    const freezeKey = `对${name}疑心值冻结` as '对秦璐疑心值冻结' | '对苏梦疑心值冻结';
+    const freeze = data.苏文状态[freezeKey];
+    if (freeze.是否冻结) {
+      if (currentFloor >= freeze.冻结结束楼层) {
+        freeze.是否冻结 = false;
+        console.info(`[疑心] 对${name}的冻结到期解除`);
+      } else {
+        continue; // 冻结中：不涨不落
+      }
+    }
+    const full = getOutfitStars(data, charKey).full;
+    const before = data.苏文状态[susKey];
+    const after = full ? Math.min(100, before + 1) : Math.max(0, before - 0.5);
+    if (after !== before) {
+      data.苏文状态[susKey] = after;
+      console.info(`[疑心] 苏文对${name} ${before}→${after}（${full ? '满星+1' : '回落-0.5'}）`);
+    }
+    // 触顶 → 坏结局锁定（下一轮快照只注入终局指引，引擎/商店全停）
+    if (after >= 100) {
+      data.系统._坏结局 = `疑心爆表·${name}`;
+      console.warn(`[坏结局] 苏文对${name}疑心爆表，存档锁定`);
+      return;
+    }
+  }
+}
+
+/**
+ * 疑心阶梯提示（30/60/90）：脚本告知 AI 苏文的猜疑演绎强度，AI 不改数值只演态度
+ * <30 不注入（无事）；爆表走坏结局块
+ */
+function suspicionHint(name: '秦璐' | '苏梦', v: number): string | null {
+  if (v >= 90) return `  🔥 他对${name}的疑心濒临爆发：阴沉冷淡、暗中翻查，一触即发`;
+  if (v >= 60) return `  ⚠⚠ 他对${name}明显起疑：盘问变多、留意她的行踪与手机、家中气氛发紧`;
+  if (v >= 30) return `  ⚠ 他对${name}有些起疑：会多看两眼、状似无意地盘问，但仍愿意相信家人`;
+  return null;
+}
 
 /** 在场角色列表（AI 每轮维护 系统.在场角色；兜底：全 false 时按秦璐在场） */
 function getPresentCharacters(data: SchemaType): Array<'秦璐' | '苏梦'> {
@@ -179,6 +229,17 @@ const STAGE_RESTRAINTS: Record<number, string> = {
  * - 按 系统.在场角色 过滤：不在场角色的状态/影响/相关度判定整块跳过（对标云霜凝）
  */
 function buildStatusSnapshot(data: SchemaType): string {
+  // 坏结局已锁定：只注入终局指引，其余系统块全部停止
+  if (data.系统._坏结局) {
+    return [
+      '════════ 当前游戏状态 ════════',
+      `【坏结局·已锁定】${data.系统._坏结局}：苏文积压的疑心终于爆发，他已经摊牌。`,
+      '培育、判定、商店等系统已全部停止（不再输出任何判定指令）。',
+      '请围绕摊牌之后的后果演绎终局篇章——质问、崩解、收场，不再开启新的剧情线。',
+      '══════════════════════════',
+    ].join('\n');
+  }
+
   const lines: string[] = [];
   lines.push('════════ 当前游戏状态 ════════');
 
@@ -187,21 +248,39 @@ function buildStatusSnapshot(data: SchemaType): string {
 
   // ━━━━ 在场角色状态行 ━━━━
   //   心防松动是脚本覆写的（AI 上下文里没有），附在状态行上
-  //   穿着：网店装备是脚本管理的（AI 自由写的服装细节不含它），需注入告知
+  //   穿着不再单独注入：装备写入 服装/妆容细节 变量（唯一事实源），换装靠一次性换装事件桥接
   for (const name of present) {
     const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
     const char = data[charKey];
     const vulnerable =
       char.当前情绪 === '心防松动' ? ' ⚡她此刻心防松动，比平时更容易接受亲密试探' : '';
     lines.push(`【${name}】第${char.当前阶段}阶段「${char.阶段标题}」${vulnerable}`);
-    const equipped = getEquippedNames(data, charKey);
-    if (equipped.length > 0) {
-      lines.push(`【${name}·穿着】${equipped.join('、')}（请在描写中自然体现）`);
+
+    // 装扮意识（v0.22）：只提示"非日常"装扮（风险≥1），正常衣物不打扰；
+    // 满星时追加动态全套清单（按玩家实际装备生成，不做任何"来历/谁知情"的叙事断言——
+    // 玩家路线各异，尤其不能让写苏文心理的 AI 把这份信息泄进苏文视角）
+    const daring = getDaringEquippedNames(data, charKey);
+    if (daring.length > 0) {
+      let fullSet = '';
+      if (getOutfitStars(data, charKey).full) {
+        const mods = getBodyModNames(data, charKey);
+        fullSet = `。她今天从内到外的整套装扮：${getEquippedNames(data, charKey).join('、')}${
+          mods.length > 0 ? `，身上还有${mods.join('、')}` : ''
+        }——请体现这种整体的私密意识`;
+      }
+      lines.push(
+        `【${name}·装扮意识】她此刻身上有刻意的装扮：${daring.join('、')}——演绎中自然体现她对它们的意识（异物感/遮掩动作/走神/怕被注意），不必每件都写${fullSet}。此信息仅属于她的私密认知，苏文等其他角色并不知情（除非正文中已被发现）`,
+      );
     }
   }
 
   // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
   lines.push(`【苏文】${data.苏文状态.当前状态} @ ${data.苏文状态.当前位置}`);
+  // 疑心阶梯（30/60/90）：告知 AI 苏文的猜疑演绎强度（数值脚本管理，AI 只演态度）
+  for (const name of ['秦璐', '苏梦'] as const) {
+    const hint = suspicionHint(name, data.苏文状态[`对${name}疑心值`]);
+    if (hint) lines.push(hint);
+  }
 
   // ━━━━ 一次性剧情事件（首穿等；脚本写入，注入一轮后在写阶段清空） ━━━━
   if (data.系统._待发送道具事件) {
@@ -323,9 +402,9 @@ $(() => {
         const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
 
-        // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效）
+        // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效；坏结局后不再覆写）
         //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
-        if (isInVulnerableWindow(messageId)) {
+        if (!data.系统._坏结局 && isInVulnerableWindow(messageId)) {
           for (const name of getPresentCharacters(data)) {
             const ck = `${name}状态` as '秦璐状态' | '苏梦状态';
             if (data[ck].当前情绪 !== '心防松动') {
@@ -376,6 +455,14 @@ $(() => {
         // 1. 回滚脚本管理字段（防 AI 乱改）
         rollbackProtectedFields(newData);
 
+        // 1.5 坏结局锁定：引擎全停（回滚保护仍生效），只清一次性事件后写回
+        if (newData.系统._坏结局) {
+          newData.系统._待发送道具事件 = '';
+          _.set(新变量, 'stat_data', newData);
+          _isInAiCycle = false;
+          return;
+        }
+
         // 2. 推进苏文作息游标（楼层驱动黑盒节律）
         advanceSuwenRoutine(newData, currentFloor, playerInput);
 
@@ -404,6 +491,9 @@ $(() => {
           tickThoughtProgress(newData, charKey, currentFloor, relevanceMap);
         }
         newData.系统.本轮相关念头 = {};
+
+        // 4.4 满星疑心结算（回滚已恢复基准值，在此之上涨/落）
+        settleSuspicion(newData, currentFloor);
 
         // 4.5 一次性剧情事件已注入过本轮生成 → 清空（首穿等只演一次）
         newData.系统._待发送道具事件 = '';

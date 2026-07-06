@@ -17,6 +17,9 @@
         <div class="coin" title="货币">◈ {{ data?.系统?.货币 ?? 0 }}</div>
       </header>
 
+      <!-- 坏结局横幅（锁定后常驻） -->
+      <div v-if="badEnd" class="bad-end-banner">☠ 坏结局已锁定 · {{ badEnd }} · 游戏系统全部停止</div>
+
       <!-- 苏文一行速览（常驻，不单独占页） -->
       <div class="suwen-strip">
         <span class="sw-name">苏文</span>
@@ -92,8 +95,9 @@ const suwenSafe = computed(() => {
   const s = suwen.value?.当前状态 ?? '在家';
   return s === '外出' ? '安全期' : s === '睡眠' ? '熟睡中' : '';
 });
-const susQin = computed(() => suwen.value?.对秦璐疑心值 ?? 0);
-const susMeng = computed(() => suwen.value?.对苏梦疑心值 ?? 0);
+const susQin = computed(() => Math.round(suwen.value?.对秦璐疑心值 ?? 0));
+const susMeng = computed(() => Math.round(suwen.value?.对苏梦疑心值 ?? 0));
+const badEnd = computed(() => data.value?.系统?._坏结局 ?? '');
 const hasFreeze = computed(() => {
   const floor = SillyTavern.chat?.length ?? 0;
   const fq = suwen.value?.对秦璐疑心值冻结;
@@ -322,6 +326,30 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   background: var(--panel);
   backdrop-filter: blur(4px);
   font-variant-numeric: tabular-nums;
+}
+
+// ━━━ 坏结局横幅 ━━━
+.bad-end-banner {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(224, 104, 104, 0.55);
+  background: linear-gradient(160deg, rgba(224, 104, 104, 0.18), rgba(0, 0, 0, 0.32));
+  color: #e06868;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(224, 104, 104, 0.5);
+  animation: bad-end-throb 2.4s ease-in-out infinite;
+}
+@keyframes bad-end-throb {
+  0%,
+  100% {
+    box-shadow: 0 0 6px rgba(224, 104, 104, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(224, 104, 104, 0.35);
+  }
 }
 
 // ━━━ 苏文速览条 ━━━

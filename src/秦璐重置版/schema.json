@@ -76,12 +76,12 @@
         "当前情绪": {
           "default": "平静",
           "description": "AI 每轮更新",
-          "$ref": "#/$defs/__schema18"
+          "$ref": "#/$defs/__schema19"
         },
         "当前心理想法": {
           "default": "家里最近挺平静的，璐璐把家里打理得很好，孩子们也懂事。",
           "description": "60-100字第一人称内心独白，AI 每轮更新",
-          "$ref": "#/$defs/__schema19"
+          "$ref": "#/$defs/__schema20"
         },
         "对秦璐疑心值": {
           "type": "number"
@@ -91,11 +91,11 @@
         },
         "对秦璐疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema20"
+          "$ref": "#/$defs/__schema21"
         },
         "对苏梦疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema20"
+          "$ref": "#/$defs/__schema21"
         }
       }
     },
@@ -198,6 +198,14 @@
           "additionalProperties": {
             "type": "boolean"
           }
+        },
+        "_调试满星": {
+          "default": false,
+          "type": "boolean"
+        },
+        "_坏结局": {
+          "default": "",
+          "type": "string"
         },
         "_待发送道具事件": {
           "default": "",
@@ -384,6 +392,11 @@
               "description": "纹身妆、泪痕妆等",
               "$ref": "#/$defs/__schema9"
             },
+            "香氛": {
+              "default": "无",
+              "description": "香水气息",
+              "$ref": "#/$defs/__schema10"
+            },
             "整体风格": {
               "default": "清新自然",
               "type": "string"
@@ -408,7 +421,7 @@
             "纹身": {
               "description": "部位: 纹身内容",
               "default": {},
-              "$ref": "#/$defs/__schema10"
+              "$ref": "#/$defs/__schema11"
             },
             "穿刺": {
               "default": {},
@@ -454,22 +467,22 @@
             "乳晕改造": {
               "default": "无",
               "description": "如：增大、变色、穿刺等",
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema12"
             },
             "永久标记": {
               "default": [],
               "description": "烙印、伤疤等",
-              "$ref": "#/$defs/__schema12"
+              "$ref": "#/$defs/__schema13"
             },
             "临时标记": {
               "default": [],
               "description": "吻痕、精液痕迹等",
-              "$ref": "#/$defs/__schema13"
+              "$ref": "#/$defs/__schema14"
             },
             "体态变化": {
               "default": "无",
               "description": "因开发导致的身体变化",
-              "$ref": "#/$defs/__schema14"
+              "$ref": "#/$defs/__schema15"
             }
           }
         },
@@ -493,7 +506,7 @@
               "类型": {
                 "default": "待判定",
                 "description": "唯一让 AI 判定写入的字段",
-                "$ref": "#/$defs/__schema15"
+                "$ref": "#/$defs/__schema16"
               },
               "状态": {
                 "default": "判定中",
@@ -518,12 +531,12 @@
               "需要楼数": {
                 "default": 0,
                 "description": "成熟所需楼层数，类型判定后由脚本按难度设定",
-                "$ref": "#/$defs/__schema16"
+                "$ref": "#/$defs/__schema17"
               },
               "开发进度": {
                 "default": 0,
                 "description": "累积楼层进度（含加速）",
-                "$ref": "#/$defs/__schema17"
+                "$ref": "#/$defs/__schema18"
               },
               "植入楼层": {
                 "default": -1,
@@ -598,6 +611,9 @@
       "type": "string"
     },
     "__schema10": {
+      "type": "string"
+    },
+    "__schema11": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -606,14 +622,8 @@
         "type": "string"
       }
     },
-    "__schema11": {
-      "type": "string"
-    },
     "__schema12": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "type": "string"
     },
     "__schema13": {
       "type": "array",
@@ -622,9 +632,15 @@
       }
     },
     "__schema14": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "__schema15": {
+      "type": "string"
+    },
+    "__schema16": {
       "type": "string",
       "enum": [
         "待判定",
@@ -640,19 +656,19 @@
         "家庭替代"
       ]
     },
-    "__schema16": {
-      "type": "number"
-    },
     "__schema17": {
       "type": "number"
     },
     "__schema18": {
-      "type": "string"
+      "type": "number"
     },
     "__schema19": {
       "type": "string"
     },
     "__schema20": {
+      "type": "string"
+    },
+    "__schema21": {
       "type": "object",
       "properties": {
         "是否冻结": {
@@ -666,11 +682,11 @@
         "冻结结束楼层": {
           "default": -1,
           "description": "当前楼层 >= 此值则解冻",
-          "$ref": "#/$defs/__schema21"
+          "$ref": "#/$defs/__schema22"
         }
       }
     },
-    "__schema21": {
+    "__schema22": {
       "type": "number"
     }
   }

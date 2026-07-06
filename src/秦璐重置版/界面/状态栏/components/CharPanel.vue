@@ -128,14 +128,26 @@
     <!-- 仪容 -->
     <section class="card">
       <h3>仪容</h3>
+      <div :class="['stars', { full: outfitStars.full }]" @click="starTap">
+        <span
+          v-for="(lit, i) in outfitStars.lit"
+          :key="i"
+          :class="['star', { lit }]"
+          :title="OUTFIT_STAR_SLOTS[i]"
+          >★</span
+        >
+        <span class="star-note">{{
+          debugFullStar
+            ? '⚙ 调试满星 · 培育+1/楼 · 疑心+1/楼'
+            : outfitStars.full
+              ? '全套共鸣 · 培育+1/楼 · 疑心+1/楼'
+              : `${outfitStars.count}/5`
+        }}</span>
+      </div>
       <div class="tags">
         <span class="tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
         <span class="tag line">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
         <span class="tag line">{{ char?.妆容细节?.浓淡程度 ?? '淡妆' }}</span>
-      </div>
-      <div v-if="equippedNames.length > 0" class="equipped-row">
-        <span class="eq-label">装备中</span>
-        <span v-for="n in equippedNames" :key="n" class="tag eq">{{ n }}</span>
       </div>
       <div v-if="bodyModNames.length > 0" class="equipped-row">
         <span class="eq-label">改造</span>
@@ -147,6 +159,12 @@
         <div><dt>内衣</dt><dd>{{ char?.服装细节?.内衣?.上 ?? '—' }}</dd></div>
         <div><dt>内裤</dt><dd>{{ char?.服装细节?.内衣?.下 ?? '—' }}</dd></div>
         <div><dt>袜</dt><dd>{{ char?.服装细节?.袜裤 ?? '—' }}</dd></div>
+        <div v-if="shown(char?.服装细节?.配饰)"><dt>配饰</dt><dd>{{ char?.服装细节?.配饰 }}</dd></div>
+        <div v-if="shown(char?.服装细节?.特殊装饰)"><dt>装饰</dt><dd>{{ char?.服装细节?.特殊装饰 }}</dd></div>
+        <div v-if="shown(char?.妆容细节?.唇妆)"><dt>唇妆</dt><dd>{{ char?.妆容细节?.唇妆 }}</dd></div>
+        <div v-if="shown(char?.妆容细节?.眼妆)"><dt>眼妆</dt><dd>{{ char?.妆容细节?.眼妆 }}</dd></div>
+        <div v-if="shown(char?.妆容细节?.特殊妆容)"><dt>妆饰</dt><dd>{{ char?.妆容细节?.特殊妆容 }}</dd></div>
+        <div v-if="shown(char?.妆容细节?.香氛)"><dt>香氛</dt><dd>{{ char?.妆容细节?.香氛 }}</dd></div>
       </dl>
     </section>
     </div>
@@ -156,7 +174,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
-import { ITEM_MAP, getCultivationSlots, getThoughtMaxLen, getEquippedNames } from '../../../脚本/游戏逻辑/shopSystem';
+import { ITEM_MAP, OUTFIT_STAR_SLOTS, getCultivationSlots, getOutfitStars, getThoughtMaxLen } from '../../../脚本/游戏逻辑/shopSystem';
 import { HABIT_SELL_PRICE, countActiveThoughts } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
@@ -180,7 +198,39 @@ const maxLen = computed(() => (data.value ? getThoughtMaxLen(data.value as any) 
 const slotLimit = computed(() => (data.value ? getCultivationSlots(data.value as any) : 3));
 const slotsUsed = computed(() => (data.value ? countActiveThoughts(data.value as any, charKey.value) : 0));
 
-const equippedNames = computed(() => (data.value ? getEquippedNames(data.value as any, charKey.value) : []));
+/** 仪容可选行："无"/空值不占行（装备写回变量后自然浮现） */
+function shown(v?: string): boolean {
+  return !!v && v !== '无';
+}
+
+/** 仪容星标：4 槽网店装备 + 体改 = 5 星；满星脉冲 + 全套加成 */
+const outfitStars = computed(() =>
+  data.value
+    ? getOutfitStars(data.value as any, charKey.value)
+    : { lit: [false, false, false, false, false], count: 0, full: false },
+);
+const debugFullStar = computed(() => data.value?.系统?._调试满星 ?? false);
+
+// 测试后门：星标区 1.5s 内连点 5 次切换"调试满星"（模拟满星：培育+1/楼、疑心+1/楼）
+let starTapCount = 0;
+let starTapTimer: ReturnType<typeof setTimeout> | null = null;
+async function starTap() {
+  starTapCount++;
+  if (starTapTimer) clearTimeout(starTapTimer);
+  starTapTimer = setTimeout(() => (starTapCount = 0), 1500);
+  if (starTapCount < 5) return;
+  starTapCount = 0;
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) return;
+    d.系统._调试满星 = !d.系统._调试满星;
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`调试满星已${d.系统._调试满星 ? '开启' : '关闭'}`, 'warn');
+  } catch (e) {
+    console.error('[秦璐重置版] 调试满星切换失败', e);
+  }
+}
 
 /** 已完成的体改（永久，显示在仪容卡） */
 const bodyModNames = computed(() => {
@@ -208,7 +258,7 @@ const isAccelerating = computed(() => {
   return p === '餐厅' || p === '客厅' || p === '主卧';
 });
 const suspicion = computed(() =>
-  props.name === '秦璐' ? suwen.value?.对秦璐疑心值 ?? 0 : suwen.value?.对苏梦疑心值 ?? 0,
+  Math.round(props.name === '秦璐' ? suwen.value?.对秦璐疑心值 ?? 0 : suwen.value?.对苏梦疑心值 ?? 0),
 );
 const freezeUntil = computed(() => {
   const f = props.name === '秦璐' ? suwen.value?.对秦璐疑心值冻结 : suwen.value?.对苏梦疑心值冻结;
@@ -249,6 +299,10 @@ async function implantThought() {
     const d = _.get(vars, 'stat_data') as any;
     if (!d || !d[key]) {
       showMsg('变量未初始化，请先发一条消息让 AI 回复后再植入', 'warn');
+      return;
+    }
+    if (d.系统?._坏结局) {
+      showMsg('坏结局已锁定，游戏系统全部停止', 'error');
       return;
     }
     // 培育槽限制：判定中+培育中 ≤ 槽上限（基础3，植入扩容+1）
@@ -298,6 +352,10 @@ async function sellHabit(index: number) {
     const key = charKey.value;
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     const d = _.get(vars, 'stat_data') as any;
+    if (d.系统?._坏结局) {
+      showMsg('坏结局已锁定，游戏系统全部停止', 'error');
+      return;
+    }
     if (d[key].习惯列表.length < 5) {
       showMsg('习惯未满5，不可出售', 'warn');
       return;
@@ -977,6 +1035,55 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   font-family: $serif;
   font-size: 12.5px;
   color: #cfe3d0;
+}
+
+// ━━━ 仪容星标（满星脉冲） ━━━
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: -2px 0 6px;
+}
+.star {
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.14);
+  transition: color 0.3s, text-shadow 0.3s;
+
+  &.lit {
+    color: var(--acc);
+    text-shadow: 0 0 6px var(--glow);
+  }
+}
+.stars.full .star {
+  animation: star-pulse 1.8s ease-in-out infinite;
+
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{($i - 1) * 0.12}s;
+    }
+  }
+}
+@keyframes star-pulse {
+  0%,
+  100% {
+    text-shadow: 0 0 4px var(--glow);
+  }
+  50% {
+    text-shadow:
+      0 0 12px var(--glow),
+      0 0 22px var(--glow2);
+  }
+}
+.star-note {
+  margin-left: 5px;
+  font-size: 9.5px;
+  letter-spacing: 0.5px;
+  color: color-mix(in srgb, var(--acc) 40%, #776);
+}
+.stars.full .star-note {
+  color: var(--acc);
+  text-shadow: 0 0 8px var(--glow);
 }
 
 // ━━━ 仪容 ━━━

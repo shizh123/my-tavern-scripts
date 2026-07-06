@@ -89,6 +89,7 @@ const MakeupDetails = z.object({
   唇妆: z.string().default('淡粉色唇彩'),
   腮红: z.string().default('自然红晕'),
   特殊妆容: z.string().default('无').describe('纹身妆、泪痕妆等'),
+  香氛: z.string().default('无').describe('香水气息'),
   整体风格: z.string().default('清新自然'),
   浓淡程度: z.enum(['素颜', '淡妆', '日常妆', '浓妆', '艳妆']).default('淡妆'),
 });
@@ -291,6 +292,10 @@ const SystemState = z.object({
   _已首穿: z.record(z.string(), z.boolean()).prefault({}),
 
   // ━━━━ 内部标志（脚本管理，AI 不要修改） ━━━━
+  /** 调试后门：模拟满星（状态栏星标区连点5次切换；测试满星冲刺/疑心循环用） */
+  _调试满星: z.boolean().default(false),
+  /** 坏结局锁定（脚本写入，如 '疑心爆表·秦璐'；非空后培育/商店全停，快照只注入终局指引） */
+  _坏结局: z.string().default(''),
   /** 待发送道具事件（| 分隔，脚本写、下一轮 AI 演绎，注入后清空） */
   _待发送道具事件: z.string().default(''),
   /** 苏文作息游标：已推进的楼层基准（黑盒，决定苏文位置） */

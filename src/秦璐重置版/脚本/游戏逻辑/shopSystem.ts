@@ -512,9 +512,10 @@ type ClothingPart =
   | '特殊装饰'
   | '唇妆'
   | '眼妆'
-  | '特殊妆容';
+  | '特殊妆容'
+  | '香氛';
 
-/** 物品名 → 写入的仪容字段（未列入的物品不改显示，只走快照穿着行，如香水） */
+/** 物品名 → 写入的仪容字段。服装细节/妆容细节 变量是穿着的唯一事实源，每件装备都必须有映射 */
 const CLOTHING_WRITE: Record<string, Partial<Record<ClothingPart, string>>> = {
   蕾丝内衣: { 内衣上: '黑色蕾丝文胸', 内衣下: '黑色蕾丝内裤' },
   无痕丁字裤: { 内衣下: '无痕丁字裤' },
@@ -536,6 +537,8 @@ const CLOTHING_WRITE: Record<string, Partial<Record<ClothingPart, string>>> = {
   正红色口红: { 唇妆: '正红色口红' },
   魅惑晚妆: { 眼妆: '魅惑晚妆·眼尾上挑', 唇妆: '浓艳红唇' },
   鲜红美甲: { 特殊妆容: '十指鲜红长甲' },
+  雾致香水: { 香氛: '若有似无的雾致香水' },
+  催情香水: { 香氛: '耳后与锁骨的甜腻催情香' },
 };
 
 function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart, text: string): void {
@@ -571,6 +574,9 @@ function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart,
     case '特殊妆容':
       c.妆容细节.特殊妆容 = text;
       break;
+    case '香氛':
+      c.妆容细节.香氛 = text;
+      break;
   }
 }
 
@@ -601,6 +607,7 @@ function restoreClothingParts(data: SchemaType, charKey: CharKey, itemName: stri
     唇妆: d.妆容.唇妆,
     眼妆: d.妆容.眼妆,
     特殊妆容: d.妆容.特殊妆容,
+    香氛: '无',
   };
   for (const part of Object.keys(write) as ClothingPart[]) {
     setClothingPart(data, charKey, part, defaults[part]);
@@ -611,11 +618,22 @@ function restoreClothingParts(data: SchemaType, charKey: CharKey, itemName: stri
 // 购买 / 装备 / 卸下
 // ────────────────────────────────────────────
 
-/** 购买装备（各买各的）。返回错误信息，null=成功 */
+/** 追加一条一次性剧情事件（下一轮注入 AI 后清空） */
+export function queueItemEvent(data: SchemaType, charKey: CharKey, text: string): void {
+  const charName = charKey === '秦璐状态' ? '秦璐' : '苏梦';
+  const event = `${charName}：${text}`;
+  data.系统._待发送道具事件 = data.系统._待发送道具事件
+    ? `${data.系统._待发送道具事件}|${event}`
+    : event;
+}
+
+/** 购买装备（各买各的）。能买即能穿：购买同样吃阶段门槛。返回错误信息，null=成功 */
 export function buyEquipment(data: SchemaType, charKey: CharKey, name: string): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '装备') return '未知装备';
   if (data[charKey].装备状态[name]) return '已购买过';
+  if (data[charKey].当前阶段 < item.阶段门槛) return `她还接受不了（需阶段${item.阶段门槛}）`;
   if (data.系统.货币 < item.价格) return '货币不足';
   data.系统.货币 -= item.价格;
   data[charKey].装备状态[name] = '已购买';
@@ -624,7 +642,9 @@ export function buyEquipment(data: SchemaType, charKey: CharKey, name: string): 
 }
 
 /**
- * 装备/卸下 toggle。装备时同槽自动卸下；首次装备写入首穿事件。
+ * 装备/卸下 toggle。装备时同槽自动卸下。
+ * 换装叙事桥：每次装备/卸下都注入一次性换装事件（首穿用专属文案，之后用通用文案），
+ * 否则 AI 只见变量突变、无叙事依据，会跟随历史正文忽略换装。
  * 返回 { error } 或 { firstWear }
  */
 export function toggleEquip(
@@ -632,6 +652,7 @@ export function toggleEquip(
   charKey: CharKey,
   name: string,
 ): { error?: string; firstWear?: boolean } {
+  if (data.系统._坏结局) return { error: '结局已锁定' };
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '装备' || !item.槽位) return { error: '未知装备' };
   const state = data[charKey].装备状态[name];
@@ -641,6 +662,7 @@ export function toggleEquip(
   if (state === '装备中') {
     data[charKey].装备状态[name] = '已购买';
     restoreClothingParts(data, charKey, name);
+    queueItemEvent(data, charKey, `她已换下「${name}」，相应部位恢复日常穿着（以服装/妆容细节变量为准）`);
     console.info(`[网店] ${charKey} 卸下「${name}」`);
     return {};
   }
@@ -649,7 +671,7 @@ export function toggleEquip(
   if (data[charKey].当前阶段 < item.阶段门槛) {
     return { error: `她还接受不了（需阶段${item.阶段门槛}）` };
   }
-  // 槽位即互斥组：同槽自动卸下（并恢复其仪容字段，随后由新件覆盖）
+  // 槽位即互斥组：同槽自动卸下（并恢复其仪容字段，随后由新件覆盖；换装事件由新件统一承载）
   for (const [other, s] of Object.entries(data[charKey].装备状态)) {
     if (other !== name && s === '装备中' && ITEM_MAP[other]?.槽位 === item.槽位) {
       data[charKey].装备状态[other] = '已购买';
@@ -660,17 +682,15 @@ export function toggleEquip(
   data[charKey].装备状态[name] = '装备中';
   applyClothingParts(data, charKey, name);
 
-  // 首穿事件（只发一次，MVU 持久字段防 reload 重置）
+  // 换装事件：首穿用专属文案（只发一次，MVU 持久字段防 reload 重置），复穿用通用文案
   const wearKey = `${charKey}:${name}`;
   let firstWear = false;
   if (item.首穿 && !data.系统._已首穿[wearKey]) {
     data.系统._已首穿[wearKey] = true;
-    const charName = charKey === '秦璐状态' ? '秦璐' : '苏梦';
-    const event = `${charName}：${item.首穿}`;
-    data.系统._待发送道具事件 = data.系统._待发送道具事件
-      ? `${data.系统._待发送道具事件}|${event}`
-      : event;
+    queueItemEvent(data, charKey, item.首穿);
     firstWear = true;
+  } else {
+    queueItemEvent(data, charKey, `她已换上「${name}」（服装/妆容细节变量已同步，请让她自然完成换装或以新装扮登场）`);
   }
   console.info(`[网店] ${charKey} 装备「${name}」${firstWear ? '（首穿）' : ''}`);
   return { firstWear };
@@ -694,6 +714,7 @@ export function getEquipBoost(data: SchemaType, charKey: CharKey, category: Thou
  * 永久生效、不可卸下、各买各的；阶段门槛对齐 stageConfig 允许身体改造(阶4+)
  */
 export function buyBodyMod(data: SchemaType, charKey: CharKey, name: string): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '体改') return '未知改造项目';
   if (data[charKey].装备状态[name]) return '已完成该改造';
@@ -758,6 +779,40 @@ export function getEquippedNames(data: SchemaType, charKey: CharKey): string[] {
     .map(([n]) => n);
 }
 
+/** 已完成的体改项目名列表（永久；快照/界面共用） */
+export function getBodyModNames(data: SchemaType, charKey: CharKey): string[] {
+  return Object.keys(data[charKey].装备状态).filter(n => ITEM_MAP[n]?.分类 === '体改');
+}
+
+/**
+ * 装备中的"非日常"装扮（风险 ≥ 1；修身连衣裙/红绳手链等风险 0 的正常衣物不列入）
+ * 用于快照【装扮意识】动态提示——只提醒 AI 演绎值得她"有意识"的大胆装扮
+ */
+export function getDaringEquippedNames(data: SchemaType, charKey: CharKey): string[] {
+  return getEquippedNames(data, charKey).filter(n => (ITEM_MAP[n]?.风险 ?? 0) >= 1);
+}
+
+/**
+ * 仪容星标（v0.22）：5 星 = 4 个装备槽各有网店装备 + 任意体改
+ * 满星 = 全套加成：所有培育中念头 +1/楼（无视类型匹配）+ 苏文疑心 +1/楼（高收益高风险）
+ */
+export const OUTFIT_STAR_SLOTS = ['内着', '外装', '饰品', '妆容', '体改'] as const;
+
+export function getOutfitStars(data: SchemaType, charKey: CharKey): { lit: boolean[]; count: number; full: boolean } {
+  // 调试后门：模拟满星（星标区连点5次切换，测试满星冲刺/疑心循环）
+  if (data.系统._调试满星) {
+    return { lit: OUTFIT_STAR_SLOTS.map(() => true), count: OUTFIT_STAR_SLOTS.length, full: true };
+  }
+  const equipped = getEquippedNames(data, charKey);
+  const lit = OUTFIT_STAR_SLOTS.map(slot =>
+    slot === '体改'
+      ? Object.keys(data[charKey].装备状态).some(n => ITEM_MAP[n]?.分类 === '体改')
+      : equipped.some(n => ITEM_MAP[n]?.槽位 === slot),
+  );
+  const count = lit.filter(Boolean).length;
+  return { lit, count, full: count === OUTFIT_STAR_SLOTS.length };
+}
+
 // ────────────────────────────────────────────
 // 消耗品（即买即用，目标=当前角色）
 // ────────────────────────────────────────────
@@ -768,6 +823,7 @@ export function useConsumable(
   name: string,
   currentFloor: number,
 ): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '消耗品') return '未知消耗品';
   if (data.系统.货币 < item.价格) return '货币不足';
@@ -797,6 +853,7 @@ export function useConsumable(
 // ────────────────────────────────────────────
 
 export function buyPrivilege(data: SchemaType, name: string): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '特权') return '未知特权';
   if (item.未上架) return '暂未上架';
