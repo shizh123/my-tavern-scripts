@@ -90,6 +90,25 @@
       </template>
     </div>
 
+    <!-- 影像档案（特别页专属：录制生成的影像，归档后可给她们看） -->
+    <div v-if="activeCat === '特别' && tapeEntries.length > 0" class="tape-list">
+      <div class="group-header">
+        <span class="group-label">影像档案</span>
+        <span class="group-line"></span>
+      </div>
+      <div v-for="[id, t] in tapeEntries" :key="id" class="tape-card">
+        <div class="tape-main">
+          <span class="tape-name">📼 {{ id }}</span>
+          <span :class="['tape-desc', { pending: t.状态 !== '已就绪' }]">
+            {{ t.状态 === '已就绪' ? t.摘要 : '归档中…（AI 下一轮整理摘要）' }}
+          </span>
+        </div>
+        <button type="button" class="card-btn equip" :disabled="t.状态 !== '已就绪'" @click="watchTape(id)">
+          给{{ targetChar }}看
+        </button>
+      </div>
+    </div>
+
     <p v-if="msg" :class="['msg', msgType]">{{ msg }}</p>
   </div>
 </template>
@@ -98,9 +117,13 @@
 import { computed, ref } from 'vue';
 import {
   SHOP_ITEMS,
+  CAMERA_NAME,
+  buyCamera,
   buyEquipment,
   buyBodyMod,
+  showTape,
   toggleEquip,
+  toggleRecording,
   useConsumable,
   buyPrivilege,
   type ShopItem,
@@ -109,7 +132,7 @@ import {
 import { useDataStore } from '../store';
 
 const charNames = ['秦璐', '苏梦'] as const;
-const categories = ['装备', '体改', '消耗品', '特权'] as const;
+const categories = ['装备', '体改', '消耗品', '特权', '特别'] as const;
 const SLOT_ORDER: EquipSlot[] = ['内着', '外装', '饰品', '妆容'];
 
 const store = useDataStore();
@@ -144,6 +167,29 @@ const listEntries = computed<ListEntry[]>(() => {
   return out;
 });
 
+/** 影像档案（录制生成；已就绪可观看） */
+const tapeEntries = computed<[string, { 摘要: string; 状态: string }][]>(() =>
+  Object.entries(data.value?.系统?.影像列表 ?? {}),
+);
+
+async function watchTape(tapeId: string) {
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) return;
+    const err = showTape(d, targetKey.value, tapeId);
+    if (err) {
+      showMsg(err, 'warn');
+      return;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`已安排${targetChar.value}观看——下一轮演绎观看剧情（影像已销毁）`, 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 观看影像失败', e);
+    showMsg('操作失败：' + (e instanceof Error ? e.message : String(e)), 'error');
+  }
+}
+
 function ownerState(key: '秦璐状态' | '苏梦状态', name: string): '已购买' | '装备中' | undefined {
   return data.value?.[key]?.装备状态?.[name] as any;
 }
@@ -152,6 +198,14 @@ function isEquippedByTarget(item: ShopItem): boolean {
 }
 
 function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy' | 'equip' | 'unequip' | 'use' | 'none' } {
+  if (item.分类 === '特别') {
+    if (data.value?.系统?.道具状态?.[item.名称] !== '已购买') {
+      return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
+    }
+    return data.value?.系统?._录像?.录制中
+      ? { label: '⏹ 停止录制', disabled: false, kind: 'unequip' }
+      : { label: '● 开始录制', disabled: false, kind: 'equip' };
+  }
   if (item.分类 === '特权') {
     if (item.未上架) return { label: '未上架', disabled: true, kind: 'none' };
     if (data.value?.系统?.道具状态?.[item.名称] === '已购买') return { label: '已生效', disabled: true, kind: 'none' };
@@ -191,7 +245,18 @@ async function shopAction(item: ShopItem) {
     }
     let err: string | null = null;
     let extra = '';
-    if (item.分类 === '特权') {
+    if (item.分类 === '特别') {
+      if (ui.kind === 'buy') {
+        err = buyCamera(d);
+      } else {
+        const r = toggleRecording(d, SillyTavern.chat?.length ?? 0, targetChar.value);
+        err = r.error ?? null;
+        if (r.started) extra = `，镜头已就位（目标：${targetChar.value}）`;
+        if (r.stopped) extra = r.overwrote
+          ? '，影像已生成（覆盖旧影像）——AI 下一轮归档摘要'
+          : '，影像已生成——AI 下一轮归档摘要后即可给她们看';
+      }
+    } else if (item.分类 === '特权') {
       err = buyPrivilege(d, item.名称);
     } else if (item.分类 === '消耗品') {
       err = useConsumable(d, key, item.名称, SillyTavern.chat?.length ?? 0);
@@ -203,7 +268,7 @@ async function shopAction(item: ShopItem) {
     } else {
       const r = toggleEquip(d, key, item.名称);
       err = r.error ?? null;
-      if (r.firstWear) extra = '，她第一次穿上它——下一轮会有反应';
+      if (r.firstWear) extra = '，下一轮将演绎你把它交给她';
     }
     if (err) {
       showMsg(err, 'warn');
@@ -532,6 +597,51 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     cursor: not-allowed;
   }
 }
+// ━━━ 影像档案 ━━━
+.tape-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tape-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.24);
+
+  .card-btn {
+    flex: none;
+    width: auto;
+  }
+}
+.tape-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tape-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--acc);
+}
+.tape-desc {
+  font-size: 11px;
+  color: #b7ab98;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.pending {
+    font-style: italic;
+    color: color-mix(in srgb, var(--acc) 35%, #665);
+  }
+}
+
 .msg {
   margin: 0;
   padding: 5px 10px;

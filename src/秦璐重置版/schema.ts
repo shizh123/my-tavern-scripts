@@ -193,6 +193,8 @@ const CharacterState = z.object({
   /** 越级药效（安神药+1/头孢酒+2，消耗品使用后写入；脚本管理） */
   _越级加成: z.coerce.number().default(0),
   _越级加成至楼层: z.coerce.number().default(-1),
+  /** 疑心主通道基准（v0.23）：已折算过疑心的堕落度水位；-1=未初始化（首次不补收） */
+  _疑心已结算堕落度: z.coerce.number().default(-1),
 });
 
 // ============================================
@@ -291,7 +293,51 @@ const SystemState = z.object({
   /** 首穿记录：key="角色状态:物品名"，首次装备事件只发一次（对标云霜凝 _已觉醒性癖） */
   _已首穿: z.record(z.string(), z.boolean()).prefault({}),
 
+  /**
+   * 影像档案（v0.23 录像系统）：停止录制生成一份，AI 写 50 字摘要归档（判定任务 C），
+   * 就绪后可给任一女角色观看（堕落度 +N，耳濡目染通道），观看即消耗删除。
+   * key 固定 `影像_角色名`——每角色同时只存一份，重录覆盖
+   */
+  影像列表: z
+    .record(
+      z.string(),
+      z.object({
+        摘要: z.string().default('').describe('AI 归档：50字内概括被记录的画面'),
+        录制起止: z.string().default(''),
+        状态: z.enum(['待摘要', '已就绪']).default('待摘要'),
+      }),
+    )
+    .prefault({}),
+
   // ━━━━ 内部标志（脚本管理，AI 不要修改） ━━━━
+  /** 录像状态（v0.23）：设备购买走 道具状态；此处只记录制进行态 */
+  _录像: z
+    .object({
+      录制中: z.boolean().default(false),
+      起始楼层: z.coerce.number().default(-1),
+      目标: z.enum(['秦璐', '苏梦']).default('秦璐'),
+    })
+    .prefault({}),
+  /** 苏梦引场钩子（v0.23）：酒红缎面裙隐藏效果——穿上后倒数 N 楼触发苏梦登场剧情（一次性） */
+  _苏梦引场: z
+    .object({
+      剩余楼: z.coerce.number().default(-1),
+      已触发: z.boolean().default(false),
+    })
+    .prefault({}),
+  /** 打断档位记录（v0.23）：疑心每跨10点档触发一次打断，档位一生一次；key=`角色:档位` */
+  _已触发打断档位: z.record(z.string(), z.boolean()).prefault({}),
+  /** 苏文视角（v0.23）：打断后点亮按钮 → 3 幕插叙 POV，期间主线引擎冻结 */
+  _苏文视角: z
+    .object({
+      待看: z.boolean().default(false),
+      剩余楼: z.coerce.number().default(0),
+      总楼数: z.coerce.number().default(3),
+      目标: z.enum(['秦璐', '苏梦']).default('秦璐'),
+      档位: z.coerce.number().default(0),
+      上次处理楼层: z.coerce.number().default(-1),
+    })
+    .prefault({}),
   /** 调试后门：模拟满星（状态栏星标区连点5次切换；测试满星冲刺/疑心循环用） */
   _调试满星: z.boolean().default(false),
   /** 坏结局锁定（脚本写入，如 '疑心爆表·秦璐'；非空后培育/商店全停，快照只注入终局指引） */

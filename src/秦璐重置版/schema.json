@@ -199,6 +199,115 @@
             "type": "boolean"
           }
         },
+        "影像列表": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "摘要": {
+                "default": "",
+                "description": "AI 归档：50字内概括被记录的画面",
+                "$ref": "#/$defs/__schema23"
+              },
+              "录制起止": {
+                "default": "",
+                "type": "string"
+              },
+              "状态": {
+                "default": "待摘要",
+                "type": "string",
+                "enum": [
+                  "待摘要",
+                  "已就绪"
+                ]
+              }
+            }
+          }
+        },
+        "_录像": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "录制中": {
+              "default": false,
+              "type": "boolean"
+            },
+            "起始楼层": {
+              "default": -1,
+              "type": "number"
+            },
+            "目标": {
+              "default": "秦璐",
+              "type": "string",
+              "enum": [
+                "秦璐",
+                "苏梦"
+              ]
+            }
+          }
+        },
+        "_苏梦引场": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "剩余楼": {
+              "default": -1,
+              "type": "number"
+            },
+            "已触发": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        },
+        "_已触发打断档位": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        },
+        "_苏文视角": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "待看": {
+              "default": false,
+              "type": "boolean"
+            },
+            "剩余楼": {
+              "default": 0,
+              "type": "number"
+            },
+            "总楼数": {
+              "default": 3,
+              "type": "number"
+            },
+            "目标": {
+              "default": "秦璐",
+              "type": "string",
+              "enum": [
+                "秦璐",
+                "苏梦"
+              ]
+            },
+            "档位": {
+              "default": 0,
+              "type": "number"
+            },
+            "上次处理楼层": {
+              "default": -1,
+              "type": "number"
+            }
+          }
+        },
         "_调试满星": {
           "default": false,
           "type": "boolean"
@@ -589,6 +698,10 @@
         "_越级加成至楼层": {
           "default": -1,
           "type": "number"
+        },
+        "_疑心已结算堕落度": {
+          "default": -1,
+          "type": "number"
         }
       }
     },
@@ -688,6 +801,9 @@
     },
     "__schema22": {
       "type": "number"
+    },
+    "__schema23": {
+      "type": "string"
     }
   }
 }

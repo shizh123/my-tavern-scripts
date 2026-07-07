@@ -88,6 +88,8 @@
       <p v-if="isAccelerating" class="note warn">⚡ 苏文在附近 · 念头加速中</p>
       <p v-else-if="suwenSafeReason" class="note safe">✓ {{ suwenSafeReason }}</p>
       <p v-if="freezeUntil > 0" class="note freeze">❄ 对{{ name }}的疑心冻结中（至 {{ freezeUntil }} 楼）</p>
+      <button v-if="povReady" class="pov-btn" @click="enterSuwenPov">👁 苏文视角</button>
+      <p v-else-if="povRunning" class="note pov-running">👁 苏文视角进行中 · 共{{ pov?.总楼数 ?? 3 }}幕（主线已暂停）</p>
     </section>
     </div>
 
@@ -265,6 +267,27 @@ const freezeUntil = computed(() => {
   const floor = SillyTavern.chat?.length ?? 0;
   return f?.是否冻结 && floor < f.冻结结束楼层 ? f.冻结结束楼层 : 0;
 });
+
+// ━━━ 苏文视角（v0.23）：打断后点亮按钮，点击进入 3 幕插叙 POV ━━━
+const pov = computed(() => data.value?.系统?._苏文视角 ?? null);
+const povReady = computed(() => !!pov.value?.待看 && pov.value?.目标 === props.name && !data.value?.系统?._坏结局);
+const povRunning = computed(() => (pov.value?.剩余楼 ?? 0) > 0 && pov.value?.目标 === props.name);
+
+async function enterSuwenPov() {
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    const p = d?.系统?._苏文视角;
+    if (!p?.待看) return;
+    p.待看 = false;
+    p.剩余楼 = p.总楼数 ?? 3;
+    p.上次处理楼层 = -1;
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`已切入苏文视角（共${p.剩余楼}幕）——发送任意消息开始演绎`, 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 进入苏文视角失败', e);
+  }
+}
 
 const thoughtList = computed(() => {
   const thoughts = data.value?.[charKey.value]?.念头列表 ?? {};
@@ -832,6 +855,46 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     color: $info;
     background: rgba(111, 185, 220, 0.09);
     border-left: 2px solid $info;
+  }
+  &.pov-running {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 8%, transparent);
+    border-left: 2px solid var(--acc);
+  }
+}
+
+// ━━━ 苏文视角按钮（打断后点亮，发光跳动） ━━━
+.pov-btn {
+  width: 100%;
+  margin-top: 2px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--acc) 60%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--acc) 18%, transparent), rgba(0, 0, 0, 0.25));
+  color: var(--acc);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 2px;
+  cursor: pointer;
+  animation: pov-throb 1.6s ease-in-out infinite;
+  transition: filter 0.2s;
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+}
+@keyframes pov-throb {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--glow);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow:
+      0 0 14px var(--glow),
+      0 0 26px var(--glow2);
+    transform: translateY(-1px);
   }
 }
 

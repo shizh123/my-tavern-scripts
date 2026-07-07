@@ -21,7 +21,7 @@ export type EquipSlot = '内着' | '外装' | '饰品' | '妆容';
 
 export interface ShopItem {
   名称: string;
-  分类: '装备' | '消耗品' | '特权' | '体改';
+  分类: '装备' | '消耗品' | '特权' | '体改' | '特别';
   槽位?: EquipSlot;
   阶段门槛: number;
   类型倾向: ThoughtCategoryValue[];
@@ -121,6 +121,42 @@ export const SHOP_ITEMS: ShopItem[] = [
     简介: '看起来是端庄的连裤袜，只有她知道那处开口',
     首穿: '她穿上那双连裤袜，表面与平日无异——只有她自己知道走动时那处开口带来的凉意',
   },
+  {
+    名称: '连体塑身衣',
+    分类: '装备',
+    槽位: '内着',
+    阶段门槛: 2,
+    类型倾向: ['身体开放'],
+    加速: 0.5,
+    风险: 1,
+    越级钥匙: false,
+    价格: 200,
+    简介: '从颈到胯的紧致包裹，曲线一览无余',
+  },
+  {
+    名称: '黑丝吊袜带',
+    分类: '装备',
+    槽位: '内着',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动', '性行为'],
+    加速: 1,
+    风险: 2,
+    越级钥匙: false,
+    价格: 320,
+    简介: '长袜与腰间的细带，是最经典的暗号',
+  },
+  {
+    名称: '珍珠链内裤',
+    分类: '装备',
+    槽位: '内着',
+    阶段门槛: 4,
+    类型倾向: ['性行为'],
+    加速: 1.5,
+    风险: 3,
+    越级钥匙: true,
+    价格: 520,
+    简介: '一串珍珠替代了布料，走动即是折磨',
+  },
   // ━━━━ 外装（肢体亲近/暧昧互动域） ━━━━
   {
     名称: '修身连衣裙',
@@ -200,6 +236,66 @@ export const SHOP_ITEMS: ShopItem[] = [
     简介: '厨房里最危险的穿法，背后一览无余',
     首穿: '趁家里只有你们两人，她只系着围裙站进了厨房——转身盛汤时，裸露的背影让空气都凝固了',
   },
+  {
+    名称: '情侣家居服',
+    分类: '装备',
+    槽位: '外装',
+    阶段门槛: 1,
+    类型倾向: ['陪伴交流', '情感依赖'],
+    加速: 0.5,
+    风险: 0,
+    越级钥匙: false,
+    价格: 120,
+    简介: '成套的另一件在你衣柜里——家里心照不宣的小秘密',
+  },
+  {
+    名称: '包臀热裤',
+    分类: '装备',
+    槽位: '外装',
+    阶段门槛: 2,
+    类型倾向: ['暧昧互动'],
+    加速: 0.5,
+    风险: 1,
+    越级钥匙: false,
+    价格: 220,
+    简介: '腿型和臀线毫无保留',
+  },
+  {
+    名称: '侧开衩旗袍',
+    分类: '装备',
+    槽位: '外装',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动', '身体开放'],
+    加速: 1,
+    风险: 2,
+    越级钥匙: false,
+    价格: 350,
+    简介: '走一步开衩滑到大腿——古典是最好的伪装',
+  },
+  {
+    名称: '他的白衬衫',
+    分类: '装备',
+    槽位: '外装',
+    阶段门槛: 4,
+    类型倾向: ['家庭替代', '身份认同'],
+    加速: 1.5,
+    风险: 3,
+    越级钥匙: true,
+    价格: 480,
+    简介: '从你衣柜里拿走的那件——下摆刚好遮住的长度，只穿这一件',
+  },
+  {
+    名称: '酒红缎面裙',
+    分类: '装备',
+    槽位: '外装',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动'],
+    加速: 1,
+    风险: 1,
+    越级钥匙: false,
+    价格: 320,
+    简介: '缎面流光衬得气色极好——好看到家里人都会注意到',
+  },
   // ━━━━ 饰品（身份认同/绝对服从/家庭替代域） ━━━━
   {
     名称: '红绳手链',
@@ -266,6 +362,42 @@ export const SHOP_ITEMS: ShopItem[] = [
     简介: '藏在衣服下的细链，贴着小腹微凉',
     首穿: '她把那条细链系在腰腹上，衣服一盖谁也看不见——可正因为看不见，才像个秘密',
   },
+  {
+    名称: '珍珠耳坠',
+    分类: '装备',
+    槽位: '饰品',
+    阶段门槛: 1,
+    类型倾向: ['情感依赖'],
+    加速: 0.5,
+    风险: 0,
+    越级钥匙: false,
+    价格: 120,
+    简介: '摇曳在耳畔的温柔，是他挑的',
+  },
+  {
+    名称: '纤细脚链',
+    分类: '装备',
+    槽位: '饰品',
+    阶段门槛: 2,
+    类型倾向: ['暧昧互动', '亲密接触'],
+    加速: 0.5,
+    风险: 1,
+    越级钥匙: false,
+    价格: 180,
+    简介: '踝骨上的一线银光，低头才看得见',
+  },
+  {
+    名称: '玫瑰锁骨链',
+    分类: '装备',
+    槽位: '饰品',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动'],
+    加速: 1,
+    风险: 2,
+    越级钥匙: false,
+    价格: 300,
+    简介: '一朵玫瑰悬在锁骨窝，引人视线下移',
+  },
   // ━━━━ 妆容（情感依赖/暧昧互动域） ━━━━
   {
     名称: '雾致香水',
@@ -331,6 +463,30 @@ export const SHOP_ITEMS: ShopItem[] = [
     价格: 480,
     简介: '喷在耳后与锁骨，气味只对凑得够近的人生效',
     首穿: '她把那支香水喷在耳后和锁骨，甜腻的气味在皮肤上化开——只有凑得足够近的人才闻得到',
+  },
+  {
+    名称: '水光唇釉',
+    分类: '装备',
+    槽位: '妆容',
+    阶段门槛: 2,
+    类型倾向: ['亲密接触'],
+    加速: 0.5,
+    风险: 1,
+    越级钥匙: false,
+    价格: 160,
+    简介: '看起来就很软的唇，让人想验证',
+  },
+  {
+    名称: '桃花眼妆',
+    分类: '装备',
+    槽位: '妆容',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动', '情感依赖'],
+    加速: 1,
+    风险: 1,
+    越级钥匙: false,
+    价格: 260,
+    简介: '眼尾晕开的粉，看谁都像含情',
   },
   // ━━━━ 体改（一次性改造，永久生效不占槽；花钱买的堕落刻度） ━━━━
   {
@@ -458,6 +614,40 @@ export const SHOP_ITEMS: ShopItem[] = [
     价格: 350,
     简介: '意识的门槛被泡软了——3 楼内有效阶段 +2（越级闸门恢复后生效）',
   },
+  // ━━━━ 苏文安抚类（v0.23）：使用后由她去执行，弹出一楼安抚剧情 + 降疑心 ━━━━
+  {
+    名称: '精心家宴',
+    分类: '消耗品',
+    阶段门槛: 1,
+    类型倾向: [],
+    加速: 0,
+    风险: 0,
+    越级钥匙: false,
+    价格: 150,
+    简介: '她为苏文操办一桌好菜——疑心 -10（降不破堕落度铸成的下限）',
+  },
+  {
+    名称: '贴心小礼物',
+    分类: '消耗品',
+    阶段门槛: 1,
+    类型倾向: [],
+    加速: 0,
+    风险: 0,
+    越级钥匙: false,
+    价格: 250,
+    简介: '一份妥帖的礼物悄悄送到苏文手上——疑心 -15（静默生效，不占剧情）',
+  },
+  {
+    名称: '周末全家出游',
+    分类: '消耗品',
+    阶段门槛: 1,
+    类型倾向: [],
+    加速: 0,
+    风险: 0,
+    越级钥匙: false,
+    价格: 400,
+    简介: '一场家人环绕的出游——疑心 -25 并冻结 5 楼',
+  },
   // ━━━━ 特权（全局永久，货币终极去处） ━━━━
   {
     名称: '植入扩容',
@@ -492,6 +682,18 @@ export const SHOP_ITEMS: ShopItem[] = [
     价格: 1500,
     简介: '免判定直植（二期上架）',
     未上架: true,
+  },
+  // ━━━━ 特别（v0.23 录像系统：一次买断设备，录制→归档→给她们看） ━━━━
+  {
+    名称: '云台微型相机',
+    分类: '特别',
+    阶段门槛: 1,
+    类型倾向: [],
+    加速: 0,
+    风险: 0,
+    越级钥匙: false,
+    价格: 600,
+    简介: '一次买断。开始/停止录制，停止后 AI 归档影像；影像可给任一女角色观看——她看着屏幕里的画面，认知被重塑（堕落度+4）',
   },
 ];
 
@@ -539,6 +741,20 @@ const CLOTHING_WRITE: Record<string, Partial<Record<ClothingPart, string>>> = {
   鲜红美甲: { 特殊妆容: '十指鲜红长甲' },
   雾致香水: { 香氛: '若有似无的雾致香水' },
   催情香水: { 香氛: '耳后与锁骨的甜腻催情香' },
+  // v0.23 扩充 +12（全部走现有字段，无新槽位/新字段）
+  连体塑身衣: { 内衣上: '肉色连体塑身衣', 内衣下: '（塑身衣连体）' },
+  黑丝吊袜带: { 袜裤: '黑丝长袜配吊袜带' },
+  珍珠链内裤: { 内衣下: '珍珠链内裤' },
+  情侣家居服: { 上装: '情侣家居服上衣', 下装: '情侣家居服长裤' },
+  包臀热裤: { 下装: '包臀超短热裤' },
+  侧开衩旗袍: { 上装: '侧开衩旗袍', 下装: '（旗袍一体）' },
+  他的白衬衫: { 上装: '只穿一件{{user}}的白衬衫', 下装: '无' },
+  酒红缎面裙: { 上装: '酒红缎面连衣裙', 下装: '（连衣裙一体）' },
+  珍珠耳坠: { 配饰: '珍珠耳坠' },
+  纤细脚链: { 特殊装饰: '纤细脚链' },
+  玫瑰锁骨链: { 配饰: '玫瑰吊坠锁骨链' },
+  水光唇釉: { 唇妆: '水光唇釉' },
+  桃花眼妆: { 眼妆: '桃花眼妆·眼尾晕粉' },
 };
 
 function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart, text: string): void {
@@ -618,10 +834,10 @@ function restoreClothingParts(data: SchemaType, charKey: CharKey, itemName: stri
 // 购买 / 装备 / 卸下
 // ────────────────────────────────────────────
 
-/** 追加一条一次性剧情事件（下一轮注入 AI 后清空） */
+/** 追加一条一次性剧情事件（下一轮注入 AI 后清空）；消毒 | 分隔符防事件串裂 */
 export function queueItemEvent(data: SchemaType, charKey: CharKey, text: string): void {
   const charName = charKey === '秦璐状态' ? '秦璐' : '苏梦';
-  const event = `${charName}：${text}`;
+  const event = `${charName}：${text.replace(/\|/g, '，')}`;
   data.系统._待发送道具事件 = data.系统._待发送道具事件
     ? `${data.系统._待发送道具事件}|${event}`
     : event;
@@ -662,7 +878,7 @@ export function toggleEquip(
   if (state === '装备中') {
     data[charKey].装备状态[name] = '已购买';
     restoreClothingParts(data, charKey, name);
-    queueItemEvent(data, charKey, `她已换下「${name}」，相应部位恢复日常穿着（以服装/妆容细节变量为准）`);
+    queueItemEvent(data, charKey, `{{user}}让她换下「${name}」，相应部位恢复日常穿着（以服装/妆容细节变量为准）`);
     console.info(`[网店] ${charKey} 卸下「${name}」`);
     return {};
   }
@@ -682,16 +898,32 @@ export function toggleEquip(
   data[charKey].装备状态[name] = '装备中';
   applyClothingParts(data, charKey, name);
 
-  // 换装事件：首穿用专属文案（只发一次，MVU 持久字段防 reload 重置），复穿用通用文案
-  const wearKey = `${charKey}:${name}`;
-  let firstWear = false;
-  if (item.首穿 && !data.系统._已首穿[wearKey]) {
-    data.系统._已首穿[wearKey] = true;
-    queueItemEvent(data, charKey, item.首穿);
-    firstWear = true;
-  } else {
-    queueItemEvent(data, charKey, `她已换上「${name}」（服装/妆容细节变量已同步，请让她自然完成换装或以新装扮登场）`);
+  // 隐藏钩子（v0.23，无任何 UI 暗示）：秦璐穿上酒红缎面裙 → 3 楼后触发苏梦登场剧情（一次性）
+  // 目的：引出苏梦这个角色的存在；登场方式完全按上下文演绎，不硬编码场面
+  if (charKey === '秦璐状态' && name === '酒红缎面裙') {
+    // 老存档守卫：字段可能未被 Schema 补齐
+    if (!data.系统._苏梦引场) {
+      (data.系统 as any)._苏梦引场 = { 剩余楼: -1, 已触发: false };
+    }
+    if (!data.系统._苏梦引场.已触发 && data.系统._苏梦引场.剩余楼 < 0) {
+      data.系统._苏梦引场.剩余楼 = 3;
+      console.info('[隐藏钩子] 酒红缎面裙已穿上，苏梦引场倒数 3 楼');
+    }
   }
+
+  // 换装事件（v0.23 云霜凝式物理骨架）：事件 = {{user}} 本轮的交付动作，
+  // 她的反应交给 AI 按当前阶段生成——不写"她已穿上"的既成事实（那会跳过赠送环节，0.22 试用反馈）。
+  // 首穿标记仍走 MVU 持久字段防 reload 重置；装备类的 首穿 专属文案自此弃用（体改仍用）
+  const wearKey = `${charKey}:${name}`;
+  const firstWear = !data.系统._已首穿[wearKey];
+  if (firstWear) data.系统._已首穿[wearKey] = true;
+  queueItemEvent(
+    data,
+    charKey,
+    firstWear
+      ? `{{user}}把新买的「${name}」交给她，让她换上（${item.槽位}；他第一次送她这样的东西）——本轮请演绎这次交付与她按当前阶段的反应，此后以服装/妆容细节变量为准持续体现新装扮`
+      : `{{user}}让她换上「${name}」（${item.槽位}）——此后以服装/妆容细节变量为准体现新装扮`,
+  );
   console.info(`[网店] ${charKey} 装备「${name}」${firstWear ? '（首穿）' : ''}`);
   return { firstWear };
 }
@@ -760,13 +992,10 @@ export function buyBodyMod(data: SchemaType, charKey: CharKey, name: string): st
     }
   }
 
-  // 改造事件（一次性，购买即唯一，无需额外幂等标记）
+  // 改造事件（一次性，购买即唯一，无需额外幂等标记）；
+  // v0.23：加"在{{user}}的安排下"前缀，锚定改造是玩家推动的，不凭空发生
   if (item.首穿) {
-    const charName = charKey === '秦璐状态' ? '秦璐' : '苏梦';
-    const event = `${charName}：${item.首穿}`;
-    data.系统._待发送道具事件 = data.系统._待发送道具事件
-      ? `${data.系统._待发送道具事件}|${event}`
-      : event;
+    queueItemEvent(data, charKey, `在{{user}}的安排下，${item.首穿}`);
   }
   console.info(`[体改] ${charKey} 完成「${name}」-${item.价格} 堕落+${item.堕落度加成 ?? 0} (余${data.系统.货币})`);
   return null;
@@ -817,6 +1046,23 @@ export function getOutfitStars(data: SchemaType, charKey: CharKey): { lit: boole
 // 消耗品（即买即用，目标=当前角色）
 // ────────────────────────────────────────────
 
+/**
+ * 疑心下限棘轮（v0.23）：回落/降疑手段都不能低于 她堕落度×0.25——
+ * 有些变化他看见了就无法当没看见（纹身、气质、眼神）
+ */
+export function getSuspicionFloor(data: SchemaType, charKey: CharKey): number {
+  return Math.floor(data[charKey].堕落度 * 0.25);
+}
+
+/** 降低苏文对该角色的疑心（受下限棘轮约束） */
+function lowerSuspicion(data: SchemaType, charKey: CharKey, amount: number): void {
+  const susKey = charKey === '秦璐状态' ? '对秦璐疑心值' : '对苏梦疑心值';
+  const floorMin = getSuspicionFloor(data, charKey);
+  const before = data.苏文状态[susKey];
+  data.苏文状态[susKey] = Math.max(floorMin, before - amount);
+  console.info(`[疑心] ${susKey} ${before}→${data.苏文状态[susKey]}（降疑${amount}，下限${floorMin}）`);
+}
+
 export function useConsumable(
   data: SchemaType,
   charKey: CharKey,
@@ -843,6 +1089,30 @@ export function useConsumable(
   } else if (name === '头孢酒') {
     data[charKey]._越级加成 = 2;
     data[charKey]._越级加成至楼层 = currentFloor + 3;
+  } else if (name === '精心家宴') {
+    // 苏文安抚类：她去执行，弹一楼安抚剧情（方向不定细节，角色无关原则）
+    lowerSuspicion(data, charKey, 10);
+    queueItemEvent(
+      data,
+      charKey,
+      `在{{user}}的安排下，她今晚为苏文精心操办了一桌家宴——本轮请演绎这场饭桌上的安抚，方向：让他觉得"家还是那个家"；她的姿态与细节按上下文和当前阶段演绎`,
+    );
+  } else if (name === '贴心小礼物') {
+    // 静默型安抚：效果直接生效，不弹剧情（对标借口短信；礼物在幕后送达）
+    lowerSuspicion(data, charKey, 15);
+  } else if (name === '周末全家出游') {
+    lowerSuspicion(data, charKey, 25);
+    const freezeKey = charKey === '秦璐状态' ? '对秦璐疑心值冻结' : '对苏梦疑心值冻结';
+    data.苏文状态[freezeKey] = {
+      是否冻结: true,
+      借口内容: '周末全家出游的余温',
+      冻结结束楼层: currentFloor + 5,
+    };
+    queueItemEvent(
+      data,
+      charKey,
+      `在{{user}}的安排下，全家这个周末安排了一次出游——本轮请演绎出游的温馨画面，方向：苏文在家人环绕中放下疑虑；细节按上下文演绎`,
+    );
   }
   console.info(`[网店] 对${charName}使用「${name}」-${item.价格} (余${data.系统.货币})`);
   return null;
@@ -862,6 +1132,93 @@ export function buyPrivilege(data: SchemaType, name: string): string | null {
   data.系统.货币 -= item.价格;
   data.系统.道具状态[name] = '已购买';
   console.info(`[网店] 特权「${name}」解锁 -${item.价格} (余${data.系统.货币})`);
+  return null;
+}
+
+// ────────────────────────────────────────────
+// 录像系统（v0.23）：设备买断 → 录制 toggle → 停止生成影像（AI 归档摘要）→ 给她们看
+// ────────────────────────────────────────────
+
+export const CAMERA_NAME = '云台微型相机';
+/** 观看影像的堕落度增量（经主通道自动折算疑心；数值待平衡） */
+export const TAPE_CORRUPTION_GAIN = 4;
+
+/** 购买录像设备（一次买断，走 系统.道具状态） */
+export function buyCamera(data: SchemaType): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
+  const item = ITEM_MAP[CAMERA_NAME];
+  if (data.系统.道具状态[CAMERA_NAME] === '已购买') return '已购买过';
+  if (data.系统.货币 < item.价格) return '货币不足';
+  data.系统.货币 -= item.价格;
+  data.系统.道具状态[CAMERA_NAME] = '已购买';
+  console.info(`[录像] 设备购入 -${item.价格} (余${data.系统.货币})`);
+  return null;
+}
+
+/**
+ * 开始/停止录制。录制绑定目标角色（商店"为谁选购"），
+ * 每角色同时只存一份影像（key 固定 `影像_角色名`），重录覆盖旧影像。
+ * 停止时生成待摘要影像（AI 下一轮归档）
+ */
+export function toggleRecording(
+  data: SchemaType,
+  currentFloor: number,
+  targetName: '秦璐' | '苏梦',
+): { error?: string; started?: boolean; stopped?: boolean; tapeId?: string; overwrote?: boolean } {
+  if (data.系统._坏结局) return { error: '结局已锁定' };
+  if (data.系统.道具状态[CAMERA_NAME] !== '已购买') return { error: '未购买设备' };
+  // 老存档守卫：UI 直接操作裸 stat_data，新字段在首个 AI 周期 Schema 补齐前可能缺失
+  if (!data.系统._录像) {
+    (data.系统 as any)._录像 = { 录制中: false, 起始楼层: -1, 目标: '秦璐' };
+  }
+  if (!data.系统.影像列表) {
+    (data.系统 as any).影像列表 = {};
+  }
+  const rec = data.系统._录像;
+  if (!rec.录制中) {
+    rec.录制中 = true;
+    rec.起始楼层 = currentFloor;
+    rec.目标 = targetName;
+    console.info(`[录像] 开始录制（目标${targetName}）@${currentFloor}`);
+    return { started: true };
+  }
+  rec.录制中 = false;
+  const tapeId = `影像_${rec.目标}`;
+  const overwrote = !!data.系统.影像列表[tapeId];
+  data.系统.影像列表[tapeId] = {
+    摘要: '',
+    录制起止: `${rec.起始楼层}~${currentFloor}`,
+    状态: '待摘要',
+  };
+  rec.起始楼层 = -1;
+  console.info(`[录像] 停止录制，生成 ${tapeId}（待摘要）${overwrote ? '，覆盖旧影像' : ''}`);
+  return { stopped: true, tapeId, overwrote };
+}
+
+/**
+ * 给角色观看影像（A/E 合一）：观看者堕落度 +4（给自己看=认知冲击；给另一位看=耳濡目染带坏），
+ * 弹一楼观看剧情（引用 AI 归档的摘要），影像即看即毁
+ */
+export function showTape(data: SchemaType, charKey: CharKey, tapeId: string): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
+  const tape = data.系统.影像列表?.[tapeId];
+  if (!tape) return '影像不存在';
+  if (tape.状态 !== '已就绪' || !tape.摘要) return '影像还在归档中（等 AI 下一轮整理摘要）';
+
+  data[charKey].堕落度 = Math.min(100, data[charKey].堕落度 + TAPE_CORRUPTION_GAIN);
+  const ns = getStageByCorruption(data[charKey].堕落度);
+  if (ns > data[charKey].当前阶段) {
+    data[charKey].当前阶段 = ns;
+    data[charKey].阶段标题 = getStageTitle(ns) as any;
+    console.info(`[录像] ${charKey} 观后阶段提升 → ${ns}`);
+  }
+  queueItemEvent(
+    data,
+    charKey,
+    `在{{user}}的安排下，她看了一段影像（画面：${tape.摘要}）——本轮演绎这次观看与她按当前阶段的反应，方向：屏幕里的画面正在重塑她对自己/这个家的认知`,
+  );
+  delete data.系统.影像列表[tapeId];
+  console.info(`[录像] ${charKey} 观看 ${tapeId}，堕落+${TAPE_CORRUPTION_GAIN}，影像已销毁`);
   return null;
 }
 

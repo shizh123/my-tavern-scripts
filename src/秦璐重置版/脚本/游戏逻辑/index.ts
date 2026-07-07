@@ -14,7 +14,7 @@
 import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
-import { getBodyModNames, getDaringEquippedNames, getEquippedNames, getOutfitStars } from './shopSystem';
+import { getBodyModNames, getDaringEquippedNames, getEquippedNames, getOutfitStars, getSuspicionFloor } from './shopSystem';
 import { advanceSuwenRoutine } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
@@ -152,13 +152,18 @@ function rollbackProtectedFields(data: SchemaType): void {
 // ────────────────────────────────────────────────────────
 
 /**
- * 满星疑心结算（v0.22，高收益高风险）：
- * 满星（4槽+体改）期间 苏文对她疑心 +1/楼；不满星每楼回落 0.5；
- * 借口短信冻结期间不涨不落，到期自动解冻；触顶 100 → 坏结局锁定。
+ * 疑心结算（v0.23 完整版）：
+ * - 主通道：她的堕落度每 +2 → 疑心 +1（×0.5 折算，覆盖念头成熟/体改/卖习惯全部来源）——
+ *   攻略本身就是暴露，"瞒"因此成为必修课
+ * - 满星（4槽+体改）期间额外 +1/楼（v0.22 保留）
+ * - 无增长的楼每楼回落 0.5，但**降不破下限棘轮**（堕落度×0.25——看见了就无法当没看见）
+ * - 借口短信/出游余温冻结期间不涨不落，到期自动解冻；触顶 100 → 坏结局锁定
  * 数值待平衡期统一调。
  */
 function settleSuspicion(data: SchemaType, currentFloor: number): void {
   if (data.系统._坏结局) return;
+  // 每楼最多触发一次打断（调试满星下两角色可能同楼跨档；第二位不标记档位，顺延下一楼触发）
+  let interruptFiredThisFloor = false;
   for (const name of ['秦璐', '苏梦'] as const) {
     const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
     const susKey = `对${name}疑心值` as '对秦璐疑心值' | '对苏梦疑心值';
@@ -169,15 +174,40 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
         freeze.是否冻结 = false;
         console.info(`[疑心] 对${name}的冻结到期解除`);
       } else {
-        continue; // 冻结中：不涨不落
+        continue; // 冻结中：不涨不落（堕落度增量挂在基准上，解冻后照常补收）
       }
     }
+
+    // 主通道：堕落度增量 ×0.5（基准水位持久化，UI 侧改动如体改/卖习惯也会在下一楼被收到）
+    const char = data[charKey];
+    if (char._疑心已结算堕落度 < 0) {
+      char._疑心已结算堕落度 = char.堕落度; // 老存档首次初始化，不补收历史
+    }
+    let rise = 0;
+    if (char.堕落度 > char._疑心已结算堕落度) {
+      rise += Math.round((char.堕落度 - char._疑心已结算堕落度) * 0.5);
+      char._疑心已结算堕落度 = char.堕落度;
+    } else if (char.堕落度 < char._疑心已结算堕落度) {
+      char._疑心已结算堕落度 = char.堕落度; // 容错（堕落度理论上不降）
+    }
+    // 满星附加
     const full = getOutfitStars(data, charKey).full;
+    if (full) rise += 1;
+
     const before = data.苏文状态[susKey];
-    const after = full ? Math.min(100, before + 1) : Math.max(0, before - 0.5);
+    const floorMin = getSuspicionFloor(data, charKey);
+    let after: number;
+    if (rise > 0) {
+      after = Math.min(100, before + rise);
+    } else {
+      // 回落：只降不升，且不破下限棘轮
+      after = before > floorMin ? Math.max(floorMin, before - 0.5) : before;
+    }
     if (after !== before) {
       data.苏文状态[susKey] = after;
-      console.info(`[疑心] 苏文对${name} ${before}→${after}（${full ? '满星+1' : '回落-0.5'}）`);
+      console.info(
+        `[疑心] 苏文对${name} ${before}→${after}（涨${rise}${full ? ' 含满星' : ''}，下限${floorMin}）`,
+      );
     }
     // 触顶 → 坏结局锁定（下一轮快照只注入终局指引，引擎/商店全停）
     if (after >= 100) {
@@ -185,7 +215,71 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
       console.warn(`[坏结局] 苏文对${name}疑心爆表，存档锁定`);
       return;
     }
+    // 打断触发（v0.23）：跨过 10 点档且该档从未触发过 → 注入打断事件 + 点亮"苏文视角"
+    // 疑心可降回再涨，已触发档位不重演；一次跨多档只演最高档（其余标记为已触发）
+    if (interruptFiredThisFloor) continue;
+    let firedTier = 0;
+    for (let t = 10; t <= 90; t += 10) {
+      const key = `${name}:${t}`;
+      if (after >= t && before < t && !data.系统._已触发打断档位[key]) {
+        data.系统._已触发打断档位[key] = true;
+        firedTier = t;
+      }
+    }
+    if (firedTier > 0) {
+      interruptFiredThisFloor = true;
+      const dir = INTERRUPT_DIRECTIONS[firedTier];
+      const event = `【苏文打断·疑心${firedTier}】本轮请让苏文中止${name}当前的场面。方向：${dir}。只定方向不定细节——他的台词、时机与她的反应由你按上下文与当前阶段演绎；他并没有实据，这次打断不揭穿任何真相`;
+      data.系统._待发送道具事件 = data.系统._待发送道具事件
+        ? `${data.系统._待发送道具事件}|${event}`
+        : event;
+      data.系统._苏文视角 = {
+        待看: true,
+        剩余楼: 0,
+        总楼数: 3,
+        目标: name,
+        档位: firedTier,
+        上次处理楼层: -1,
+      };
+      console.info(`[打断] 苏文对${name}疑心跨过${firedTier}档，打断事件已注入，苏文视角待看`);
+    }
   }
+}
+
+/**
+ * 打断方向（v0.23）：疑心每跨一个 10 点档触发一次苏文打断，档位一生一次。
+ * 9 条只给"方向"不给"演法"——台词/时机/她的反应由 AI 按上下文与当前阶段演绎。
+ */
+const INTERRUPT_DIRECTIONS: Record<number, string> = {
+  10: '一次纯属不巧的出现——递水果、找充电器、喊吃饭这类毫无怀疑的日常理由，他自己都没多想',
+  20: '顺口的关心变成了敲门——"怎么半天没动静"，无心，但离开前多看了一眼',
+  30: '说不清的违和感让他找了个借口过来转一圈——东西没找到，眼神却在屋里停了停',
+  40: '他开始核实——借口拿东西进来，目光落在细节上（衣着/距离/神色），停留得比平时久',
+  50: '第一次带着目的接近——脚步放轻，先听了一会儿才出声，出现的时机是挑过的',
+  60: '试探性打断——用一个问题破门（"你们在聊什么呢"），进来后不急着走，观察反应',
+  70: '不该出现的时间出现——悄声折返/提前回家，钥匙转动的声音就是预警的全部',
+  80: '几乎是守候——他挑了最可能撞见什么的时机，出现得又快又静，脸上没有笑',
+  90: '带着接近确认的猜疑登场——不敲门，直接推开，进门第一眼就在找证据',
+};
+
+/** POV 三幕的本幕方向 */
+const POV_ACT_DIRECTIONS: Record<number, string> = {
+  1: '铺垫——他这段日子的视角与最初的违和感（素材取自上下文里真实发生过的变化）',
+  2: '发酵——线索在他心里串联，自我解释开始站不住，他决定去看一眼',
+  3: '收束——走向那扇门；以他推门打断的那一刻结束（与主线被打断的场面同一时刻，从他的眼睛看）',
+};
+
+/** 当前楼层是否属于苏文视角插叙（含"已计数楼层"的 ROLL 重生成，防幕数错位/漏冻结） */
+function isPovFloor(data: SchemaType, floor: number): boolean {
+  const pov = data.系统._苏文视角;
+  return pov.剩余楼 > 0 || (pov.档位 > 0 && pov.上次处理楼层 >= 0 && pov.上次处理楼层 === floor);
+}
+
+/** 本楼所属幕数（1~总楼数）；ROLL 重生成已计数楼层时回退一幕 */
+function getPovAct(data: SchemaType, floor: number): number {
+  const pov = data.系统._苏文视角;
+  const act = pov.上次处理楼层 === floor ? pov.总楼数 - pov.剩余楼 : pov.总楼数 - pov.剩余楼 + 1;
+  return Math.min(Math.max(act, 1), pov.总楼数);
 }
 
 /**
@@ -240,6 +334,23 @@ function buildStatusSnapshot(data: SchemaType): string {
     ].join('\n');
   }
 
+  // 苏文视角插叙（v0.23）：POV 进行中只注入本幕指引，主线各系统块全部不出现
+  const pov = data.系统._苏文视角;
+  if (isPovFloor(data, getCurrentFloor())) {
+    const act = getPovAct(data, getCurrentFloor());
+    return [
+      `════════ 苏文视角（插叙 · 第${act}/${pov.总楼数}幕）════════`,
+      '主线已暂停。本幕以苏文为唯一视角焦点（推荐第一人称内心流，全程不切入她们的私密视角），',
+      `演绎他一步步走向那次打断的过程（触发背景：他对${pov.目标}的疑心已达${pov.档位}——${INTERRUPT_DIRECTIONS[pov.档位] ?? ''}）。`,
+      `▷ 本幕方向：${POV_ACT_DIRECTIONS[act] ?? POV_ACT_DIRECTIONS[3]}`,
+      '规则：',
+      '- 素材只用上下文里真实发生过的剧情（她的变化/装扮/异常举动），不虚构未发生的事',
+      '- 他没有实据，也不在这一段获得实据——疑心的答案不在此揭晓',
+      '- 本段不推进主线；变量只更新 苏文状态.当前情绪/当前心理想法（若有变化）',
+      '══════════════════════════',
+    ].join('\n');
+  }
+
   const lines: string[] = [];
   lines.push('════════ 当前游戏状态 ════════');
 
@@ -272,6 +383,11 @@ function buildStatusSnapshot(data: SchemaType): string {
         `【${name}·装扮意识】她此刻身上有刻意的装扮：${daring.join('、')}——演绎中自然体现她对它们的意识（异物感/遮掩动作/走神/怕被注意），不必每件都写${fullSet}。此信息仅属于她的私密认知，苏文等其他角色并不知情（除非正文中已被发现）`,
       );
     }
+  }
+
+  // 录像（v0.23）：录制中提示镜头存在（AI 演画面质感）
+  if (data.系统._录像.录制中) {
+    lines.push('【录像】一枚隐蔽的镜头正在记录当前场景——画面自带被记录的质感（角色是否意识到镜头由剧情决定）');
   }
 
   // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
@@ -326,15 +442,16 @@ function buildStatusSnapshot(data: SchemaType): string {
 
   // 已成熟待腾位/习惯栏容量/货币/依存度：玩家侧或脚本内部信息，不注入给 AI
 
-  // ━━━━ AI 判定通道 1：待判定念头 → 类型判定（植入后≤3楼动态注入） ━━━━
-  //   不按在场过滤：类型判定是纯语义分类，不需要角色在场；
-  //   若过滤，趁角色不在提前植入的念头会错过 3 楼注入窗口，永远卡在判定中
+  // ━━━━ AI 判定通道 1：待判定念头 → 类型判定（未判出就持续注入） ━━━━
+  //   不按在场过滤：类型判定是纯语义分类，不需要角色在场
+  //   v0.23 校对修复：撤掉"植入后≤3楼"窗口——POV 插叙 3 幕 + 打断楼会烧穿窗口，
+  //   念头永远卡在判定中还占培育槽；判定中即注入，判出即消失，无骚扰面
   //   10大类枚举/只判类型 等完整规则常驻世界书「变量输出格式」
   const pendingLines: string[] = [];
   for (const name of ['秦璐', '苏梦'] as const) {
     const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
     for (const [id, t] of Object.entries(data[charKey].念头列表)) {
-      if (t.状态 === '判定中' && floor - t.植入楼层 <= 3) {
+      if (t.状态 === '判定中') {
         pendingLines.push(`  ${id}：「${t.内容}」（写入 /${charKey}/念头列表/${id}/类型）`);
       }
     }
@@ -352,6 +469,19 @@ function buildStatusSnapshot(data: SchemaType): string {
     lines.push('');
     lines.push(`━━━ 判定任务 B：培育中念头相关度 ━━━`);
     lines.push(`判定本轮剧情与上方"想法层"清单中各念头的相关度：replace /系统/本轮相关念头 = { "<念头ID>": 2或1 }（2=高度相关；1=轻微相关；不相关不列入）。`);
+  }
+
+  // ━━━━ AI 判定通道 3：影像归档（停止录制后一次性，写完即消失） ━━━━
+  const pendingTapes = Object.entries(data.系统.影像列表).filter(([, t]) => t.状态 === '待摘要');
+  if (pendingTapes.length > 0) {
+    lines.push('');
+    lines.push(`━━━ 判定任务 C：影像归档 ━━━`);
+    for (const [id] of pendingTapes) {
+      lines.push(
+        `  replace /系统/影像列表/${id}/摘要 = 50字以内，概括刚才那段被录制的剧情中最私密/最不可示人的画面`,
+      );
+    }
+    lines.push(`只写摘要，不要修改影像的其它字段，不要在正文里提及归档这件事。`);
   }
 
   lines.push('══════════════════════════');
@@ -402,9 +532,9 @@ $(() => {
         const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
         const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
 
-        // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效；坏结局后不再覆写）
+        // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效；坏结局/苏文视角期间不覆写）
         //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
-        if (!data.系统._坏结局 && isInVulnerableWindow(messageId)) {
+        if (!data.系统._坏结局 && !isPovFloor(data, messageId) && isInVulnerableWindow(messageId)) {
           for (const name of getPresentCharacters(data)) {
             const ck = `${name}状态` as '秦璐状态' | '苏梦状态';
             if (data[ck].当前情绪 !== '心防松动') {
@@ -455,9 +585,26 @@ $(() => {
         // 1. 回滚脚本管理字段（防 AI 乱改）
         rollbackProtectedFields(newData);
 
-        // 1.5 坏结局锁定：引擎全停（回滚保护仍生效），只清一次性事件后写回
+        // 1.4 清空上一轮已注入的一次性事件（v0.23 校对修复：清空必须在引擎步骤**之前**——
+        //     原先放在末尾 4.5，会把本周期 4.25/4.4 新产生的打断/引场事件一并吞掉，永远到不了 AI）
+        newData.系统._待发送道具事件 = '';
+
+        // 1.5 坏结局锁定：引擎全停（回滚保护仍生效）
         if (newData.系统._坏结局) {
-          newData.系统._待发送道具事件 = '';
+          _.set(新变量, 'stat_data', newData);
+          _isInAiCycle = false;
+          return;
+        }
+
+        // 1.6 苏文视角插叙（v0.23）：主线引擎全部冻结，只推进幕数（按楼层防 ROLL 重复扣；
+        //     含"已计数楼层"的 ROLL 重生成——那也是 POV 楼，不能放引擎跑）
+        if (isPovFloor(newData, currentFloor)) {
+          const pov = newData.系统._苏文视角;
+          if (pov.剩余楼 > 0 && currentFloor !== pov.上次处理楼层) {
+            pov.剩余楼 -= 1;
+            pov.上次处理楼层 = currentFloor;
+            console.info(`[苏文视角] 第${pov.总楼数 - pov.剩余楼}/${pov.总楼数}幕完成，剩余${pov.剩余楼}`);
+          }
           _.set(新变量, 'stat_data', newData);
           _isInAiCycle = false;
           return;
@@ -492,11 +639,36 @@ $(() => {
         }
         newData.系统.本轮相关念头 = {};
 
+        // 4.25 苏梦引场倒数（酒红缎面裙隐藏钩子）：归零 → 注入苏梦登场剧情（一次性）
+        {
+          const intro = newData.系统._苏梦引场;
+          if (!intro.已触发 && intro.剩余楼 > 0) {
+            intro.剩余楼 -= 1;
+            if (intro.剩余楼 === 0) {
+              intro.已触发 = true;
+              intro.剩余楼 = -1;
+              const event =
+                '苏梦：她不经意撞见了母亲此刻的样子（推门/厨房/走廊——按当前场景自然选择），由衷地赞美了母亲的变化。本轮让苏梦自然登场并留下鲜明的存在感（记得将 /系统/在场角色/苏梦 置为 true），登场方式与对话完全按上下文演绎';
+              newData.系统._待发送道具事件 = newData.系统._待发送道具事件
+                ? `${newData.系统._待发送道具事件}|${event}`
+                : event;
+              console.info('[隐藏钩子] 苏梦引场触发');
+            }
+          }
+        }
+
+        // 4.3 影像归档就绪：AI 写完摘要 → 标记已就绪（前端"给她看"按钮解锁）
+        for (const [id, tape] of Object.entries(newData.系统.影像列表)) {
+          if (tape.状态 === '待摘要' && tape.摘要) {
+            tape.状态 = '已就绪';
+            console.info(`[录像] ${id} 摘要归档完成：${tape.摘要}`);
+          }
+        }
+
         // 4.4 满星疑心结算（回滚已恢复基准值，在此之上涨/落）
         settleSuspicion(newData, currentFloor);
 
-        // 4.5 一次性剧情事件已注入过本轮生成 → 清空（首穿等只演一次）
-        newData.系统._待发送道具事件 = '';
+        // （原 4.5 事件清空已前移至 1.4——本周期新产生的事件保留到下一轮注入）
 
         // 5. 写回
         _.set(新变量, 'stat_data', newData);

@@ -14,7 +14,11 @@
           <i class="sep"></i>
           <span>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div class="coin" title="货币">◈ {{ data?.系统?.货币 ?? 0 }}</div>
+        <span v-if="recording" class="rec-dot" title="录制中">● REC</span>
+        <div class="coin" title="货币" @click="coinTap">
+          ◈ {{ data?.系统?.货币 ?? 0 }}
+          <span v-if="coinGain" class="coin-gain">+500</span>
+        </div>
       </header>
 
       <!-- 坏结局横幅（锁定后常驻） -->
@@ -98,6 +102,31 @@ const suwenSafe = computed(() => {
 const susQin = computed(() => Math.round(suwen.value?.对秦璐疑心值 ?? 0));
 const susMeng = computed(() => Math.round(suwen.value?.对苏梦疑心值 ?? 0));
 const badEnd = computed(() => data.value?.系统?._坏结局 ?? '');
+const recording = computed(() => data.value?.系统?._录像?.录制中 ?? false);
+
+// 货币后门：货币区 1.5s 内连点 5 次 → +500，可无限重复（与调试满星同款手势通道）
+let coinTapCount = 0;
+let coinTapTimer: ReturnType<typeof setTimeout> | null = null;
+const coinGain = ref(false);
+async function coinTap() {
+  coinTapCount++;
+  if (coinTapTimer) clearTimeout(coinTapTimer);
+  coinTapTimer = setTimeout(() => (coinTapCount = 0), 1500);
+  if (coinTapCount < 5) return;
+  coinTapCount = 0;
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) return;
+    d.系统.货币 = (d.系统.货币 ?? 0) + 500;
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    coinGain.value = true;
+    setTimeout(() => (coinGain.value = false), 1200);
+    console.info(`[后门] 货币 +500 → ${d.系统.货币}`);
+  } catch (e) {
+    console.error('[秦璐重置版] 货币后门失败', e);
+  }
+}
 const hasFreeze = computed(() => {
   const floor = SillyTavern.chat?.length ?? 0;
   const fq = suwen.value?.对秦璐疑心值冻结;
@@ -315,6 +344,7 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   flex: none;
 }
 .coin {
+  position: relative;
   flex: none;
   font-size: 13px;
   font-weight: 700;
@@ -325,7 +355,44 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   border: 1px solid var(--line);
   background: var(--panel);
   backdrop-filter: blur(4px);
+
   font-variant-numeric: tabular-nums;
+
+  .coin-gain {
+    position: absolute;
+    right: 6px;
+    top: -4px;
+    font-size: 11px;
+    color: #79c48a;
+    text-shadow: 0 0 8px rgba(121, 196, 138, 0.6);
+    animation: coin-float 1.2s ease-out forwards;
+    pointer-events: none;
+  }
+}
+@keyframes coin-float {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+// ━━━ 录制指示灯 ━━━
+.rec-dot {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #e05555;
+  animation: rec-blink 1.2s steps(2, start) infinite;
+}
+@keyframes rec-blink {
+  50% {
+    opacity: 0.25;
+  }
 }
 
 // ━━━ 坏结局横幅 ━━━
