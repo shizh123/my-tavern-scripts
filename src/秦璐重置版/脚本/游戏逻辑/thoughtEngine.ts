@@ -13,7 +13,7 @@
 
 import type { SchemaType } from '../../schema';
 import { getStageByCorruption } from '../../stageConfig';
-import { getEquipBoost, getCultivationSlots, getOutfitStars } from './shopSystem';
+import { getEquipBoost, getCultivationSlots, getOutfitStars, hasEscalationKey, queueItemEvent } from './shopSystem';
 import { isSuwenInAccelerationRoom } from './suwenRoutine';
 
 /** 念头类型（10大类 + 待判定），沿用旧版 */
@@ -205,18 +205,61 @@ export function resolveThoughtType(
   thought.难度 = 难度;
   thought.需要楼数 = 需要楼数;
 
-  // v0.14 测试期：暂停越级闸门，任何念头都直接进培育中，不做退回
-  // 待整体流程验证完毕后（数值/AI相关度加速/念头成熟结算）再恢复越级检查
-  const effectiveStage = getEffectiveStage(data, characterKey, currentFloor);
+  // 越级闸门（v0.24 恢复）：类型推荐阶段 > 有效阶段 → 退回（未达标）
+  // 有效阶段 = 基础阶段 + 心防松动窗口(+1) + 药效越级(安神药+1/头孢酒+2) + 越级钥匙装备(匹配类型+1)
+  const keyBonus = hasEscalationKey(data, characterKey, category) ? 1 : 0;
+  const effectiveStage = Math.min(5, getEffectiveStage(data, characterKey, currentFloor) + keyBonus);
   const catStage = CATEGORY_STAGE[category];
-  thought.状态 = '培育中';
   if (catStage > effectiveStage) {
+    thought.状态 = '未达标';
     console.info(
-      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 培育中（测试期跳过越级闸门）`,
+      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}${keyBonus ? '·含越级钥匙' : ''}) → 未达标退回`,
     );
-  } else {
-    console.info(`[念头判定] ${thoughtId} 类型=${category} 难度=${难度} 需${需要楼数}楼 → 培育中`);
+    return;
   }
+  thought.状态 = '培育中';
+  // 正常植入成功进入培育 → 三振连续计数清零（连续语义，用户定）
+  if (data[characterKey]._强植三振 > 0) {
+    data[characterKey]._强植三振 = 0;
+    console.info(`[三振] ${characterKey} 正常植入成功，连续计数清零`);
+  }
+  console.info(`[念头判定] ${thoughtId} 类型=${category} 难度=${难度} 需${需要楼数}楼 → 培育中`);
+}
+
+/**
+ * 强行植入（v0.24 三振）：对"未达标"念头强推。诱惑派入口、惩罚亮：
+ * - 前 2 次：假意进入培育中（_强植 标记），下一楼必被心智排异退回；注入排异反应事件
+ * - 连续第 3 次：三振——坏结局锁定（正常植入成功会清零计数）
+ */
+export function forceImplant(
+  data: SchemaType,
+  characterKey: '秦璐状态' | '苏梦状态',
+  thoughtId: string,
+): { error?: string; count?: number; bad?: boolean } {
+  if (data.系统._坏结局) return { error: '结局已锁定' };
+  const thought = data[characterKey].念头列表[thoughtId];
+  if (!thought || thought.状态 !== '未达标') return { error: '只有被退回的念头可以强行植入' };
+
+  const charName = characterKey === '秦璐状态' ? '秦璐' : '苏梦';
+  const count = (data[characterKey]._强植三振 ?? 0) + 1;
+  data[characterKey]._强植三振 = count;
+
+  if (count >= 3) {
+    // 三振出局：坏结局锁定（快照转终局指引，引擎/商店全停）
+    data.系统._坏结局 = `三振崩溃·${charName}`;
+    console.warn(`[三振] ${characterKey} 第3次强行植入，心智崩溃，存档锁定`);
+    return { count, bad: true };
+  }
+
+  thought.状态 = '培育中';
+  thought._强植 = true;
+  queueItemEvent(
+    data,
+    characterKey,
+    `{{user}}把「${thought.内容}」强行压进了她的心智——本轮演绎剧烈的排异反应：突如其来的失控、生理性的抗拒与痛苦（这道念头正在伤害她，不要让它生效）${count === 2 ? '。这已是第二次，她的眼神里出现了裂纹' : ''}`,
+  );
+  console.warn(`[三振] ${characterKey} 强行植入「${thought.内容}」（连续${count}/3）`);
+  return { count };
 }
 
 /**
@@ -236,6 +279,13 @@ export function tickThoughtProgress(
   const accelerating = isSuwenInAccelerationRoom(data.系统._苏文作息游标);
 
   for (const [id, thought] of Object.entries(thoughts)) {
+    // 强植排异（v0.24 三振）：强行压入的念头下一楼必被心智弹出 → 退回未达标
+    if (thought._强植 && thought.状态 === '培育中') {
+      thought.状态 = '未达标';
+      thought._强植 = false;
+      console.info(`[三振] ${characterKey} ${id} 强植排异 → 退回未达标`);
+      continue;
+    }
     // 过期判定：培育中/未达标超保留楼数 → 已过期（判定中不参与，等 AI 重试）
     if (isThoughtExpired(thought, currentFloor)) {
       thought.状态 = '已过期' as any;

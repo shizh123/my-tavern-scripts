@@ -133,6 +133,8 @@ const Thought = z.object({
   需要楼数: z.coerce.number().default(0).describe('成熟所需楼层数，类型判定后由脚本按难度设定'),
   开发进度: z.coerce.number().default(0).describe('累积楼层进度（含加速）'),
   植入楼层: z.coerce.number().default(-1),
+  /** 强行植入标记（v0.24 三振）：强植的念头下一楼必被退回 */
+  _强植: z.boolean().default(false),
 });
 
 /** 习惯（成熟念头转化，上限 5，满了变卖） */
@@ -195,6 +197,8 @@ const CharacterState = z.object({
   _越级加成至楼层: z.coerce.number().default(-1),
   /** 疑心主通道基准（v0.23）：已折算过疑心的堕落度水位；-1=未初始化（首次不补收） */
   _疑心已结算堕落度: z.coerce.number().default(-1),
+  /** 三振计数（v0.24）：连续强行植入次数，正常植入成功转培育中即清零；3 次 → 坏结局 */
+  _强植三振: z.coerce.number().default(0),
 });
 
 // ============================================

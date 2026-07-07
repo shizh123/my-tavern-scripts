@@ -112,7 +112,17 @@
           <div class="track"><i class="fill f-grow" :style="{ width: thoughtProgressPercent(t) + '%' }"></i></div>
           <span class="pv">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}</span>
         </div>
-        <div v-if="t.状态 === '未达标'" class="t-reject">她还接受不了，需先推进关系</div>
+        <div v-if="t.状态 === '未达标'" class="t-reject">
+          <span>她还接受不了，需先推进关系</span>
+          <button
+            v-if="!sysBadEnd"
+            class="ghost force"
+            :title="forceCount >= 2 ? '再强行一次，她会碎的' : '她挡不住你——但她的心智会排异'"
+            @click="forceImplantUi(t.id)"
+          >
+            {{ forceCount > 0 ? `强行植入 ⚠${forceCount}/3` : '强行植入' }}
+          </button>
+        </div>
       </div>
     </section>
 
@@ -177,7 +187,7 @@
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
 import { ITEM_MAP, OUTFIT_STAR_SLOTS, getCultivationSlots, getOutfitStars, getThoughtMaxLen } from '../../../脚本/游戏逻辑/shopSystem';
-import { HABIT_SELL_PRICE, countActiveThoughts } from '../../../脚本/游戏逻辑/thoughtEngine';
+import { HABIT_SELL_PRICE, countActiveThoughts, forceImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
 const props = defineProps<{ name: '秦璐' | '苏梦' }>();
@@ -352,6 +362,34 @@ async function implantThought() {
   } catch (e) {
     console.error('[秦璐重置版] 植入失败', e);
     showMsg('植入失败：' + (e instanceof Error ? e.message : String(e)), 'error');
+  }
+}
+
+// ━━━ 三振（v0.24）：强行植入被退回的念头——诱惑入口，惩罚亮牌 ━━━
+const sysBadEnd = computed(() => data.value?.系统?._坏结局 ?? '');
+const forceCount = computed(() => data.value?.[charKey.value]?._强植三振 ?? 0);
+
+async function forceImplantUi(id: string) {
+  try {
+    const key = charKey.value;
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.[key]) return;
+    const r = forceImplant(d, key, id);
+    if (r.error) {
+      showMsg(r.error, 'warn');
+      return;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    if (r.bad) {
+      showMsg('☠ 三振——她的心智崩溃了，坏结局锁定', 'error');
+    } else if (r.count === 2) {
+      showMsg('⚠ 强行压入（连续 2/3）——她的眼神出现了裂纹，再一次将是崩溃', 'error');
+    } else {
+      showMsg('强行压入了——下一轮她会剧烈排异（连续 1/3）', 'warn');
+    }
+  } catch (e) {
+    console.error('[秦璐重置版] 强行植入失败', e);
   }
 }
 
@@ -1048,8 +1086,32 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   }
 }
 .t-reject {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 11px;
   color: $danger;
+
+  .force {
+    border-color: rgba(224, 104, 104, 0.7);
+    color: $danger;
+    font-weight: 700;
+    animation: force-lure 2.2s ease-in-out infinite;
+
+    &:hover {
+      background: rgba(224, 104, 104, 0.16);
+    }
+  }
+}
+@keyframes force-lure {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(224, 104, 104, 0);
+  }
+  50% {
+    box-shadow: 0 0 9px rgba(224, 104, 104, 0.45);
+  }
 }
 
 .ghost {

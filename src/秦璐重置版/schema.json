@@ -650,6 +650,10 @@
               "植入楼层": {
                 "default": -1,
                 "type": "number"
+              },
+              "_强植": {
+                "default": false,
+                "type": "boolean"
               }
             },
             "required": [
@@ -701,6 +705,10 @@
         },
         "_疑心已结算堕落度": {
           "default": -1,
+          "type": "number"
+        },
+        "_强植三振": {
+          "default": 0,
           "type": "number"
         }
       }

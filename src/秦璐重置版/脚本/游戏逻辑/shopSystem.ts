@@ -928,6 +928,14 @@ export function toggleEquip(
   return { firstWear };
 }
 
+/** 越级钥匙（v0.24 接入）：装备中且类型倾向匹配的越级钥匙装备 → 该类型有效阶段 +1 */
+export function hasEscalationKey(data: SchemaType, charKey: CharKey, category: ThoughtCategoryValue): boolean {
+  return Object.entries(data[charKey].装备状态).some(([name, state]) => {
+    const item = ITEM_MAP[name];
+    return state === '装备中' && !!item?.越级钥匙 && item.类型倾向.includes(category);
+  });
+}
+
 /** 装备加速合计：装备中的仪容 + 已完成的体改（永久生效不占槽），类型倾向匹配 */
 export function getEquipBoost(data: SchemaType, charKey: CharKey, category: ThoughtCategoryValue): number {
   let boost = 0;
