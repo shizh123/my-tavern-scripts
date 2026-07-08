@@ -199,6 +199,10 @@ const CharacterState = z.object({
   _疑心已结算堕落度: z.coerce.number().default(-1),
   /** 三振计数（v0.24）：连续强行植入次数，正常植入成功转培育中即清零；3 次 → 坏结局 */
   _强植三振: z.coerce.number().default(0),
+  /** 经济结算水位（v0.25）：已折算成货币的堕落度；-1=旧档首见校准不补发（她的堕落是你的资本） */
+  _货币已结算堕落度: z.coerce.number().default(-1),
+  /** 阶段突破奖励水位（v0.25）：已发过奖励的最高阶段；-1=旧档首见校准不补发 */
+  _已奖励阶段: z.coerce.number().default(-1),
 });
 
 // ============================================
@@ -322,7 +326,7 @@ const SystemState = z.object({
       目标: z.enum(['秦璐', '苏梦']).default('秦璐'),
     })
     .prefault({}),
-  /** 苏梦引场钩子（v0.23）：酒红缎面裙隐藏效果——穿上后倒数 N 楼触发苏梦登场剧情（一次性） */
+  /** 苏梦引场钩子（v0.23，v0.25 放宽为任意阶段2+外装）：秦璐穿上后倒数 N 楼触发苏梦登场剧情（一次性） */
   _苏梦引场: z
     .object({
       剩余楼: z.coerce.number().default(-1),
@@ -331,6 +335,8 @@ const SystemState = z.object({
     .prefault({}),
   /** 打断档位记录（v0.23）：疑心每跨10点档触发一次打断，档位一生一次；key=`角色:档位` */
   _已触发打断档位: z.record(z.string(), z.boolean()).prefault({}),
+  /** 打断余波（v0.25）：打断楼+后3楼苏文滞留家中（作息游标暂停），行为尺度收敛；-1=无余波 */
+  _打断余波至楼层: z.coerce.number().default(-1),
   /** 苏文视角（v0.23）：打断后点亮按钮 → 3 幕插叙 POV，期间主线引擎冻结 */
   _苏文视角: z
     .object({
@@ -346,8 +352,19 @@ const SystemState = z.object({
   _调试满星: z.boolean().default(false),
   /** 坏结局锁定（脚本写入，如 '疑心爆表·秦璐'；非空后培育/商店全停，快照只注入终局指引） */
   _坏结局: z.string().default(''),
-  /** 待发送道具事件（| 分隔，脚本写、下一轮 AI 演绎，注入后清空） */
+  /** 待发送道具事件（| 分隔，脚本写、下一轮 AI 演绎，注入后转存 _已注入事件） */
   _待发送道具事件: z.string().default(''),
+  /** 已注入事件转存（v0.25 重roll保护）：记录已注入某楼的事件文本，同楼重roll 时重注入防 AI 口胡 */
+  _已注入事件: z
+    .object({
+      楼层: z.coerce.number().default(-1),
+      内容: z.string().default(''),
+    })
+    .prefault({}),
+  /** 消耗品冷却（v0.25）：key=道具名，value=上次使用楼层（冷却楼数定义在 SHOP_ITEMS） */
+  _消耗品上次使用楼层: z.record(z.string(), z.coerce.number()).prefault({}),
+  /** 在场角色锁定（v0.25）：true 时 在场角色 转脚本管理（回滚 AI 改动），玩家手动纠正 AI 判错用 */
+  _在场锁定: z.boolean().default(false),
   /** 苏文作息游标：已推进的楼层基准（黑盒，决定苏文位置） */
   _苏文作息游标: z.coerce.number().default(0),
   /** 上次处理楼层（防 ROLL 重复推进游标） */

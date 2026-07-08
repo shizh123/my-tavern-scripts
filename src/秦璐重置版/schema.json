@@ -274,6 +274,10 @@
             "type": "boolean"
           }
         },
+        "_打断余波至楼层": {
+          "default": -1,
+          "type": "number"
+        },
         "_苏文视角": {
           "default": {},
           "type": "object",
@@ -319,6 +323,34 @@
         "_待发送道具事件": {
           "default": "",
           "type": "string"
+        },
+        "_已注入事件": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "楼层": {
+              "default": -1,
+              "type": "number"
+            },
+            "内容": {
+              "default": "",
+              "type": "string"
+            }
+          }
+        },
+        "_消耗品上次使用楼层": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "_在场锁定": {
+          "default": false,
+          "type": "boolean"
         },
         "_苏文作息游标": {
           "default": 0,
@@ -709,6 +741,14 @@
         },
         "_强植三振": {
           "default": 0,
+          "type": "number"
+        },
+        "_货币已结算堕落度": {
+          "default": -1,
+          "type": "number"
+        },
+        "_已奖励阶段": {
+          "default": -1,
           "type": "number"
         }
       }

@@ -24,17 +24,18 @@
       <!-- 坏结局横幅（锁定后常驻） -->
       <div v-if="badEnd" class="bad-end-banner">☠ 坏结局已锁定 · {{ badEnd }} · 游戏系统全部停止</div>
 
-      <!-- 苏文一行速览（常驻，不单独占页） -->
-      <div class="suwen-strip">
+      <!-- 苏文一行速览（常驻，不单独占页；打断余波期整条变琥珀色脉冲） -->
+      <div :class="['suwen-strip', { aftermath: aftermathLeft > 0 }]">
         <span class="sw-name">苏文</span>
         <span :class="['sw-chip', suwenStatusClass]">{{ suwenStatusDisplay }}</span>
         <span class="sw-loc">@ {{ suwenPos }}</span>
-        <span v-if="suwenAccel" class="sw-hint accel">⚡念头加速中</span>
+        <span v-if="aftermathLeft > 0" class="sw-hint aftermath-hint">👁 余波·他还没走远（剩{{ aftermathLeft }}楼）</span>
+        <span v-else-if="suwenAccel" class="sw-hint accel">⚡念头加速中</span>
         <span v-else-if="suwenSafe" class="sw-hint safe">✓ {{ suwenSafe }}</span>
         <span class="sw-sus">疑心 秦 {{ susQin }} · 梦 {{ susMeng }}<i v-if="hasFreeze" title="疑心冻结中">❄</i></span>
       </div>
 
-      <!-- 标签页：角色（含在场点）+ 网店 -->
+      <!-- 标签页：角色（含在场点）+ 网店 + 在场锁定 -->
       <nav class="tabs">
         <button
           v-for="t in tabs"
@@ -46,7 +47,24 @@
           <span v-if="t.presence !== undefined" :class="['presence', { on: t.presence }]"></span>
           <span class="tab-label">{{ t.label }}</span>
         </button>
+        <button
+          type="button"
+          :class="['lock-btn', { on: actorLocked }]"
+          :title="actorLocked ? '在场角色已锁定（点击调整/解锁）' : '锁定在场角色（纠正 AI 进出场判错）'"
+          @click="showLockPicker = !showLockPicker"
+        >
+          {{ actorLocked ? '🔒' : '🔓' }}
+        </button>
       </nav>
+
+      <!-- 在场锁定浮层 -->
+      <div v-if="showLockPicker" class="lock-picker">
+        <span class="lp-label">锁定在场</span>
+        <button type="button" @click="setActorLock('秦璐')">仅秦璐</button>
+        <button type="button" @click="setActorLock('苏梦')">仅苏梦</button>
+        <button type="button" @click="setActorLock('两者')">两者</button>
+        <button type="button" class="unlock" :disabled="!actorLocked" @click="setActorLock(null)">解锁</button>
+      </div>
 
       <!-- 内容区（老楼层默认折叠，点 tab 临时展开——对标云霜凝 v2.0.31 性能优化） -->
       <div v-if="activeTab" class="content-area">
@@ -103,6 +121,12 @@ const susQin = computed(() => Math.round(suwen.value?.对秦璐疑心值 ?? 0));
 const susMeng = computed(() => Math.round(suwen.value?.对苏梦疑心值 ?? 0));
 const badEnd = computed(() => data.value?.系统?._坏结局 ?? '');
 const recording = computed(() => data.value?.系统?._录像?.录制中 ?? false);
+// 打断余波（v0.25）：打断后苏文滞留家中的剩余楼数（>0 时速览条特殊显示）
+const aftermathLeft = computed(() => {
+  const until = data.value?.系统?._打断余波至楼层 ?? -1;
+  if (until < 0) return 0;
+  return Math.max(0, until - (SillyTavern.chat?.length ?? 0));
+});
 
 // 货币后门：货币区 1.5s 内连点 5 次 → +500，可无限重复（与调试满星同款手势通道）
 let coinTapCount = 0;
@@ -127,6 +151,35 @@ async function coinTap() {
     console.error('[秦璐重置版] 货币后门失败', e);
   }
 }
+// ━━━ 在场角色锁定（v0.25 对标云霜凝 2.0.31）：玩家手动纠正 AI 进出场判错 ━━━
+// 直接写最新楼 MVU（message_id=-1）——iframe store 绑定本楼，flush 写不到 AI 下轮读的位置
+const actorLocked = computed(() => data.value?.系统?._在场锁定 ?? false);
+const showLockPicker = ref(false);
+async function setActorLock(preset: '秦璐' | '苏梦' | '两者' | null) {
+  showLockPicker.value = false;
+  const 在场 = preset === null ? null : { 秦璐: preset !== '苏梦', 苏梦: preset !== '秦璐' };
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) return;
+    if (在场 === null) {
+      d.系统._在场锁定 = false;
+    } else {
+      d.系统.在场角色 = { ...在场 };
+      d.系统._在场锁定 = true;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    // 本地 store 同步（UI 立即反馈）
+    if (store.data?.系统) {
+      store.data.系统._在场锁定 = 在场 !== null;
+      if (在场 !== null) store.data.系统.在场角色 = { ...在场 };
+    }
+    console.info(`[在场锁定] ${在场 === null ? '已解锁' : `锁定为 ${preset}`}`);
+  } catch (e) {
+    console.error('[秦璐重置版] 在场锁定写入失败', e);
+  }
+}
+
 const hasFreeze = computed(() => {
   const floor = SillyTavern.chat?.length ?? 0;
   const fq = suwen.value?.对秦璐疑心值冻结;
@@ -150,6 +203,22 @@ function refreshIsLatest() {
 onMounted(() => {
   refreshIsLatest();
   latestTimer = setInterval(refreshIsLatest, 2000);
+  // 脚本心跳监察（v0.25 对标云霜凝 2.0.32）：脚本每 5s 写 _top.sessionStorage 心跳，
+  // 15s 后心跳仍空/陈旧 → 弹"脚本未加载"错误；sessionStorage gate 防重复弹
+  setTimeout(() => {
+    try {
+      const top = window.parent as any;
+      const heartbeat = Number(top?.sessionStorage?.getItem?.('秦璐重置版_脚本心跳') || 0);
+      if (heartbeat > 0 && Date.now() - heartbeat < 15000) return;
+      if (top?.sessionStorage?.getItem?.('秦璐重置版_加载失败toast已弹')) return;
+      top?.toastr?.error?.(
+        '⚠️ 游戏逻辑脚本未加载，培育/疑心/商店等系统不会运转。\n请刷新页面或检查酒馆助手脚本是否启用。',
+        '秦璐重置版',
+        { timeOut: 0, extendedTimeOut: 0 },
+      );
+      top?.sessionStorage?.setItem?.('秦璐重置版_加载失败toast已弹', '1');
+    } catch {}
+  }, 15000);
 });
 onUnmounted(() => {
   if (latestTimer) clearInterval(latestTimer);
@@ -467,6 +536,27 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   &.safe {
     color: #79c48a;
   }
+  &.aftermath-hint {
+    color: #e8a94f;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+}
+
+// 打断余波：整条速览琥珀色脉冲（他还没走远）
+.suwen-strip.aftermath {
+  border-bottom-color: rgba(232, 169, 79, 0.45);
+  background: linear-gradient(90deg, rgba(232, 169, 79, 0.1), rgba(0, 0, 0, 0.18) 60%);
+  animation: aftermath-throb 2.2s ease-in-out infinite;
+}
+@keyframes aftermath-throb {
+  0%,
+  100% {
+    box-shadow: inset 0 -1px 0 rgba(232, 169, 79, 0.1);
+  }
+  50% {
+    box-shadow: inset 0 -1px 0 rgba(232, 169, 79, 0.4);
+  }
 }
 .sw-sus {
   margin-left: auto;
@@ -528,6 +618,72 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   &.on {
     background: #79c48a;
     box-shadow: 0 0 6px rgba(121, 196, 138, 0.8);
+  }
+}
+
+// ━━━ 在场锁定 ━━━
+.lock-btn {
+  flex: none;
+  width: 38px;
+  padding: 9px 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 9px 9px 0 0;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: all 0.25s;
+
+  &:hover {
+    opacity: 1;
+  }
+  &.on {
+    opacity: 1;
+    border-color: var(--line);
+    background: color-mix(in srgb, var(--acc) 12%, rgba(0, 0, 0, 0.25));
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--acc) 25%, transparent);
+  }
+}
+.lock-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 8px 12px 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.28);
+
+  .lp-label {
+    font-size: 10.5px;
+    color: color-mix(in srgb, var(--acc) 50%, #887);
+    letter-spacing: 1px;
+    margin-right: 2px;
+  }
+  button {
+    padding: 4px 12px;
+    border: 1px solid color-mix(in srgb, var(--acc) 40%, transparent);
+    border-radius: 14px;
+    background: transparent;
+    color: var(--acc);
+    font-size: 11.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--acc) 13%, transparent);
+    }
+    &.unlock {
+      border-color: rgba(224, 104, 104, 0.5);
+      color: #e06868;
+    }
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
   }
 }
 

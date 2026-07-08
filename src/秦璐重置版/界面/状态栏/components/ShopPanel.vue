@@ -2,10 +2,11 @@
   <div class="shop-panel">
     <!-- 页头：货币 + 选购对象 -->
     <div class="shop-header">
-      <div class="money">
+      <div class="money" @click="coinTap">
         <span class="m-icon">◈</span>
         <span class="m-val">{{ money }}</span>
         <span class="m-unit">货币</span>
+        <span v-if="coinGain" class="coin-gain">+500</span>
       </div>
       <div class="target-switch">
         <span class="ts-label">为谁选购</span>
@@ -59,8 +60,14 @@
     <!-- 道具列表（装备按槽位分组） -->
     <div class="item-list">
       <template v-for="entry in listEntries" :key="entry.kind === 'header' ? 'h-' + entry.label : entry.item!.名称">
-        <div v-if="entry.kind === 'header'" class="group-header">
+        <div
+          v-if="entry.kind === 'header'"
+          :class="['group-header', { clickable: entry.slot, open: entry.open }]"
+          @click="entry.slot && toggleSlot(entry.slot)"
+        >
+          <span v-if="entry.slot" class="group-arrow">{{ entry.open ? '▾' : '▸' }}</span>
           <span class="group-label">{{ entry.label }}</span>
+          <span v-if="entry.slot" class="group-count">{{ entry.count }} 件</span>
           <span class="group-line"></span>
         </div>
         <div
@@ -121,6 +128,7 @@ import {
   buyCamera,
   buyEquipment,
   buyBodyMod,
+  getConsumableCooldownLeft,
   showTape,
   toggleEquip,
   toggleRecording,
@@ -146,13 +154,46 @@ const selected = ref<ShopItem | null>(null);
 
 const msg = ref('');
 const msgType = ref<'success' | 'warn' | 'error'>('success');
+
+// 货币后门（与顶栏同款）：1.5s 内连点 5 次 → +500，可无限重复
+let coinTapCount = 0;
+let coinTapTimer: ReturnType<typeof setTimeout> | null = null;
+const coinGain = ref(false);
+async function coinTap() {
+  coinTapCount++;
+  if (coinTapTimer) clearTimeout(coinTapTimer);
+  coinTapTimer = setTimeout(() => (coinTapCount = 0), 1500);
+  if (coinTapCount < 5) return;
+  coinTapCount = 0;
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.系统) return;
+    d.系统.货币 = (d.系统.货币 ?? 0) + 500;
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    coinGain.value = true;
+    setTimeout(() => (coinGain.value = false), 1200);
+    showMsg('作弊生效：货币 +500', 'success');
+    console.info(`[后门] 货币 +500 → ${d.系统.货币}`);
+  } catch (e) {
+    console.error('[秦璐重置版] 货币后门失败', e);
+  }
+}
 function showMsg(m: string, t: 'success' | 'warn' | 'error') {
   msg.value = m;
   msgType.value = t;
   setTimeout(() => (msg.value = ''), 3000);
 }
 
-type ListEntry = { kind: 'header'; label: string } | { kind: 'item'; item: ShopItem };
+type ListEntry =
+  | { kind: 'header'; label: string; slot?: EquipSlot; count?: number; open?: boolean }
+  | { kind: 'item'; item: ShopItem };
+
+// 装备页槽位分组默认收起，点击组头展开/收起（装备已 35 件，全铺开页面太长）
+const openSlots = ref<Record<string, boolean>>({});
+function toggleSlot(slot: string) {
+  openSlots.value = { ...openSlots.value, [slot]: !openSlots.value[slot] };
+}
 
 const listEntries = computed<ListEntry[]>(() => {
   const items = SHOP_ITEMS.filter(i => i.分类 === activeCat.value);
@@ -161,8 +202,9 @@ const listEntries = computed<ListEntry[]>(() => {
   for (const slot of SLOT_ORDER) {
     const slotItems = items.filter(i => i.槽位 === slot);
     if (slotItems.length === 0) continue;
-    out.push({ kind: 'header', label: slot });
-    out.push(...slotItems.map(i => ({ kind: 'item' as const, item: i })));
+    const open = !!openSlots.value[slot];
+    out.push({ kind: 'header', label: slot, slot, count: slotItems.length, open });
+    if (open) out.push(...slotItems.map(i => ({ kind: 'item' as const, item: i })));
   }
   return out;
 });
@@ -212,6 +254,9 @@ function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy'
     return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
   }
   if (item.分类 === '消耗品') {
+    // 冷却（v0.25）：使用后 N 楼内禁用（防降疑连刷/药效叠加）
+    const cdLeft = data.value ? getConsumableCooldownLeft(data.value as any, item.名称, SillyTavern.chat?.length ?? 0) : 0;
+    if (cdLeft > 0) return { label: `冷却 ${cdLeft} 楼`, disabled: true, kind: 'none' };
     return { label: `对${targetChar.value}使用`, disabled: money.value < item.价格, kind: 'use' };
   }
   if (item.分类 === '体改') {
@@ -304,9 +349,21 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   flex-wrap: wrap;
 }
 .money {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: 5px;
+
+  .coin-gain {
+    position: absolute;
+    right: -6px;
+    top: -10px;
+    font-size: 11px;
+    color: $safe;
+    text-shadow: 0 0 8px rgba(121, 196, 138, 0.6);
+    animation: shop-coin-float 1.2s ease-out forwards;
+    pointer-events: none;
+  }
 
   .m-icon {
     color: var(--acc);
@@ -323,6 +380,16 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     font-size: 10.5px;
     color: color-mix(in srgb, var(--acc) 45%, #887);
     letter-spacing: 1px;
+  }
+}
+@keyframes shop-coin-float {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px);
   }
 }
 .target-switch {
@@ -470,10 +537,37 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   gap: 8px;
   margin-top: 2px;
 
+  &.clickable {
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.34);
+    }
+    &.open {
+      border-color: color-mix(in srgb, var(--acc) 35%, transparent);
+      background: color-mix(in srgb, var(--acc) 6%, rgba(0, 0, 0, 0.22));
+    }
+  }
+  .group-arrow {
+    font-size: 10px;
+    color: color-mix(in srgb, var(--acc) 65%, #998);
+    width: 12px;
+  }
   .group-label {
     font-size: 10.5px;
     color: color-mix(in srgb, var(--acc) 55%, #998);
     letter-spacing: 2px;
+  }
+  .group-count {
+    font-size: 9.5px;
+    color: color-mix(in srgb, var(--acc) 40%, #776);
+    font-variant-numeric: tabular-nums;
   }
   .group-line {
     flex: 1;
