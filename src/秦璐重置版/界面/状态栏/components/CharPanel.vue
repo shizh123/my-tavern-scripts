@@ -302,7 +302,10 @@ async function enterSuwenPov() {
     p.剩余楼 = p.总楼数 ?? 3;
     p.上次处理楼层 = -1;
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
-    showMsg(`已切入苏文视角（共${p.剩余楼}幕）——发送任意消息开始演绎`, 'success');
+    showMsg(`已切入苏文视角（共${p.剩余楼}幕）——第一幕开始`, 'success');
+    // 立即触发第一幕（对标云霜凝 退出神魂空间：写完状态直接 /send + /trigger，
+    // 不再让玩家手动发消息；PROMPT_READY 检测到 剩余楼>0 即注入 POV 指引）
+    await triggerSlash('/send （进入苏文视角）|/trigger');
   } catch (e) {
     console.error('[秦璐重置版] 进入苏文视角失败', e);
   }
