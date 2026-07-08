@@ -32,7 +32,12 @@
         <span v-if="aftermathLeft > 0" class="sw-hint aftermath-hint">👁 余波·他还没走远（剩{{ aftermathLeft }}楼）</span>
         <span v-else-if="suwenAccel" class="sw-hint accel">⚡念头加速中</span>
         <span v-else-if="suwenSafe" class="sw-hint safe">✓ {{ suwenSafe }}</span>
-        <span class="sw-sus">疑心 秦 {{ susQin }} · 梦 {{ susMeng }}<i v-if="hasFreeze" title="疑心冻结中">❄</i></span>
+        <span class="sw-sus"
+          >疑心 秦 {{ susQin }} · 梦 {{ susMeng
+          }}<i v-if="hasFreeze" title="疑心冻结中：期间的堕落度增量挂账，解冻后每楼最多补收+2"
+            >❄<template v-if="frozenOwed > 0"> 挂账+{{ frozenOwed }}</template></i
+          ></span
+        >
       </div>
 
       <!-- 标签页：角色（含在场点）+ 网店 + 在场锁定 -->
@@ -193,6 +198,21 @@ const hasFreeze = computed(() => {
   const fq = suwen.value?.对秦璐疑心值冻结;
   const fm = suwen.value?.对苏梦疑心值冻结;
   return (fq?.是否冻结 && floor < fq.冻结结束楼层) || (fm?.是否冻结 && floor < fm.冻结结束楼层);
+});
+
+// 疑心挂账（v0.31 D）：冻结期间堕落度增量不结算而是挂账，解冻后每楼最多补收+2（脚本 B 分期制）。
+// 这里把挂账摆到明面上，免得解冻后疑心连涨显得"莫名其妙"
+const frozenOwed = computed(() => {
+  const floor = SillyTavern.chat?.length ?? 0;
+  let total = 0;
+  for (const name of ['秦璐', '苏梦'] as const) {
+    const f = suwen.value?.[`对${name}疑心值冻结`];
+    if (!f?.是否冻结 || floor >= f.冻结结束楼层) continue;
+    const char = data.value?.[`${name}状态`];
+    const base = char?._疑心已结算堕落度 ?? -1;
+    if (char && base >= 0 && char.堕落度 > base) total += Math.round((char.堕落度 - base) * 0.5);
+  }
+  return total;
 });
 
 // ━━━ 老楼层折叠：最新楼共享 localStorage tab；老楼独立 local tab（默认收起） ━━━

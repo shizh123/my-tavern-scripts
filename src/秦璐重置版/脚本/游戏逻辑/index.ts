@@ -194,8 +194,11 @@ function rollbackProtectedFields(data: SchemaType): void {
  * - 满星（4槽+体改）期间额外 +1/楼（v0.22 保留）
  * - 无增长的楼每楼回落 0.5，但**降不破下限棘轮**（堕落度×0.25——看见了就无法当没看见）
  * - 借口短信/出游余温冻结期间不涨不落，到期自动解冻；触顶 100 → 坏结局锁定
+ * - 分期补收（v0.31）：主通道每楼最多 +2——解冻账单/多念头同楼成熟不再一楼跳变，
+ *   未收部分留在水位线上逐楼续收（总量守恒，延期不免除；满星 +1/楼 不占此额度）
  * 数值待平衡期统一调。
  */
+const SUSPICION_RISE_CAP_PER_FLOOR = 2;
 function settleSuspicion(data: SchemaType, currentFloor: number): void {
   if (data.系统._坏结局) return;
   // 每楼最多触发一次打断（两角色同楼都够档时只演一位；另一位档位不标记，等冷却后按存量补触发）
@@ -221,8 +224,11 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
     }
     let rise = 0;
     if (char.堕落度 > char._疑心已结算堕落度) {
-      rise += Math.round((char.堕落度 - char._疑心已结算堕落度) * 0.5);
-      char._疑心已结算堕落度 = char.堕落度;
+      // 分期补收（v0.31）：本楼最多收 +2，水位线只按实收推进，余账下楼继续
+      const owed = char.堕落度 - char._疑心已结算堕落度;
+      const collect = Math.min(Math.round(owed * 0.5), SUSPICION_RISE_CAP_PER_FLOOR);
+      rise += collect;
+      char._疑心已结算堕落度 += Math.min(collect * 2, owed);
     } else if (char.堕落度 < char._疑心已结算堕落度) {
       char._疑心已结算堕落度 = char.堕落度; // 容错（堕落度理论上不降）
     }
