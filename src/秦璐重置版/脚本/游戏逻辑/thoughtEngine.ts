@@ -118,6 +118,11 @@ function getEffectiveStage(data: SchemaType, characterKey: '秦璐状态' | '苏
     stage += 1;
   }
 
+  // 裂纹窗口（v0.25）：强植被排异弹回后 3 楼内，她的心防带着裂缝——阶段+1（可与药效/松动叠加）
+  if (char._裂纹至楼层 >= 0 && currentFloor <= char._裂纹至楼层) {
+    stage += 1;
+  }
+
   // 道具越级药效（安神药+1/头孢酒+2，消耗品使用后在有效楼数内生效）
   if (char._越级加成 > 0 && currentFloor <= char._越级加成至楼层) {
     stage += char._越级加成;
@@ -256,10 +261,51 @@ export function forceImplant(
   queueItemEvent(
     data,
     characterKey,
-    `{{user}}把「${thought.内容}」强行压进了她的心智——本轮演绎剧烈的排异反应：突如其来的失控、生理性的抗拒与痛苦（这道念头正在伤害她，不要让它生效）${count === 2 ? '。这已是第二次，她的眼神里出现了裂纹' : ''}`,
+    `{{user}}把「${thought.内容}」强行压进了她的心智——本轮演绎剧烈的排异反应：突如其来的失控、生理性的抗拒与痛苦（这道念头正在伤害她，不要让它生效），但这次粗暴的撞击也在她的心防上留下了一道裂缝${count === 2 ? '。这已是第二次，她的眼神里出现了裂纹' : ''}`,
   );
   console.warn(`[三振] ${characterKey} 强行植入「${thought.内容}」（连续${count}/3）`);
   return { count };
+}
+
+/**
+ * 趁隙再植（v0.25 裂纹窗口）：对已判型的"未达标"念头重新过一次越级闸门——
+ * 裂纹/心防松动/药效/越级钥匙此刻可能已把有效阶段抬够。
+ * 成功 → 培育中（刷新植入楼层）+ 三振连续计数清零（等同正常植入成功）。
+ * 返回错误信息，null=成功
+ */
+export function retryImplant(
+  data: SchemaType,
+  characterKey: '秦璐状态' | '苏梦状态',
+  thoughtId: string,
+  currentFloor: number,
+): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
+  const thought = data[characterKey].念头列表[thoughtId];
+  if (!thought || thought.状态 !== '未达标') return '只有被退回的念头可以再植';
+  if (thought.类型 === '待判定') return '类型未判定，无法再植';
+  const slots = getCultivationSlots(data);
+  if (countActiveThoughts(data, characterKey) >= slots) return `培育槽已满（${slots}）`;
+
+  const category = thought.类型 as Exclude<ThoughtCategoryValue, '待判定'>;
+  const keyBonus = hasEscalationKey(data, characterKey, category) ? 1 : 0;
+  const effectiveStage = Math.min(5, getEffectiveStage(data, characterKey, currentFloor) + keyBonus);
+  const catStage = CATEGORY_STAGE[category];
+  if (catStage > effectiveStage) {
+    return `她仍然接受不了（需阶段${catStage}，当前有效阶段${effectiveStage}）`;
+  }
+
+  const { 难度, 需要楼数 } = calcDifficultyAndFloors(category, data[characterKey].当前阶段);
+  thought.难度 = 难度;
+  thought.需要楼数 = 需要楼数;
+  thought.开发进度 = 0;
+  thought.植入楼层 = currentFloor;
+  thought.状态 = '培育中';
+  if (data[characterKey]._强植三振 > 0) {
+    data[characterKey]._强植三振 = 0;
+    console.info(`[三振] ${characterKey} 趁隙再植成功，连续计数清零`);
+  }
+  console.info(`[裂纹窗口] ${characterKey} ${thoughtId} 趁隙再植 → 培育中（${难度}/${需要楼数}楼）`);
+  return null;
 }
 
 /**
@@ -280,10 +326,12 @@ export function tickThoughtProgress(
 
   for (const [id, thought] of Object.entries(thoughts)) {
     // 强植排异（v0.24 三振）：强行压入的念头下一楼必被心智弹出 → 退回未达标
+    // v0.25 裂纹窗口：暴力撞击在心防上砸出裂缝——之后 3 楼有效阶段+1，未达标念头可趁隙再植
     if (thought._强植 && thought.状态 === '培育中') {
       thought.状态 = '未达标';
       thought._强植 = false;
-      console.info(`[三振] ${characterKey} ${id} 强植排异 → 退回未达标`);
+      character._裂纹至楼层 = currentFloor + 3;
+      console.info(`[三振] ${characterKey} ${id} 强植排异 → 退回未达标（心防裂纹至楼${currentFloor + 3}）`);
       continue;
     }
     // 过期判定：培育中/未达标超保留楼数 → 已过期（判定中不参与，等 AI 重试）

@@ -743,6 +743,10 @@
           "default": 0,
           "type": "number"
         },
+        "_裂纹至楼层": {
+          "default": -1,
+          "type": "number"
+        },
         "_货币已结算堕落度": {
           "default": -1,
           "type": "number"

@@ -113,11 +113,20 @@
           <span class="pv">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}</span>
         </div>
         <div v-if="t.状态 === '未达标'" class="t-reject">
-          <span>她还接受不了，需先推进关系</span>
+          <span v-if="crackLeft > 0">她的心防上有一道裂缝（剩{{ crackLeft }}楼）——趁现在</span>
+          <span v-else>她还接受不了，需先推进关系</span>
+          <button
+            v-if="!sysBadEnd && crackLeft > 0"
+            class="ghost retry"
+            title="趁心防裂缝再植（有效阶段+1）——若差距仍大，可再叠药物/越级钥匙"
+            @click="retryImplantUi(t.id)"
+          >
+            趁隙再植
+          </button>
           <button
             v-if="!sysBadEnd"
             class="ghost force"
-            :title="forceCount >= 2 ? '再强行一次，她会碎的' : '她挡不住你——但她的心智会排异'"
+            :title="forceCount >= 2 ? '再强行一次，她会碎的' : '她挡不住你——但她的心智会排异，也会被砸出裂缝'"
             @click="forceImplantUi(t.id)"
           >
             {{ forceCount > 0 ? `强行植入 ⚠${forceCount}/3` : '强行植入' }}
@@ -187,7 +196,7 @@
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
 import { ITEM_MAP, OUTFIT_STAR_SLOTS, getCultivationSlots, getOutfitStars, getThoughtMaxLen } from '../../../脚本/游戏逻辑/shopSystem';
-import { HABIT_SELL_PRICE, countActiveThoughts, forceImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
+import { HABIT_SELL_PRICE, countActiveThoughts, forceImplant, retryImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
 const props = defineProps<{ name: '秦璐' | '苏梦' }>();
@@ -368,6 +377,30 @@ async function implantThought() {
 // ━━━ 三振（v0.24）：强行植入被退回的念头——诱惑入口，惩罚亮牌 ━━━
 const sysBadEnd = computed(() => data.value?.系统?._坏结局 ?? '');
 const forceCount = computed(() => data.value?.[charKey.value]?._强植三振 ?? 0);
+// 裂纹窗口（v0.25）：强植弹回后 3 楼内有效阶段+1，未达标念头可趁隙再植
+const crackLeft = computed(() => {
+  const until = data.value?.[charKey.value]?._裂纹至楼层 ?? -1;
+  if (until < 0) return 0;
+  return Math.max(0, until - (SillyTavern.chat?.length ?? 0));
+});
+
+async function retryImplantUi(id: string) {
+  try {
+    const key = charKey.value;
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d?.[key]) return;
+    const err = retryImplant(d, key, id, SillyTavern.chat?.length ?? 0);
+    if (err) {
+      showMsg(err, 'warn');
+      return;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg('趁隙再植成功——念头已进入培育（三振计数清零）', 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 趁隙再植失败', e);
+  }
+}
 
 async function forceImplantUi(id: string) {
   try {
@@ -1103,6 +1136,18 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
       background: rgba(224, 104, 104, 0.16);
     }
   }
+
+  // 裂纹窗口（v0.25）：绿色脉冲——机会通道，与红色强植的不归路形成对照
+  .retry {
+    border-color: rgba(121, 196, 138, 0.7);
+    color: $safe;
+    font-weight: 700;
+    animation: retry-glow 1.8s ease-in-out infinite;
+
+    &:hover {
+      background: rgba(121, 196, 138, 0.16);
+    }
+  }
 }
 @keyframes force-lure {
   0%,
@@ -1111,6 +1156,15 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   }
   50% {
     box-shadow: 0 0 9px rgba(224, 104, 104, 0.45);
+  }
+}
+@keyframes retry-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(121, 196, 138, 0);
+  }
+  50% {
+    box-shadow: 0 0 9px rgba(121, 196, 138, 0.5);
   }
 }
 
