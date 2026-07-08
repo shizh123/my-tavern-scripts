@@ -387,7 +387,7 @@ function getPresentCharacters(data: SchemaType): Array<'秦璐' | '苏梦'> {
 const ENABLE_STAGE_RESTRAINTS = true;
 
 const STAGE_RESTRAINTS: Record<number, string> = {
-  1: '影响只在内部呈现（走神/脸红/视线停留/梦境/对他莫名多一分关注）。禁止：主动谈性或身体话题（被提及会慌乱岔开）、超出母亲/姐姐常态的主动肢体接触、任何暧昧性质的主动行动。',
+  1: '已列念头/习惯的影响只在内部呈现（走神/脸红/视线停留/梦境/对他莫名多一分关注），没有念头时她的内心就是纯粹的日常。禁止：主动谈性或身体话题（被提及会慌乱岔开）、超出母亲/姐姐常态的主动肢体接触、任何暧昧性质的主动行动。',
   2: '允许被动接擦边话题、说出口才惊觉的双关。禁止：露骨字眼、主动制造身体接触（顺势的短暂接触可以，事后心慌）、性质明确的邀约。',
   3: '允许独处时的暗示性话题、主动制造亲近的机会，有台阶就顺势而为。禁止：人前越界、直白的性邀约（但可以"不拒绝"）。',
   4: '私下几乎全解禁——会直白说出欲望并主动行动。禁止：苏文可感知范围内的任何越界（这是风险管理，不是道德）。',
@@ -538,24 +538,41 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
     const char = data[`${name}状态` as '秦璐状态' | '苏梦状态'];
     const growing = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
     const habits = char.习惯列表;
-    if (growing.length === 0 && habits.length === 0) continue;
     if (growing.length > 0) hasGrowing = true;
     lines.push('');
-    lines.push(`【${name}当下受以下念头/习惯的影响，请在演绎中自然体现】`);
-    if (growing.length > 0) {
-      lines.push(`  念头（想法层）：`);
-      for (const [id, t] of growing) {
-        lines.push(`  · 「${t.内容}」（${id}）`);
+    if (growing.length > 0 || habits.length > 0) {
+      lines.push(`【${name}当下受以下念头/习惯的影响，请在演绎中自然体现】`);
+      if (growing.length > 0) {
+        lines.push(`  念头（想法层）：`);
+        for (const [id, t] of growing) {
+          lines.push(`  · 「${t.内容}」（${id}）`);
+        }
       }
-    }
-    if (habits.length > 0) {
-      lines.push(`  习惯（行为层）：`);
-      for (const h of habits) {
-        lines.push(`  · 「${h.内容}」`);
+      if (habits.length > 0) {
+        lines.push(`  习惯（行为层）：`);
+        for (const h of habits) {
+          lines.push(`  · 「${h.内容}」`);
+        }
       }
+      // 心理来源白名单（v0.30）：影响清单即全集——防 AI 从人设/氛围自发脑补
+      // "压抑的欲望"（玩家反馈：不撩不植念头也发情）
+      lines.push(
+        `  ▷ 心理来源限定：她超出阶段基线的暧昧/欲望向心理，只能来自上面列出的念头与习惯——没列出的 = 不存在，不要自发添加或放大`,
+      );
+    } else if (char.当前阶段 <= 1) {
+      // v0.30 平常心基线：原先无念头/习惯时整块跳过——恰好在最需要约束的场景
+      // （没植念头也没撩）什么都没说，AI 只剩人设和氛围可脑补
+      const 身份 = name === '秦璐' ? '一位普通的母亲' : '一个普通的姐姐';
+      lines.push(
+        `【${name}·当前无念头影响】她此刻没有任何念头/习惯在起作用，就是${身份}：内心戏围绕家务/学业/家人/日常琐事展开，不要自发生成任何暧昧、性张力、身体意识或"压抑的欲望"类描写`,
+      );
+    } else {
+      lines.push(
+        `【${name}·当前无念头影响】她此刻没有额外念头/习惯在起作用，心理基线以下方阶段约束为准，不要在此之外自发加码暧昧/欲望描写`,
+      );
     }
-    // 阶段禁区：影响恒在，出口按阶段限幅（念头决定想什么，阶段决定敢什么）
-    // v0.21 测试期由 ENABLE_STAGE_RESTRAINTS 暂停
+    // 阶段禁区：出口按阶段限幅（念头决定想什么，阶段决定敢什么）
+    // v0.30 起常驻注入（原先挂在影响块内，无念头时连约束一起消失）
     if (ENABLE_STAGE_RESTRAINTS) {
       lines.push(
         `  ▷ 阶段约束（第${char.当前阶段}阶段「${char.阶段标题}」）：${STAGE_RESTRAINTS[char.当前阶段] ?? STAGE_RESTRAINTS[1]}`,
