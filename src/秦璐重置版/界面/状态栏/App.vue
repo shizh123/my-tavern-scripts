@@ -128,14 +128,15 @@ const aftermathLeft = computed(() => {
   return Math.max(0, until - (SillyTavern.chat?.length ?? 0));
 });
 
-// 货币后门：货币区 1.5s 内连点 5 次 → +500，可无限重复（与调试满星同款手势通道）
+// 货币后门：货币区 2.5s 内连点 5 次 → +500，可无限重复（与调试满星同款手势通道）
+//   v0.28：窗口 1.5s→2.5s，配合 CSS touch-action:manipulation，兼顾移动端快速连点
 let coinTapCount = 0;
 let coinTapTimer: ReturnType<typeof setTimeout> | null = null;
 const coinGain = ref(false);
 async function coinTap() {
   coinTapCount++;
   if (coinTapTimer) clearTimeout(coinTapTimer);
-  coinTapTimer = setTimeout(() => (coinTapCount = 0), 1500);
+  coinTapTimer = setTimeout(() => (coinTapCount = 0), 2500);
   if (coinTapCount < 5) return;
   coinTapCount = 0;
   try {
@@ -419,6 +420,7 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   font-weight: 700;
   color: var(--acc);
   text-shadow: 0 0 10px var(--glow);
+  touch-action: manipulation; // 后门连点：掐掉移动端点击延迟与双击缩放
   padding: 2px 12px;
   border-radius: 20px;
   border: 1px solid var(--line);

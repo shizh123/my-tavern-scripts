@@ -98,6 +98,11 @@ function captureProtectionSnapshot(data: SchemaType): void {
       _苏文作息游标: data.系统._苏文作息游标,
       在场角色: { ...data.系统.在场角色 },
       _在场锁定: data.系统._在场锁定,
+      // 打断/苏文视角状态（v0.28）：重roll 打断楼时 MVU 从上一楼变量重建，
+      // 待看/档位记录/余波会整体丢失（按钮永远不亮）——纳入快照按"进度保留"恢复
+      _苏文视角: { ...data.系统._苏文视角 },
+      _已触发打断档位: { ...data.系统._已触发打断档位 },
+      _打断余波至楼层: data.系统._打断余波至楼层,
     } as any,
   };
 }
@@ -137,6 +142,19 @@ function rollbackProtectedFields(data: SchemaType): void {
     if (snap.系统._在场锁定 !== undefined) data.系统._在场锁定 = snap.系统._在场锁定 as boolean;
     if (snap.系统._在场锁定 && snap.系统.在场角色) {
       data.系统.在场角色 = { ...(snap.系统.在场角色 as { 秦璐: boolean; 苏梦: boolean }) };
+    }
+    // 打断/苏文视角状态恢复（v0.28 重roll保护）：快照来自本次生成时的最新楼数据，
+    // 永远 ≥ 重建基准（上一楼）——整体覆盖 pov、并集档位、取大余波；随后引擎照常推进
+    if (snap.系统._苏文视角) {
+      data.系统._苏文视角 = { ...(snap.系统._苏文视角 as typeof data.系统._苏文视角) };
+    }
+    if (snap.系统._已触发打断档位) {
+      for (const [k, v] of Object.entries(snap.系统._已触发打断档位 as Record<string, boolean>)) {
+        if (v) data.系统._已触发打断档位[k] = true;
+      }
+    }
+    if (typeof snap.系统._打断余波至楼层 === 'number') {
+      data.系统._打断余波至楼层 = Math.max(data.系统._打断余波至楼层, snap.系统._打断余波至楼层);
     }
   }
 
@@ -459,6 +477,17 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
 
   // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
   lines.push(`【苏文】${data.苏文状态.当前状态} @ ${data.苏文状态.当前位置}`);
+  // 心理活动锚定（v0.28）：当前心理想法由 AI 写，但必须符合脚本算出的处境——
+  //   否则会出现"外出上班却在想着再睡一会"这类与位置矛盾的独白
+  {
+    const 处境 =
+      data.苏文状态.当前状态 === '外出'
+        ? '他此刻不在家（上班/通勤/在外办事），心理活动须落在外面的处境，绝不能写成在家、在房间、赖床/再睡一会等居家内容'
+        : data.苏文状态.当前状态 === '睡眠'
+          ? `他此刻在${data.苏文状态.当前位置}睡眠，心理活动是睡前/半梦半醒的思绪`
+          : `他此刻在家中的${data.苏文状态.当前位置}，心理活动须符合这个位置与在家状态`;
+    lines.push(`  ▷ 苏文·心理活动锚定：${处境}（当前心理想法要与上面这行位置一致，不得自相矛盾）`);
+  }
   // 疑心阶梯（30/60/90）：告知 AI 苏文的猜疑演绎强度（数值脚本管理，AI 只演态度）
   for (const name of ['秦璐', '苏梦'] as const) {
     const hint = suspicionHint(name, data.苏文状态[`对${name}疑心值`]);
@@ -684,6 +713,13 @@ $(() => {
 
         // 1. 回滚脚本管理字段（防 AI 乱改）
         rollbackProtectedFields(newData);
+
+        // 1.1 旧档迁移（v0.28）：苏梦气质描述曾因 initvar 缺字段回落到秦璐的字段级默认
+        //     （'温柔贤淑的家庭主妇'）。该字段 AI/脚本均不写，旧档会一直错——幂等纠正。
+        if (newData.苏梦状态.气质描述 === '温柔贤淑的家庭主妇') {
+          newData.苏梦状态.气质描述 = '活泼开朗的大学生';
+          console.info('[迁移] 苏梦气质描述从泄漏默认纠正为「活泼开朗的大学生」');
+        }
 
         // 1.4 一次性事件消费转存（v0.23 清空前移；v0.25 重roll保护升级为转存制）：
         //     - 本楼重roll（转存楼层===currentFloor）：PROMPT_READY 已用转存内容重放，

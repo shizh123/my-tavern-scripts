@@ -232,13 +232,14 @@ const outfitStars = computed(() =>
 );
 const debugFullStar = computed(() => data.value?.系统?._调试满星 ?? false);
 
-// 测试后门：星标区 1.5s 内连点 5 次切换"调试满星"（模拟满星：培育+1/楼、疑心+1/楼）
+// 测试后门：星标区 2.5s 内连点 5 次切换"调试满星"（模拟满星：培育+1/楼、疑心+1/楼）
+//   v0.28：窗口 1.5s→2.5s，配合 CSS touch-action:manipulation，兼顾移动端快速连点
 let starTapCount = 0;
 let starTapTimer: ReturnType<typeof setTimeout> | null = null;
 async function starTap() {
   starTapCount++;
   if (starTapTimer) clearTimeout(starTapTimer);
-  starTapTimer = setTimeout(() => (starTapCount = 0), 1500);
+  starTapTimer = setTimeout(() => (starTapCount = 0), 2500);
   if (starTapCount < 5) return;
   starTapCount = 0;
   try {
@@ -1225,6 +1226,7 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   align-items: center;
   gap: 3px;
   margin: -2px 0 6px;
+  touch-action: manipulation; // 后门连点：掐掉移动端点击延迟与双击缩放
 }
 .star {
   font-size: 13px;

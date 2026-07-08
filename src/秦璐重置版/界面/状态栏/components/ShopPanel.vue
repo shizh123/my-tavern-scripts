@@ -155,14 +155,15 @@ const selected = ref<ShopItem | null>(null);
 const msg = ref('');
 const msgType = ref<'success' | 'warn' | 'error'>('success');
 
-// 货币后门（与顶栏同款）：1.5s 内连点 5 次 → +500，可无限重复
+// 货币后门（与顶栏同款）：2.5s 内连点 5 次 → +500，可无限重复
+//   v0.28：窗口 1.5s→2.5s，配合 CSS touch-action:manipulation，兼顾移动端快速连点
 let coinTapCount = 0;
 let coinTapTimer: ReturnType<typeof setTimeout> | null = null;
 const coinGain = ref(false);
 async function coinTap() {
   coinTapCount++;
   if (coinTapTimer) clearTimeout(coinTapTimer);
-  coinTapTimer = setTimeout(() => (coinTapCount = 0), 1500);
+  coinTapTimer = setTimeout(() => (coinTapCount = 0), 2500);
   if (coinTapCount < 5) return;
   coinTapCount = 0;
   try {
@@ -353,6 +354,7 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   display: flex;
   align-items: baseline;
   gap: 5px;
+  touch-action: manipulation; // 后门连点：掐掉移动端点击延迟与双击缩放
 
   .coin-gain {
     position: absolute;
