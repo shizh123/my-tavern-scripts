@@ -184,6 +184,35 @@ export function isSuwenHome(cursor: number): boolean {
 }
 
 /**
+ * 预演本楼推进后的苏文状态（v0.29，纯计算不写变量）
+ *
+ * 供 PROMPT_READY 注入快照时调用：真正的推进在写阶段（AI 回复后）才发生，
+ * 注入时从 message_id=-1 读到的是上一楼的状态——每个跨段楼/跳转楼，快照与
+ * 本楼落地值必然错开一段（"第二天"跳转楼错开一整天），v0.28 的心理锚定
+ * 反而会把 AI 摁在旧处境上。此函数与写阶段同输入（游标基准/玩家输入/余波窗口）
+ * 同算法，预演结果 = 写阶段落地结果；写阶段仍是唯一写入方。
+ *
+ * @param isReroll 重roll/继续（chat 末条为 AI 消息）不预推——重roll 的推进
+ *   基准与原次生成相同，落地结果一致，读到什么就是什么
+ */
+export function previewSuwenPosition(
+  data: SchemaType,
+  promptFloor: number,
+  playerInput: string,
+  isReroll: boolean,
+): { 状态: SuwenStatusValue; 位置: string } {
+  // 打断余波窗口：写阶段游标暂停、状态强制在家（位置维持打断落地值；条件对齐快照余波提示行）
+  if (data.系统._打断余波至楼层 >= 0 && promptFloor < data.系统._打断余波至楼层) {
+    return { 状态: '在家', 位置: data.苏文状态.当前位置 };
+  }
+  if (isReroll) {
+    return { 状态: data.苏文状态.当前状态, 位置: data.苏文状态.当前位置 };
+  }
+  const cursor = detectJump(playerInput, data.系统._苏文作息游标) ?? data.系统._苏文作息游标 + 1;
+  return getSuwenPosition(cursor);
+}
+
+/**
  * 主推进函数：根据当前楼层更新苏文位置游标
  * 应在 VARIABLE_UPDATE_ENDED 调用（AI 回复后的写阶段）
  *

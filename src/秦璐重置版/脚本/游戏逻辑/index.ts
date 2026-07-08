@@ -15,7 +15,7 @@ import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 import { getBodyModNames, getDaringEquippedNames, getEquippedNames, getOutfitStars, getSuspicionFloor } from './shopSystem';
-import { advanceSuwenRoutine } from './suwenRoutine';
+import { advanceSuwenRoutine, previewSuwenPosition } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
 import { registerMvuSchema } from 'https://testingcf.jsdelivr.net/gh/StageDog/tavern_resource/dist/util/mvu_zod.js';
@@ -53,6 +53,13 @@ function getLastUserMessage(): string {
     if (chat[i].is_user) return chat[i].mes ?? '';
   }
   return '';
+}
+
+/** 本次生成是否为重roll/继续（chat 末条已是 AI 消息；新楼生成时末条是玩家输入） */
+function isRerollGeneration(): boolean {
+  const chat = SillyTavern.chat ?? [];
+  const last = chat[chat.length - 1];
+  return !!last && !last.is_user;
 }
 
 /** 获取最后一条 AI 回复文本 */
@@ -476,17 +483,24 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
   }
 
   // 苏文位置：脚本黑盒作息算出，快照是 AI 唯一获知通道，必须每轮注入
-  lines.push(`【苏文】${data.苏文状态.当前状态} @ ${data.苏文状态.当前位置}`);
+  // v0.29 预演注入：作息推进发生在写阶段（AI 回复后），此处直接读变量拿到的是
+  //   上一楼的状态——跨段楼/跳转楼快照必错一段，v0.28 的锚定反而把 AI 摁在旧处境
+  //   （症状：状态栏已"外出"，心理活动还是"回卧室躺一会"）。预演与写阶段同输入
+  //   同算法，注入的即本楼落地值
+  const suwen = previewSuwenPosition(data, promptFloor, getLastUserMessage(), isRerollGeneration());
+  lines.push(`【苏文】${suwen.状态} @ ${suwen.位置}`);
   // 心理活动锚定（v0.28）：当前心理想法由 AI 写，但必须符合脚本算出的处境——
   //   否则会出现"外出上班却在想着再睡一会"这类与位置矛盾的独白
   {
     const 处境 =
-      data.苏文状态.当前状态 === '外出'
+      suwen.状态 === '外出'
         ? '他此刻不在家（上班/通勤/在外办事），心理活动须落在外面的处境，绝不能写成在家、在房间、赖床/再睡一会等居家内容'
-        : data.苏文状态.当前状态 === '睡眠'
-          ? `他此刻在${data.苏文状态.当前位置}睡眠，心理活动是睡前/半梦半醒的思绪`
-          : `他此刻在家中的${data.苏文状态.当前位置}，心理活动须符合这个位置与在家状态`;
-    lines.push(`  ▷ 苏文·心理活动锚定：${处境}（当前心理想法要与上面这行位置一致，不得自相矛盾）`);
+        : suwen.状态 === '睡眠'
+          ? `他此刻在${suwen.位置}睡眠，心理活动是睡前/半梦半醒的思绪`
+          : `他此刻在家中的${suwen.位置}，心理活动须符合这个位置与在家状态`;
+    lines.push(
+      `  ▷ 苏文·心理活动锚定：${处境}（当前心理想法要与上面这行位置一致，不得自相矛盾；若他上一轮的心理想法与此处境已不符，本轮必须重写该字段）`,
+    );
   }
   // 疑心阶梯（30/60/90）：告知 AI 苏文的猜疑演绎强度（数值脚本管理，AI 只演态度）
   for (const name of ['秦璐', '苏梦'] as const) {
