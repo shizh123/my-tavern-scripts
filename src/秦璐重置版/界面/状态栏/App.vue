@@ -48,6 +48,7 @@
           <span class="tab-label">{{ t.label }}</span>
         </button>
         <button
+          v-if="isLatest"
           type="button"
           :class="['lock-btn', { on: actorLocked }]"
           :title="actorLocked ? '在场角色已锁定（点击调整/解锁）' : '锁定在场角色（纠正 AI 进出场判错）'"
@@ -58,7 +59,7 @@
       </nav>
 
       <!-- 在场锁定浮层 -->
-      <div v-if="showLockPicker" class="lock-picker">
+      <div v-if="showLockPicker && isLatest" class="lock-picker">
         <span class="lp-label">锁定在场</span>
         <button type="button" @click="setActorLock('秦璐')">仅秦璐</button>
         <button type="button" @click="setActorLock('苏梦')">仅苏梦</button>
@@ -67,9 +68,14 @@
       </div>
 
       <!-- 内容区（老楼层默认折叠，点 tab 临时展开——对标云霜凝 v2.0.31 性能优化） -->
+      <!-- v0.31 旧楼只读：操作本就固定写最新楼(-1)，但旧楼面板显示的是历史数据，
+           按历史数据点操作会造成"点了没反应/校验对不上"的困惑——整块禁点，只留查看 -->
       <div v-if="activeTab" class="content-area">
-        <CharPanel v-if="activeTab === '秦璐' || activeTab === '苏梦'" :key="activeTab" :name="activeTab" />
-        <ShopPanel v-else-if="activeTab === '网店'" />
+        <div v-if="!isLatest" class="stale-guard">📜 旧楼层仅供回看，购买/植入等操作请回到最新楼层</div>
+        <div :class="['panel-host', { readonly: !isLatest }]">
+          <CharPanel v-if="activeTab === '秦璐' || activeTab === '苏梦'" :key="activeTab" :name="activeTab" />
+          <ShopPanel v-else-if="activeTab === '网店'" />
+        </div>
       </div>
 
       <div class="panel-decor bottom"></div>
@@ -134,6 +140,7 @@ let coinTapCount = 0;
 let coinTapTimer: ReturnType<typeof setTimeout> | null = null;
 const coinGain = ref(false);
 async function coinTap() {
+  if (!isLatest.value) return; // v0.31 旧楼只读：顶栏后门与内容区遮罩同规则
   coinTapCount++;
   if (coinTapTimer) clearTimeout(coinTapTimer);
   coinTapTimer = setTimeout(() => (coinTapCount = 0), 2500);
@@ -694,6 +701,23 @@ $font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   padding: 12px;
   border-top: 1px solid var(--line);
   background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 3%, transparent), transparent 12%);
+}
+
+// 旧楼只读（v0.31）：面板整块禁点，仅供回看
+.stale-guard {
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+  color: var(--acc);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+.panel-host.readonly {
+  pointer-events: none;
+  opacity: 0.72;
+  filter: saturate(0.75);
 }
 
 @media (max-width: 380px) {
