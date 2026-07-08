@@ -110,6 +110,7 @@ function captureProtectionSnapshot(data: SchemaType): void {
       _苏文视角: { ...data.系统._苏文视角 },
       _已触发打断档位: { ...data.系统._已触发打断档位 },
       _打断余波至楼层: data.系统._打断余波至楼层,
+      _打断冷却至楼层: data.系统._打断冷却至楼层,
     } as any,
   };
 }
@@ -163,6 +164,9 @@ function rollbackProtectedFields(data: SchemaType): void {
     if (typeof snap.系统._打断余波至楼层 === 'number') {
       data.系统._打断余波至楼层 = Math.max(data.系统._打断余波至楼层, snap.系统._打断余波至楼层);
     }
+    if (typeof snap.系统._打断冷却至楼层 === 'number') {
+      data.系统._打断冷却至楼层 = Math.max(data.系统._打断冷却至楼层, snap.系统._打断冷却至楼层);
+    }
   }
 
   // 念头"内容"保护：AI 只许改"类型"，不许改"内容"
@@ -194,7 +198,7 @@ function rollbackProtectedFields(data: SchemaType): void {
  */
 function settleSuspicion(data: SchemaType, currentFloor: number): void {
   if (data.系统._坏结局) return;
-  // 每楼最多触发一次打断（调试满星下两角色可能同楼跨档；第二位不标记档位，顺延下一楼触发）
+  // 每楼最多触发一次打断（两角色同楼都够档时只演一位；另一位档位不标记，等冷却后按存量补触发）
   let interruptFiredThisFloor = false;
   for (const name of ['秦璐', '苏梦'] as const) {
     const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
@@ -247,18 +251,25 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
       console.warn(`[坏结局] 苏文对${name}疑心爆表，存档锁定`);
       return;
     }
-    // 打断触发（v0.23）：跨过 10 点档且该档从未触发过 → 注入打断事件 + 点亮"苏文视角"
-    // 疑心可降回再涨，已触发档位不重演；一次跨多档只演最高档（其余标记为已触发）
+    // 打断触发（v0.30 冷却存量制，用户设计；替代 v0.23 跨档瞬间制）：
+    // - 两次打断至少间隔 12 楼：冷却内跨档不触发也不标记（疑心值照涨，欠账玩家可见）
+    // - 冷却外每楼按"当前疑心值"结算：最高未触发档 ≤ 当前值 → 触发该档并连带标记其下档位
+    //   （非冷却期首次涨过某档 = 当楼即触发，与旧跨档语义一致）
+    // - 拆弹：冷却期内玩家把疑心降回档下（自然回落/借口短信），到期就不触发，该档等再涨上来
+    // - 已触发档位一生一次不重演；同楼两角色只演一位（另一位冷却后补）
     if (interruptFiredThisFloor) continue;
+    if (data.系统._打断冷却至楼层 >= 0 && currentFloor < data.系统._打断冷却至楼层) continue;
     let firedTier = 0;
     for (let t = 10; t <= 90; t += 10) {
-      const key = `${name}:${t}`;
-      if (after >= t && before < t && !data.系统._已触发打断档位[key]) {
-        data.系统._已触发打断档位[key] = true;
+      if (after >= t && !data.系统._已触发打断档位[`${name}:${t}`]) {
         firedTier = t;
       }
     }
     if (firedTier > 0) {
+      for (let t = 10; t <= firedTier; t += 10) {
+        data.系统._已触发打断档位[`${name}:${t}`] = true;
+      }
+      data.系统._打断冷却至楼层 = currentFloor + 12;
       interruptFiredThisFloor = true;
       const dir = INTERRUPT_DIRECTIONS[firedTier];
       const event = `【苏文打断·疑心${firedTier}】本轮请让苏文中止${name}当前的场面。方向：${dir}。只定方向不定细节——打断的具体理由/借口必须从当前上下文与家庭日常里生成（不要凭空发明道具或情节），他的台词、时机与她的反应由你按上下文与当前阶段演绎；他并没有实据，这次打断不揭穿任何真相`;
@@ -279,7 +290,7 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
       data.苏文状态.当前位置 = data.世界.地点;
       data.系统._打断余波至楼层 = currentFloor + 4;
       console.info(
-        `[打断] 苏文对${name}疑心跨过${firedTier}档，打断事件已注入（苏文强制在场@${data.世界.地点}，余波至楼${currentFloor + 4}），苏文视角待看`,
+        `[打断] 苏文对${name}疑心达到${firedTier}档触发打断（冷却至楼${currentFloor + 12}），事件已注入（苏文强制在场@${data.世界.地点}，余波至楼${currentFloor + 4}），苏文视角待看`,
       );
     }
   }

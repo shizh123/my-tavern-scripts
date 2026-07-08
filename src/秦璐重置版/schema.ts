@@ -339,6 +339,8 @@ const SystemState = z.object({
   _已触发打断档位: z.record(z.string(), z.boolean()).prefault({}),
   /** 打断余波（v0.25）：打断楼+后3楼苏文滞留家中（作息游标暂停），行为尺度收敛；-1=无余波 */
   _打断余波至楼层: z.coerce.number().default(-1),
+  /** 打断冷却（v0.30）：两次打断至少间隔12楼；冷却内跨档不触发不标记，到期按当前疑心值重新结算（可拆弹） */
+  _打断冷却至楼层: z.coerce.number().default(-1),
   /** 苏文视角（v0.23）：打断后点亮按钮 → 3 幕插叙 POV，期间主线引擎冻结 */
   _苏文视角: z
     .object({
