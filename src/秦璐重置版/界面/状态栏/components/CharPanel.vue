@@ -11,7 +11,9 @@
             <small>第{{ char?.当前阶段 ?? 1 }}阶段 · {{ isPresent ? '在场' : '不在场' }}</small>
           </div>
         </div>
-        <span :class="['emotion', { vuln: isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
+        <span :class="['emotion', { vuln: isVulnerable }]" :title="char?.当前情绪 ?? '平静'">{{
+          char?.当前情绪 ?? '平静'
+        }}</span>
       </div>
 
       <div class="bars">
@@ -75,7 +77,7 @@
       </h3>
       <div class="sw-meta">
         <span>📍 {{ suwenPos }}</span>
-        <span class="sw-emo">{{ suwen?.当前情绪 ?? '平静' }}</span>
+        <span class="sw-emo" :title="suwen?.当前情绪 ?? '平静'">{{ suwen?.当前情绪 ?? '平静' }}</span>
       </div>
       <blockquote v-if="suwen?.当前心理想法" class="inner-voice sw-voice">{{ suwen.当前心理想法 }}</blockquote>
       <div class="bar">
@@ -596,6 +598,11 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.28);
   letter-spacing: 1px;
+  // v0.32：AI 偶尔把情绪写成整句，钳制显示防撑破布局（完整文本悬停 title 可看）
+  max-width: 11em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &.vuln {
     color: $vuln;
@@ -1011,6 +1018,10 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     border: 1px solid var(--line);
     background: rgba(0, 0, 0, 0.25);
     color: #cfc6b8;
+    max-width: 10em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 .sw-voice {
