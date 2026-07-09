@@ -203,6 +203,7 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
   if (data.系统._坏结局) return;
   // 每楼最多触发一次打断（两角色同楼都够档时只演一位；另一位档位不标记，等冷却后按存量补触发）
   let interruptFiredThisFloor = false;
+  const present = getPresentCharacters(data);
   for (const name of ['秦璐', '苏梦'] as const) {
     const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
     const susKey = `对${name}疑心值` as '对秦璐疑心值' | '对苏梦疑心值';
@@ -232,8 +233,10 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
     } else if (char.堕落度 < char._疑心已结算堕落度) {
       char._疑心已结算堕落度 = char.堕落度; // 容错（堕落度理论上不降）
     }
-    // 满星附加
-    const full = getOutfitStars(data, charKey).full;
+    // 满星附加（v0.31补2：仅在场生效）——不在场谈不上"被他看见"；
+    // 也堵住 _调试满星 全局旗标给缺席角色暗涨疑心的坑（玩家实测：苏梦离场后
+    // 疑心自涨到跨档，打断砸进秦璐的剧情）
+    const full = getOutfitStars(data, charKey).full && present.includes(name);
     if (full) rise += 1;
 
     const before = data.苏文状态[susKey];
@@ -265,6 +268,9 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
     // - 已触发档位一生一次不重演；同楼两角色只演一位（另一位冷却后补）
     if (interruptFiredThisFloor) continue;
     if (data.系统._打断冷却至楼层 >= 0 && currentFloor < data.系统._打断冷却至楼层) continue;
+    // 打断需在场（v0.31补2）：打断的语义是"中止她当前的场面"——不在场没有场面可断。
+    // 不触发不标记，档位欠着，等她下次在场且冷却外按存量补触发
+    if (!present.includes(name)) continue;
     let firedTier = 0;
     for (let t = 10; t <= 90; t += 10) {
       if (after >= t && !data.系统._已触发打断档位[`${name}:${t}`]) {
