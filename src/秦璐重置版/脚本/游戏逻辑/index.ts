@@ -55,6 +55,21 @@ function getLastUserMessage(): string {
   return '';
 }
 
+/**
+ * 玩家角色名（v0.32）：脚本注入的快照不经过酒馆宏替换，{{user}} 会原样透传给 AI——
+ * 注入前用此值统一替换（开场白等世界书文本不受影响，酒馆自己会替换宏）
+ */
+function getUserName(): string {
+  try {
+    const sub = (globalThis as any).substitudeMacros;
+    if (typeof sub === 'function') {
+      const n = sub('{{user}}');
+      if (n && n !== '{{user}}') return n;
+    }
+  } catch {}
+  return (SillyTavern as any)?.name1 || '儿子';
+}
+
 /** 本次生成是否为重roll/继续（chat 末条已是 AI 消息；新楼生成时末条是玩家输入） */
 function isRerollGeneration(): boolean {
   const chat = SillyTavern.chat ?? [];
@@ -530,10 +545,11 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
     const hint = suspicionHint(name, data.苏文状态[`对${name}疑心值`]);
     if (hint) lines.push(hint);
   }
-  // 打断余波（v0.25）：打断后 2~3 楼行为尺度收敛——不冻结培育（念头在内心），收的是"出口"
+  // 打断余波（v0.25，v0.32 收紧为硬约束）：不冻结培育（念头在内心），封死的是"出口"——
+  // 原文案"收敛一档"太软，AI 不当回事（玩家实测余波期亲密照旧）
   if (data.系统._打断余波至楼层 >= 0 && promptFloor < data.系统._打断余波至楼层) {
     lines.push(
-      '  🌫 打断余波：他刚打断过这里，注意力还没移开、人也没走远——这几轮她们的越界收进眼神与暗流（行为出口临时收敛一档），等风头过去；具体如何收敛按上下文与当前阶段演绎',
+      '  🌫 打断余波【硬约束】：他刚打断过这里，注意力还没移开、人也没走远——余波期间不论她处于第几阶段、受什么念头影响，禁止一切亲密/暧昧/越轨的行为与话题：全部收进眼神、呼吸与心理暗流；她们会主动拉开距离、把话题掰回家常，{{user}}的越界试探也会被她们以"不是现在"式的紧张按住（这不是拒绝他，是怕被看见）。余波过后恢复正常尺度',
     );
   }
 
@@ -603,7 +619,7 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
       // 越界应对（v0.30）：只给底线不给动作剧本（教训6/7——写具体反应会坍缩成固定戏码）；
       // 明确"拒绝≠关系受损"，保住攻略性——被拒的信号是"她现在还不行"，不是"这条线死了"
       lines.push(
-        `  ▷ 越界应对：若苏斌的言行超出本阶段禁区，她本轮不会配合——但如何回应必须从她的人设、她对他的感情与当下情境里长出来（错愕、心疼、自责、担心他是不是压力太大……形式由你按上下文演绎），不要模板化的翻脸；拒绝不损害她对他的爱，也不会点燃她的欲望`,
+        `  ▷ 越界应对：若{{user}}的言行超出本阶段禁区，她本轮不会配合——但如何回应必须从她的人设、她对他的感情与当下情境里长出来（错愕、心疼、自责、担心他是不是压力太大……形式由你按上下文演绎），不要模板化的翻脸；拒绝不损害她对他的爱，也不会点燃她的欲望`,
       );
     }
   }
@@ -736,7 +752,12 @@ $(() => {
         captureProtectionSnapshot(data);
 
         // 3. 构建快照 + 注入（幂等 marker 防重复）
-        const snapshot = SNAPSHOT_MARKER + ']\n' + buildStatusSnapshot(data, messageId);
+        //    v0.32：注入前统一替换 {{user}}——脚本注入的消息不经过酒馆宏替换，
+        //    此前快照/道具事件里的 {{user}} 原样透传（越界应对行曾硬编码"苏斌"，玩家角色名各异）
+        const snapshot = (SNAPSHOT_MARKER + ']\n' + buildStatusSnapshot(data, messageId)).replace(
+          /\{\{user\}\}/g,
+          getUserName(),
+        );
         const chat = event_data.chat ?? [];
         // 清理旧快照
         for (let i = chat.length - 1; i >= 0; i--) {
