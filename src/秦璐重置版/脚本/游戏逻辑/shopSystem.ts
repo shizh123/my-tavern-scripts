@@ -763,6 +763,17 @@ export const SHOP_ITEMS: ShopItem[] = [
     简介: '免判定直植（二期上架）',
     未上架: true,
   },
+  {
+    名称: '刻印香炉',
+    分类: '特权',
+    阶段门槛: 1,
+    类型倾向: [],
+    加速: 0,
+    风险: 0,
+    越级钥匙: false,
+    价格: 500,
+    简介: '获得 1 个刻印名额：把一条习惯刻进她的本能——不占习惯栏、表现权重加强、不可逆（可复购囤积，每角色最多刻 4 条）',
+  },
   // ━━━━ 特别（v0.23 录像系统：一次买断设备，录制→归档→给她们看） ━━━━
   {
     名称: '云台微型相机',
@@ -1117,6 +1128,11 @@ export function getDaringEquippedNames(data: SchemaType, charKey: CharKey): stri
   return getEquippedNames(data, charKey).filter(n => (ITEM_MAP[n]?.风险 ?? 0) >= 1);
 }
 
+/** 装备中物品的风险总和（v0.33 装扮信号事件：触发率随风险升高） */
+export function getEquippedRiskSum(data: SchemaType, charKey: CharKey): number {
+  return getEquippedNames(data, charKey).reduce((sum, n) => sum + (ITEM_MAP[n]?.风险 ?? 0), 0);
+}
+
 /**
  * 仪容星标（v0.22）：5 星 = 4 个装备槽各有网店装备 + 任意体改
  * 满星 = 全套加成：所有培育中念头 +1/楼（无视类型匹配）+ 苏文疑心 +1/楼（高收益高风险）
@@ -1245,11 +1261,24 @@ export function getConsumableCooldownLeft(data: SchemaType, name: string, curren
 // 特权（全局永久，复用 系统.道具状态）
 // ────────────────────────────────────────────
 
+/** 刻印香炉（v0.33）：可复购特权——每次购买 +1 刻印名额；名额在角色页把习惯固定为刻印习性 */
+export const ENGRAVE_ITEM_NAME = '刻印香炉';
+/** 每角色刻印上限（防快照提示词膨胀） */
+export const ENGRAVE_MAX_PER_CHAR = 4;
+
 export function buyPrivilege(data: SchemaType, name: string): string | null {
   if (data.系统._坏结局) return '结局已锁定';
   const item = ITEM_MAP[name];
   if (!item || item.分类 !== '特权') return '未知特权';
   if (item.未上架) return '暂未上架';
+  // 刻印香炉：可复购，走名额累计，不占 道具状态
+  if (name === ENGRAVE_ITEM_NAME) {
+    if (data.系统.货币 < item.价格) return '货币不足';
+    data.系统.货币 -= item.价格;
+    data.系统._刻印名额 += 1;
+    console.info(`[网店] 刻印名额 +1（共${data.系统._刻印名额}）-${item.价格} (余${data.系统.货币})`);
+    return null;
+  }
   if (data.系统.道具状态[name] === '已购买') return '已购买过';
   if (data.系统.货币 < item.价格) return '货币不足';
   data.系统.货币 -= item.价格;

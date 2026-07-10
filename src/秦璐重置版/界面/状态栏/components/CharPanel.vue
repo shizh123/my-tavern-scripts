@@ -113,6 +113,7 @@
         <div v-if="t.状态 === '培育中'" class="t-prog">
           <div class="track"><i class="fill f-grow" :style="{ width: thoughtProgressPercent(t) + '%' }"></i></div>
           <span class="pv">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}</span>
+          <span class="t-rate" :title="rateTitle(t)">+{{ thoughtRate(t) }}/楼</span>
         </div>
         <div v-if="t.状态 === '未达标'" class="t-reject">
           <span v-if="crackLeft > 0">她的心防上有一道裂缝（剩{{ crackLeft }}楼）——趁现在</span>
@@ -139,13 +140,31 @@
 
     <!-- 习惯 -->
     <section class="card">
-      <h3>习惯 <em>{{ habitList.length }}/5</em></h3>
+      <h3>
+        习惯 <em>{{ habitList.length }}/5</em>
+        <em v-if="engraveQuota > 0" class="quota" title="网店「刻印香炉」购得，用于把习惯固定为刻印习性">📌 名额 ×{{ engraveQuota }}</em>
+      </h3>
+      <!-- 刻印习性（v0.33）：不占上限、权重加强、不可逆 -->
+      <div v-if="engravedList.length > 0" class="engraved-box">
+        <div class="eg-title">✦ 刻印习性 {{ engravedList.length }}/{{ ENGRAVE_MAX_PER_CHAR }} · 已成为她的本能</div>
+        <div v-for="(h, i) in engravedList" :key="'e' + i" class="habit engraved">
+          <span class="h-text">{{ h.内容 }}</span>
+        </div>
+      </div>
       <p v-if="habitList.length === 0" class="empty">暂无习惯</p>
       <div v-for="(h, i) in habitList" :key="i" class="habit">
         <span class="h-text">{{ h.内容 }}</span>
+        <button
+          v-if="engraveQuota > 0 && engravedList.length < ENGRAVE_MAX_PER_CHAR"
+          class="ghost pin"
+          title="消耗 1 刻印名额：固定为刻印习性——不占习惯栏、表现权重加强、不可逆"
+          @click="pinHabit(i)"
+        >
+          📌 刻印
+        </button>
         <button v-if="habitList.length >= 5" class="ghost gold" @click="sellHabit(i)">出售 +{{ HABIT_SELL_PRICE }}</button>
       </div>
-      <p v-if="habitList.length >= 5" class="note warn">习惯已满，出售腾位后可接纳新习惯</p>
+      <p v-if="habitList.length >= 5" class="note warn">习惯已满，出售或刻印腾位后可接纳新习惯</p>
     </section>
 
     <!-- 仪容 -->
@@ -197,7 +216,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { getStageByCorruption, getStageTitle } from '../../../stageConfig';
-import { ITEM_MAP, OUTFIT_STAR_SLOTS, getCultivationSlots, getOutfitStars, getThoughtMaxLen } from '../../../脚本/游戏逻辑/shopSystem';
+import {
+  ENGRAVE_MAX_PER_CHAR,
+  ITEM_MAP,
+  OUTFIT_STAR_SLOTS,
+  getCultivationSlots,
+  getEquipBoost,
+  getOutfitStars,
+  getThoughtMaxLen,
+} from '../../../脚本/游戏逻辑/shopSystem';
+import { isSuwenInAccelerationRoom } from '../../../脚本/游戏逻辑/suwenRoutine';
 import { HABIT_SELL_PRICE, countActiveThoughts, forceImplant, retryImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
@@ -319,6 +347,37 @@ const thoughtList = computed(() => {
   return Object.entries(thoughts).map(([id, t]) => ({ id, ...(t as any) }));
 });
 const habitList = computed(() => char.value?.习惯列表 ?? []);
+const engravedList = computed(() => char.value?.刻印习性列表 ?? []);
+const engraveQuota = computed(() => data.value?.系统?._刻印名额 ?? 0);
+
+// 加速来源明细（v0.33 A）：与 tickThoughtProgress 同公式的"当前每楼进度"预览
+// （相关度是 AI 每轮现判的，只在 title 里注明"剧情相关另 +1~2"）
+function thoughtRateParts(t: any): { total: number; parts: string[] } {
+  const parts: string[] = ['保底 1'];
+  let total = 1;
+  if (data.value && isSuwenInAccelerationRoom(data.value.系统?._苏文作息游标 ?? 0)) {
+    total += 0.5;
+    parts.push('加速房 +0.5');
+  }
+  if (data.value && t.类型 && t.类型 !== '待判定') {
+    const eb = getEquipBoost(data.value as any, charKey.value, t.类型);
+    if (eb > 0) {
+      total += eb;
+      parts.push(`装备定向 +${eb}`);
+    }
+  }
+  if (outfitStars.value.full) {
+    total += 1;
+    parts.push('满星共鸣 +1');
+  }
+  return { total, parts };
+}
+function thoughtRate(t: any): number {
+  return thoughtRateParts(t).total;
+}
+function rateTitle(t: any): string {
+  return `${thoughtRateParts(t).parts.join(' · ')}；剧情与念头相关时 AI 另判 +1~2`;
+}
 
 function thoughtStatusClass(s: string) {
   if (s === '培育中') return 'growing';
@@ -447,6 +506,36 @@ async function discardThought(id: string) {
   }
 }
 
+/** 腾位后补转入（变卖/刻印共用）：把标记"已成熟"的待转念头按植入楼层补转入习惯 + 阶段校正 */
+function backfillMatureThoughts(d: any, key: string): void {
+  const pending = Object.entries(d[key].念头列表)
+    .filter(([, t]: any) => t.状态 === '已成熟')
+    .sort((a: any, b: any) => a[1].植入楼层 - b[1].植入楼层);
+  for (const [pid, pt] of pending as any) {
+    if (d[key].习惯列表.length >= 5) break;
+    const isHard = pt.难度 === '困难';
+    d[key].习惯列表.push({ 内容: pt.内容, 形成楼层: SillyTavern.chat?.length ?? 0 });
+    d[key].堕落度 += isHard ? 8 : 6;
+    d[key].对主角依存度 += isHard ? 4 : 3;
+    const dep = d[key].对主角依存度;
+    let sd = -2;
+    if (dep >= 80) sd = -5;
+    else if (dep >= 60) sd = -4;
+    else if (dep >= 30) sd = -3;
+    if (isHard) sd = Math.floor(sd * 1.2);
+    d[key].对苏文依存度 += sd;
+    delete d[key].念头列表[pid];
+    console.info(`[习惯腾位补转] ${key} ${pid} 补转入习惯`);
+  }
+  // 补转入后阶段校正（由堕落度派生）
+  const ns = getStageByCorruption(d[key].堕落度);
+  if (ns > d[key].当前阶段) {
+    d[key].当前阶段 = ns;
+    d[key].阶段标题 = getStageTitle(ns) as any;
+    console.info(`[习惯腾位补转] ${key} 阶段提升 → ${ns}`);
+  }
+}
+
 async function sellHabit(index: number) {
   try {
     const key = charKey.value;
@@ -462,40 +551,45 @@ async function sellHabit(index: number) {
     }
     d[key].习惯列表.splice(index, 1);
     d.系统.货币 += HABIT_SELL_PRICE;
-
-    // 腾位后补转入：把标记"已成熟"的待转念头按植入楼层补转入习惯
-    const pending = Object.entries(d[key].念头列表)
-      .filter(([, t]: any) => t.状态 === '已成熟')
-      .sort((a: any, b: any) => a[1].植入楼层 - b[1].植入楼层);
-    for (const [pid, pt] of pending as any) {
-      if (d[key].习惯列表.length >= 5) break;
-      const isHard = pt.难度 === '困难';
-      d[key].习惯列表.push({ 内容: pt.内容, 形成楼层: SillyTavern.chat?.length ?? 0 });
-      d[key].堕落度 += isHard ? 8 : 6;
-      d[key].对主角依存度 += isHard ? 4 : 3;
-      const dep = d[key].对主角依存度;
-      let sd = -2;
-      if (dep >= 80) sd = -5;
-      else if (dep >= 60) sd = -4;
-      else if (dep >= 30) sd = -3;
-      if (isHard) sd = Math.floor(sd * 1.2);
-      d[key].对苏文依存度 += sd;
-      delete d[key].念头列表[pid];
-      console.info(`[习惯腾位补转] ${key} ${pid} 补转入习惯`);
-    }
-
-    // 补转入后阶段校正（由堕落度派生）
-    const ns = getStageByCorruption(d[key].堕落度);
-    if (ns > d[key].当前阶段) {
-      d[key].当前阶段 = ns;
-      d[key].阶段标题 = getStageTitle(ns) as any;
-      console.info(`[习惯腾位补转] ${key} 阶段提升 → ${ns}`);
-    }
-
+    backfillMatureThoughts(d, key);
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     showMsg(`变卖习惯 +${HABIT_SELL_PRICE}货币`, 'success');
   } catch (e) {
     console.error('[秦璐重置版] 变卖失败', e);
+  }
+}
+
+/** 刻印（v0.33）：消耗1名额把习惯固定为刻印习性——不占5条上限、权重加强、不可逆 */
+async function pinHabit(index: number) {
+  try {
+    const key = charKey.value;
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (d.系统?._坏结局) {
+      showMsg('坏结局已锁定，游戏系统全部停止', 'error');
+      return;
+    }
+    if ((d.系统._刻印名额 ?? 0) < 1) {
+      showMsg('没有刻印名额——网店·特权页购买「刻印香炉」', 'warn');
+      return;
+    }
+    if (!d[key].刻印习性列表) d[key].刻印习性列表 = []; // 老存档守卫
+    if (d[key].刻印习性列表.length >= ENGRAVE_MAX_PER_CHAR) {
+      showMsg(`她的刻印已满（每角色最多 ${ENGRAVE_MAX_PER_CHAR} 条）`, 'warn');
+      return;
+    }
+    const [habit] = d[key].习惯列表.splice(index, 1);
+    if (!habit) {
+      showMsg('习惯不存在', 'error');
+      return;
+    }
+    d[key].刻印习性列表.push(habit);
+    d.系统._刻印名额 -= 1;
+    backfillMatureThoughts(d, key); // 刻印同样腾出习惯位
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`「${habit.内容}」已刻进她的本能`, 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 刻印失败', e);
   }
 }
 </script>
@@ -1132,6 +1226,18 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
     color: color-mix(in srgb, var(--acc) 52%, #998);
     font-variant-numeric: tabular-nums;
   }
+
+  // 加速来源标签（v0.33 A）：+N/楼，悬停显示分解
+  .t-rate {
+    flex: none;
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
+    color: var(--acc);
+    font-variant-numeric: tabular-nums;
+    cursor: help;
+  }
 }
 .t-reject {
   display: flex;
@@ -1224,6 +1330,41 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   & + .habit {
     margin-top: 6px;
   }
+}
+
+// 刻印习性（v0.33）：金色专属区块
+.quota {
+  margin-left: 8px;
+  color: #e8c76a;
+  font-style: normal;
+  cursor: help;
+}
+.engraved-box {
+  margin-bottom: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 199, 106, 0.35);
+  background: linear-gradient(180deg, rgba(232, 199, 106, 0.08), rgba(232, 199, 106, 0.02));
+
+  .eg-title {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: #e8c76a;
+    margin-bottom: 5px;
+  }
+}
+.habit.engraved {
+  background: rgba(232, 199, 106, 0.07);
+  border-left-color: #e8c76a;
+
+  .h-text {
+    color: #efe0b8;
+  }
+}
+.pin {
+  border-color: rgba(232, 199, 106, 0.55);
+  color: #e8c76a;
+  white-space: nowrap;
 }
 .h-text {
   font-family: $serif;

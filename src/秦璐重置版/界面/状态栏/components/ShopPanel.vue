@@ -125,6 +125,7 @@ import { computed, ref } from 'vue';
 import {
   SHOP_ITEMS,
   CAMERA_NAME,
+  ENGRAVE_ITEM_NAME,
   buyCamera,
   buyEquipment,
   buyBodyMod,
@@ -251,6 +252,11 @@ function itemUi(item: ShopItem): { label: string; disabled: boolean; kind: 'buy'
   }
   if (item.分类 === '特权') {
     if (item.未上架) return { label: '未上架', disabled: true, kind: 'none' };
+    // 刻印香炉（v0.33）：可复购，购买累计刻印名额（角色页习惯旁 📌 消耗）
+    if (item.名称 === ENGRAVE_ITEM_NAME) {
+      const quota = data.value?.系统?._刻印名额 ?? 0;
+      return { label: `购买名额（现有×${quota}）`, disabled: money.value < item.价格, kind: 'buy' };
+    }
     if (data.value?.系统?.道具状态?.[item.名称] === '已购买') return { label: '已生效', disabled: true, kind: 'none' };
     return { label: '购买', disabled: money.value < item.价格, kind: 'buy' };
   }

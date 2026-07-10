@@ -188,6 +188,10 @@ const CharacterState = z.object({
   念头列表: z.record(z.string(), Thought).prefault({}),
   /** 习惯列表：上限 5，满了变卖换货币 */
   习惯列表: z.array(Habit).default([]),
+  /** 刻印习性（v0.33）：用刻印名额固定的习惯——不占5条上限、不可变卖、快照中权重加强 */
+  刻印习性列表: z.array(Habit).default([]),
+  /** 装扮注意事件冷却（v0.33）：上次触发"苏文注意到她的装扮"的楼层；-1=从未 */
+  _装扮注意上次楼层: z.coerce.number().default(-1),
 
   // ━━━━ 网店装备（界面/脚本管理，AI 不要改） ━━━━
   /** 装备状态：key=物品名，缺省=未购买；装备各买各的（对标云霜凝但对称化） */
@@ -341,6 +345,8 @@ const SystemState = z.object({
   _打断余波至楼层: z.coerce.number().default(-1),
   /** 打断冷却（v0.30）：两次打断至少间隔12楼；冷却内跨档不触发不标记，到期按当前疑心值重新结算（可拆弹） */
   _打断冷却至楼层: z.coerce.number().default(-1),
+  /** 刻印名额（v0.33）：购买「刻印香炉」获得，用于把习惯固定为刻印习性（可囤积） */
+  _刻印名额: z.coerce.number().default(0),
   /** 苏文视角（v0.23）：打断后点亮按钮 → 3 幕插叙 POV，期间主线引擎冻结 */
   _苏文视角: z
     .object({

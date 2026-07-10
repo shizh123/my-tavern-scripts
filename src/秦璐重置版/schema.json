@@ -79,12 +79,12 @@
         "当前情绪": {
           "default": "平静",
           "description": "AI 每轮更新",
-          "$ref": "#/$defs/__schema19"
+          "$ref": "#/$defs/__schema20"
         },
         "当前心理想法": {
           "default": "家里最近挺平静的，璐璐把家里打理得很好，孩子们也懂事。",
           "description": "60-100字第一人称内心独白，AI 每轮更新",
-          "$ref": "#/$defs/__schema20"
+          "$ref": "#/$defs/__schema21"
         },
         "对秦璐疑心值": {
           "type": "number"
@@ -94,11 +94,11 @@
         },
         "对秦璐疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema21"
+          "$ref": "#/$defs/__schema22"
         },
         "对苏梦疑心值冻结": {
           "default": {},
-          "$ref": "#/$defs/__schema21"
+          "$ref": "#/$defs/__schema22"
         }
       }
     },
@@ -214,7 +214,7 @@
               "摘要": {
                 "default": "",
                 "description": "AI 归档：50字内概括被记录的画面",
-                "$ref": "#/$defs/__schema23"
+                "$ref": "#/$defs/__schema24"
               },
               "录制起止": {
                 "default": "",
@@ -283,6 +283,10 @@
         },
         "_打断冷却至楼层": {
           "default": -1,
+          "type": "number"
+        },
+        "_刻印名额": {
+          "default": 0,
           "type": "number"
         },
         "_苏文视角": {
@@ -704,21 +708,19 @@
           "default": [],
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "内容": {
-                "type": "string",
-                "description": "已固化的行为/思维"
-              },
-              "形成楼层": {
-                "default": -1,
-                "type": "number"
-              }
-            },
-            "required": [
-              "内容"
-            ]
+            "$ref": "#/$defs/__schema19"
           }
+        },
+        "刻印习性列表": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/__schema19"
+          }
+        },
+        "_装扮注意上次楼层": {
+          "default": -1,
+          "type": "number"
         },
         "装备状态": {
           "default": {},
@@ -835,12 +837,28 @@
       "type": "number"
     },
     "__schema19": {
-      "type": "string"
+      "type": "object",
+      "properties": {
+        "内容": {
+          "type": "string",
+          "description": "已固化的行为/思维"
+        },
+        "形成楼层": {
+          "default": -1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "内容"
+      ]
     },
     "__schema20": {
       "type": "string"
     },
     "__schema21": {
+      "type": "string"
+    },
+    "__schema22": {
       "type": "object",
       "properties": {
         "是否冻结": {
@@ -854,14 +872,14 @@
         "冻结结束楼层": {
           "default": -1,
           "description": "当前楼层 >= 此值则解冻",
-          "$ref": "#/$defs/__schema22"
+          "$ref": "#/$defs/__schema23"
         }
       }
     },
-    "__schema22": {
+    "__schema23": {
       "type": "number"
     },
-    "__schema23": {
+    "__schema24": {
       "type": "string"
     }
   }

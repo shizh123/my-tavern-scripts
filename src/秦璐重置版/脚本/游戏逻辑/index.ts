@@ -14,7 +14,14 @@
 import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
-import { getBodyModNames, getDaringEquippedNames, getEquippedNames, getOutfitStars, getSuspicionFloor } from './shopSystem';
+import {
+  getBodyModNames,
+  getDaringEquippedNames,
+  getEquippedNames,
+  getEquippedRiskSum,
+  getOutfitStars,
+  getSuspicionFloor,
+} from './shopSystem';
 import { advanceSuwenRoutine, previewSuwenPosition } from './suwenRoutine';
 import { tickThoughtProgress, resolveThoughtType, isInVulnerableWindow, type ThoughtCategoryValue } from './thoughtEngine';
 import { reloadOnChatChange } from '@/util/script';
@@ -99,6 +106,7 @@ function captureProtectionSnapshot(data: SchemaType): void {
       对苏文依存度: data.秦璐状态.对苏文依存度,
       念头列表: { ...data.秦璐状态.念头列表 },
       习惯列表: [...data.秦璐状态.习惯列表],
+      刻印习性列表: [...data.秦璐状态.刻印习性列表],
     } as any,
     苏梦状态: {
       堕落度: data.苏梦状态.堕落度,
@@ -107,6 +115,7 @@ function captureProtectionSnapshot(data: SchemaType): void {
       对苏文依存度: data.苏梦状态.对苏文依存度,
       念头列表: { ...data.苏梦状态.念头列表 },
       习惯列表: [...data.苏梦状态.习惯列表],
+      刻印习性列表: [...data.苏梦状态.刻印习性列表],
     } as any,
     苏文状态: {
       当前状态: data.苏文状态.当前状态,
@@ -148,6 +157,10 @@ function rollbackProtectedFields(data: SchemaType): void {
     data[charKey].阶段标题 = getStageTitle(sc.当前阶段 as number) as any;
     data[charKey].对主角依存度 = sc.对主角依存度 as number;
     data[charKey].对苏文依存度 = sc.对苏文依存度 as number;
+    // 刻印习性（v0.33）：界面/脚本管理，AI 不得增删改——整体回滚
+    if (sc.刻印习性列表) {
+      data[charKey].刻印习性列表 = [...(sc.刻印习性列表 as typeof data.秦璐状态.刻印习性列表)];
+    }
   }
 
   // 苏文状态：脚本管理字段强制回滚（疑心值 v0.22 起由满星结算脚本管理，回滚后再结算）
@@ -320,6 +333,53 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
         `[打断] 苏文对${name}疑心达到${firedTier}档触发打断（冷却至楼${currentFloor + 12}），事件已注入（苏文强制在场@${data.世界.地点}，余波至楼${currentFloor + 4}），苏文视角待看`,
       );
     }
+  }
+}
+
+/**
+ * 装扮信号事件（v0.33 B）：她穿着风险装备 + 苏文在家 + 她在场 → 概率触发"他注意到了"。
+ * 结果按当前疑心分岔：低疑心多半误读为家里的生气（降疑），高疑心多半起疑（涨疑）——
+ * 穿什么、何时穿、他在不在家时穿，成为决策而不是纯 buff。
+ * 数值（待平衡期统一调）：触发率 = 10% + 风险总和×5%（封顶 30%）；每角色 10 楼冷却；
+ * 疑心<30：70% 误读 -2 / 30% 起疑 +1；疑心≥30：30% 误读 -2 / 70% 起疑 +2。
+ * 放在 settleSuspicion 之后：本楼 delta 若跨档，下一楼由打断存量判据接手（不与注意事件同楼撞车）。
+ */
+function settleOutfitAttention(data: SchemaType, currentFloor: number): void {
+  if (data.系统._坏结局) return;
+  if (data.苏文状态.当前状态 !== '在家') return;
+  // 打断余波期他已经在全神贯注地盯着，不再叠加注意事件
+  if (data.系统._打断余波至楼层 >= 0 && currentFloor <= data.系统._打断余波至楼层) return;
+  const present = getPresentCharacters(data);
+  for (const name of ['秦璐', '苏梦'] as const) {
+    if (!present.includes(name)) continue;
+    const charKey = `${name}状态` as '秦璐状态' | '苏梦状态';
+    const char = data[charKey];
+    const freeze = data.苏文状态[`对${name}疑心值冻结`];
+    if (freeze.是否冻结 && currentFloor < freeze.冻结结束楼层) continue; // 冻结期不涨不落
+    if (char._装扮注意上次楼层 >= 0 && currentFloor - char._装扮注意上次楼层 < 10) continue;
+    if (getDaringEquippedNames(data, charKey).length === 0) continue;
+    const riskSum = getEquippedRiskSum(data, charKey);
+    const p = Math.min(0.3, 0.1 + riskSum * 0.05);
+    if (Math.random() >= p) continue;
+    char._装扮注意上次楼层 = currentFloor;
+    const susKey = `对${name}疑心值` as '对秦璐疑心值' | '对苏梦疑心值';
+    const sus = data.苏文状态[susKey];
+    const kindly = Math.random() < (sus < 30 ? 0.7 : 0.3);
+    let event: string;
+    if (kindly) {
+      const floorMin = getSuspicionFloor(data, charKey);
+      data.苏文状态[susKey] = Math.max(floorMin, sus - 2);
+      event = `【苏文注意·暖】苏文注意到了${name}近来的装扮变化，但往好处想了——家里有点生气是好事。本轮轻描淡写带一笔他不设防的受用（一句感慨/一个柔和的眼神，具体由上下文生成），他没有察觉任何异样`;
+    } else {
+      data.苏文状态[susKey] = Math.min(99, sus + (sus < 30 ? 1 : 2)); // 不直接引爆坏结局，触顶留给主通道
+      event = `【苏文注意·疑】苏文的目光在${name}的装扮上停了一下，多想了一层。本轮轻描淡写带一笔这个瞬间（他没说什么，或状似随意地问了一句，具体由上下文生成），不摊牌不对峙`;
+    }
+    data.系统._待发送道具事件 = data.系统._待发送道具事件
+      ? `${data.系统._待发送道具事件}|${event}`
+      : event;
+    console.info(
+      `[装扮注意] ${name} 触发（风险${riskSum}，p=${Math.round(p * 100)}%，${kindly ? '误读' : '起疑'}）疑心 ${sus}→${data.苏文状态[susKey]}`,
+    );
   }
 }
 
@@ -577,10 +637,18 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
     const char = data[`${name}状态` as '秦璐状态' | '苏梦状态'];
     const growing = Object.entries(char.念头列表).filter(([, t]) => t.状态 === '培育中');
     const habits = char.习惯列表;
+    const engraved = char.刻印习性列表;
     if (growing.length > 0) hasGrowing = true;
     lines.push('');
-    if (growing.length > 0 || habits.length > 0) {
+    if (growing.length > 0 || habits.length > 0 || engraved.length > 0) {
       lines.push(`【${name}当下受以下念头/习惯的影响，请在演绎中自然体现】`);
+      // 刻印习性（v0.33）：玩家花名额固定的习惯——表现权重高于普通习惯
+      if (engraved.length > 0) {
+        lines.push(`  刻印习性（已刻进她的本能，表现权重高于普通习惯，几乎每轮都应留下痕迹）：`);
+        for (const h of engraved) {
+          lines.push(`  ★ 「${h.内容}」`);
+        }
+      }
       if (growing.length > 0) {
         lines.push(`  念头（想法层）：`);
         for (const [id, t] of growing) {
@@ -949,6 +1017,9 @@ $(() => {
 
         // 4.4 满星疑心结算（回滚已恢复基准值，在此之上涨/落）
         settleSuspicion(newData, currentFloor);
+
+        // 4.42 装扮信号事件（v0.33）：苏文可能注意到她的装扮——误读降疑/起疑涨疑
+        settleOutfitAttention(newData, currentFloor);
 
         // 4.45 经济结算（v0.25）：堕落度增量折算货币 + 阶段突破奖励（坏结局楼不发钱）
         if (!newData.系统._坏结局) settleEconomy(newData);
