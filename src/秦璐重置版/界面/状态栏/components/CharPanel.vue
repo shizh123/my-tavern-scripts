@@ -195,19 +195,16 @@
         <span class="eq-label">改造</span>
         <span v-for="n in bodyModNames" :key="n" class="tag eq">{{ n }}</span>
       </div>
-      <dl class="attire">
-        <div><dt>上装</dt><dd>{{ char?.服装细节?.上装 ?? '—' }}</dd></div>
-        <div><dt>下装</dt><dd>{{ char?.服装细节?.下装 ?? '—' }}</dd></div>
-        <div><dt>内衣</dt><dd>{{ char?.服装细节?.内衣?.上 ?? '—' }}</dd></div>
-        <div><dt>内裤</dt><dd>{{ char?.服装细节?.内衣?.下 ?? '—' }}</dd></div>
-        <div><dt>袜</dt><dd>{{ char?.服装细节?.袜裤 ?? '—' }}</dd></div>
-        <div v-if="shown(char?.服装细节?.配饰)"><dt>配饰</dt><dd>{{ char?.服装细节?.配饰 }}</dd></div>
-        <div v-if="shown(char?.服装细节?.特殊装饰)"><dt>装饰</dt><dd>{{ char?.服装细节?.特殊装饰 }}</dd></div>
-        <div v-if="shown(char?.妆容细节?.唇妆)"><dt>唇妆</dt><dd>{{ char?.妆容细节?.唇妆 }}</dd></div>
-        <div v-if="shown(char?.妆容细节?.眼妆)"><dt>眼妆</dt><dd>{{ char?.妆容细节?.眼妆 }}</dd></div>
-        <div v-if="shown(char?.妆容细节?.特殊妆容)"><dt>妆饰</dt><dd>{{ char?.妆容细节?.特殊妆容 }}</dd></div>
-        <div v-if="shown(char?.妆容细节?.香氛)"><dt>香氛</dt><dd>{{ char?.妆容细节?.香氛 }}</dd></div>
-      </dl>
+      <!-- v0.33补：图标网格（原单列 dl 右侧大片空白）——自适应 1~2 列，长值省略号+title -->
+      <div class="attire">
+        <div v-for="a in attireEntries" :key="a.label" class="a-cell" :title="a.label + '：' + a.val">
+          <span class="a-ic">{{ a.ic }}</span>
+          <div class="a-tx">
+            <small>{{ a.label }}</small>
+            <b>{{ a.val }}</b>
+          </div>
+        </div>
+      </div>
     </section>
     </div>
   </div>
@@ -253,6 +250,30 @@ const slotsUsed = computed(() => (data.value ? countActiveThoughts(data.value as
 function shown(v?: string): boolean {
   return !!v && v !== '无';
 }
+
+/** 仪容明细（v0.33 补：图标网格布局）——固定五件常显，可选项非"无"才入列 */
+const attireEntries = computed(() => {
+  const c = char.value;
+  const entries: Array<{ ic: string; label: string; val: string }> = [
+    { ic: '👚', label: '上装', val: c?.服装细节?.上装 ?? '—' },
+    { ic: '👗', label: '下装', val: c?.服装细节?.下装 ?? '—' },
+    { ic: '👙', label: '内衣', val: c?.服装细节?.内衣?.上 ?? '—' },
+    { ic: '🩲', label: '内裤', val: c?.服装细节?.内衣?.下 ?? '—' },
+    { ic: '🧦', label: '袜', val: c?.服装细节?.袜裤 ?? '—' },
+  ];
+  const optional: Array<[string, string, string | undefined]> = [
+    ['💍', '配饰', c?.服装细节?.配饰],
+    ['⛓️', '装饰', c?.服装细节?.特殊装饰],
+    ['💄', '唇妆', c?.妆容细节?.唇妆],
+    ['👁️', '眼妆', c?.妆容细节?.眼妆],
+    ['✨', '妆饰', c?.妆容细节?.特殊妆容],
+    ['🌸', '香氛', c?.妆容细节?.香氛],
+  ];
+  for (const [ic, label, v] of optional) {
+    if (shown(v)) entries.push({ ic, label, val: v! });
+  }
+  return entries;
+});
 
 /** 仪容星标：4 槽网店装备 + 体改 = 5 星；满星脉冲 + 全套加成 */
 const outfitStars = computed(() =>
@@ -1462,30 +1483,43 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
 }
 .attire {
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 5px;
 
-  > div {
+  .a-cell {
     display: flex;
-    gap: 10px;
-    padding: 3px 0;
-    font-size: 11.5px;
-
-    & + div {
-      border-top: 1px dashed color-mix(in srgb, var(--acc) 12%, transparent);
-    }
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid color-mix(in srgb, var(--acc) 10%, transparent);
+    min-width: 0;
   }
-  dt {
+  .a-ic {
     flex: none;
-    width: 30px;
-    color: color-mix(in srgb, var(--acc) 48%, #887);
-    letter-spacing: 1px;
-    font-size: 10.5px;
-    line-height: inherit;
+    font-size: 14px;
+    opacity: 0.85;
   }
-  dd {
-    margin: 0;
-    color: #cabfaf;
+  .a-tx {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    small {
+      font-size: 9.5px;
+      letter-spacing: 1px;
+      color: color-mix(in srgb, var(--acc) 48%, #887);
+    }
+    b {
+      font-weight: 500;
+      font-size: 11.5px;
+      color: #cabfaf;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
 </style>
