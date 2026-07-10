@@ -260,6 +260,7 @@ const attireEntries = computed(() => {
     { ic: '👙', label: '内衣', val: c?.服装细节?.内衣?.上 ?? '—' },
     { ic: '🩲', label: '内裤', val: c?.服装细节?.内衣?.下 ?? '—' },
     { ic: '🧦', label: '袜', val: c?.服装细节?.袜裤 ?? '—' },
+    { ic: '👠', label: '鞋', val: c?.服装细节?.鞋子 ?? '—' },
   ];
   const optional: Array<[string, string, string | undefined]> = [
     ['💍', '配饰', c?.服装细节?.配饰],

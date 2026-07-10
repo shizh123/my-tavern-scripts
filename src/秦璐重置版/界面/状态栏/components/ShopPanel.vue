@@ -142,7 +142,7 @@ import { useDataStore } from '../store';
 
 const charNames = ['秦璐', '苏梦'] as const;
 const categories = ['装备', '体改', '消耗品', '特权', '特别'] as const;
-const SLOT_ORDER: EquipSlot[] = ['内着', '外装', '饰品', '妆容'];
+const SLOT_ORDER: EquipSlot[] = ['内着', '外装', '饰品', '妆容', '鞋子'];
 
 const store = useDataStore();
 const data = computed(() => store.data);

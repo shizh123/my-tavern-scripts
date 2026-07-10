@@ -17,7 +17,8 @@ import { getStageByCorruption, getStageConfig, getStageTitle } from '../../stage
 import type { ThoughtCategoryValue } from './thoughtEngine';
 
 export type CharKey = '秦璐状态' | '苏梦状态';
-export type EquipSlot = '内着' | '外装' | '饰品' | '妆容';
+/** 装备槽位。注意：鞋子（v0.34）不参与仪容星标（满星仍 = 内着/外装/饰品/妆容 + 体改） */
+export type EquipSlot = '内着' | '外装' | '饰品' | '妆容' | '鞋子';
 
 export interface ShopItem {
   名称: string;
@@ -654,6 +655,55 @@ export const SHOP_ITEMS: ShopItem[] = [
     简介: '以"变得更好看"为名，身体从此为欲望服务',
     首穿: '拆线那天她站在镜子前，胸前的弧度陌生又饱满——旧衣服全都紧了，她心跳着想：他会注意到的',
   },
+  // ━━━━ 鞋子（v0.34 新槽位；不参与仪容星标） ━━━━
+  {
+    名称: '软绒家居拖鞋',
+    分类: '装备',
+    槽位: '鞋子',
+    阶段门槛: 1,
+    类型倾向: ['陪伴交流', '情感依赖'],
+    加速: 0.5,
+    风险: 0,
+    越级钥匙: false,
+    价格: 80,
+    简介: '一双再普通不过的软拖鞋——"他挑的"这件事本身在起作用',
+  },
+  {
+    名称: '绒球细带凉拖',
+    分类: '装备',
+    槽位: '鞋子',
+    阶段门槛: 2,
+    类型倾向: ['肢体亲近'],
+    加速: 1,
+    风险: 1,
+    越级钥匙: false,
+    价格: 180,
+    简介: '足背裸露的细带，在家里踩出一点不寻常的轻盈',
+  },
+  {
+    名称: '红底细高跟',
+    分类: '装备',
+    槽位: '鞋子',
+    阶段门槛: 3,
+    类型倾向: ['暧昧互动', '身体开放'],
+    加速: 1,
+    风险: 2,
+    越级钥匙: false,
+    价格: 350,
+    简介: '在家穿高跟鞋没有任何实用理由——这正是它的含义',
+  },
+  {
+    名称: '锁扣绑带高跟',
+    分类: '装备',
+    槽位: '鞋子',
+    阶段门槛: 4,
+    类型倾向: ['性行为', '绝对服从'],
+    加速: 1.5,
+    风险: 3,
+    越级钥匙: false,
+    价格: 600,
+    简介: '踝间的细带绕成锁扣的形状，脱下它需要经过允许',
+  },
   // ━━━━ 消耗品（即买即用） ━━━━
   {
     名称: '借口短信',
@@ -801,6 +851,7 @@ type ClothingPart =
   | '内衣上'
   | '内衣下'
   | '袜裤'
+  | '鞋子'
   | '配饰'
   | '特殊装饰'
   | '唇妆'
@@ -853,6 +904,11 @@ const CLOTHING_WRITE: Record<string, Partial<Record<ClothingPart, string>>> = {
   皮质颈环: { 特殊装饰: '黑色细皮质颈环' },
   同源沐浴露: { 香氛: '与{{user}}同源的沐浴露气息（像被气味标记过）' },
   发情红晕妆: { 特殊妆容: '眼下与耳垂晕着常驻的红（像时刻带着情热）' },
+  // v0.34 鞋子槽位 +4
+  软绒家居拖鞋: { 鞋子: '他挑的软绒家居拖鞋' },
+  绒球细带凉拖: { 鞋子: '绒球细带凉拖（足背裸露）' },
+  红底细高跟: { 鞋子: '红底细高跟（在家也穿着）' },
+  锁扣绑带高跟: { 鞋子: '锁扣绑带高跟（踝间细带如缚）' },
 };
 
 function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart, text: string): void {
@@ -872,6 +928,9 @@ function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart,
       break;
     case '袜裤':
       c.服装细节.袜裤 = text;
+      break;
+    case '鞋子':
+      c.服装细节.鞋子 = text;
       break;
     case '配饰':
       c.服装细节.配饰 = text;
@@ -916,6 +975,7 @@ function restoreClothingParts(data: SchemaType, charKey: CharKey, itemName: stri
     内衣上: d.服装.内衣上,
     内衣下: d.服装.内衣下,
     袜裤: d.服装.袜裤,
+    鞋子: '室内拖鞋', // 阶段默认外观未细分鞋子，统一回落 schema 默认（居家场景通用）
     配饰: d.服装.配饰,
     特殊装饰: d.服装.特殊装饰,
     唇妆: d.妆容.唇妆,
