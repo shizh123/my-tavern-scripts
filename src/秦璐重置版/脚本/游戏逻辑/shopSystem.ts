@@ -1,7 +1,8 @@
 /**
  * 网店系统 v1 —— 参考云霜凝商店但做了四点优化：
  * 1. 对称的每角色装备表（CharacterState.装备状态），不搞"系统表+洛书晴特例表"双轨
- * 2. 槽位即互斥组：装备定义里一个 槽位 字段，同槽自动卸下（云霜凝要维护三张映射表）
+ * 2. 互斥按仪容字段重叠判定（v0.34补3）：两件装备 CLOTHING_WRITE 写入字段有交集才互斥自动卸下；
+ *    槽位 字段仅作商店分组/星标归类（旧"同槽互斥"误伤丁字裤+丝袜、口红+眼妆等不同部位组合）
  * 3. 单一 SHOP_ITEMS 目录承载全部属性（云霜凝散在五张表）
  * 4. 消耗品即买即用无库存态；不做已下线的多选批量装载
  *
@@ -953,6 +954,14 @@ function setClothingPart(data: SchemaType, charKey: CharKey, part: ClothingPart,
   }
 }
 
+/** 两件装备是否互斥 = 写入的仪容字段有交集（同一身体部位只能穿一件）。无映射的按同槽兜底 */
+function clothingConflicts(a: string, b: string): boolean {
+  const wa = CLOTHING_WRITE[a];
+  const wb = CLOTHING_WRITE[b];
+  if (!wa || !wb) return ITEM_MAP[a]?.槽位 === ITEM_MAP[b]?.槽位;
+  return Object.keys(wa).some(part => part in wb);
+}
+
 /** 装备时写入该物品的仪容字段 */
 function applyClothingParts(data: SchemaType, charKey: CharKey, itemName: string): void {
   const write = CLOTHING_WRITE[itemName];
@@ -1045,9 +1054,10 @@ export function toggleEquip(
   if (data[charKey].当前阶段 < item.阶段门槛) {
     return { error: `她还接受不了（需阶段${item.阶段门槛}）` };
   }
-  // 槽位即互斥组：同槽自动卸下（并恢复其仪容字段，随后由新件覆盖；换装事件由新件统一承载）
+  // 互斥 = 仪容字段重叠（v0.34补3，旧同槽判据误伤丁字裤+丝袜等不同部位组合）：
+  // 冲突件自动卸下（并恢复其仪容字段，随后由新件覆盖；换装事件由新件统一承载）
   for (const [other, s] of Object.entries(data[charKey].装备状态)) {
-    if (other !== name && s === '装备中' && ITEM_MAP[other]?.槽位 === item.槽位) {
+    if (other !== name && s === '装备中' && clothingConflicts(name, other)) {
       data[charKey].装备状态[other] = '已购买';
       restoreClothingParts(data, charKey, other);
       console.info(`[网店] ${charKey} 同槽卸下「${other}」`);
