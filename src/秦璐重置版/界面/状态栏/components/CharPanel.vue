@@ -178,13 +178,7 @@
           :title="OUTFIT_STAR_SLOTS[i]"
           >★</span
         >
-        <span class="star-note">{{
-          debugFullStar
-            ? '⚙ 调试满星 · 培育+1/楼 · 疑心+1/楼'
-            : outfitStars.full
-              ? '全套共鸣 · 培育+1/楼 · 疑心+1/楼'
-              : `${outfitStars.count}/5`
-        }}</span>
+        <span class="star-note">{{ starNote }}</span>
       </div>
       <div class="tags">
         <span class="tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
@@ -217,6 +211,7 @@ import {
   ENGRAVE_MAX_PER_CHAR,
   ITEM_MAP,
   OUTFIT_STAR_SLOTS,
+  ROUTE_FULLSTAR,
   getCultivationSlots,
   getEquipBoost,
   getOutfitStars,
@@ -276,13 +271,24 @@ const attireEntries = computed(() => {
   return entries;
 });
 
-/** 仪容星标：4 槽网店装备 + 体改 = 5 星；满星脉冲 + 全套加成 */
+/** 仪容星标（v0.35 路线制）：5 槽 + 体改 = 6 星，全同路线才亮；满星显示路线名 */
 const outfitStars = computed(() =>
   data.value
     ? getOutfitStars(data.value as any, charKey.value)
-    : { lit: [false, false, false, false, false], count: 0, full: false },
+    : { lit: [false, false, false, false, false, false], count: 0, full: false, route: null as any },
 );
 const debugFullStar = computed(() => data.value?.系统?._调试满星 ?? false);
+
+// 星标区文案：满星才亮出路线（路线是隐藏机制，不满星只给 n/6 让玩家自己研究）
+const starNote = computed(() => {
+  if (debugFullStar.value) return '⚙ 调试满星 · 培育+1/楼 · 疑心+1/楼';
+  const s = outfitStars.value;
+  if (s.full && s.route) {
+    const r = ROUTE_FULLSTAR[s.route as keyof typeof ROUTE_FULLSTAR];
+    return `路线共鸣「${r.图标}${s.route}」· ${r.效果简述}`;
+  }
+  return `${s.count}/6`;
+});
 
 // 测试后门：星标区 2.5s 内连点 5 次切换"调试满星"（模拟满星：培育+1/楼、疑心+1/楼）
 //   v0.28：窗口 1.5s→2.5s，配合 CSS touch-action:manipulation，兼顾移动端快速连点
@@ -388,9 +394,19 @@ function thoughtRateParts(t: any): { total: number; parts: string[] } {
       parts.push(`装备定向 +${eb}`);
     }
   }
-  if (outfitStars.value.full) {
-    total += 1;
-    parts.push('满星共鸣 +1');
+  const stars = outfitStars.value;
+  if (stars.full) {
+    if (stars.route) {
+      // 路线满星（v0.35）：只喂本路线类型
+      const r = ROUTE_FULLSTAR[stars.route as keyof typeof ROUTE_FULLSTAR];
+      if (t.类型 && t.类型 !== '待判定' && r.培育类型.includes(t.类型)) {
+        total += r.培育加成;
+        parts.push(`路线共鸣 +${r.培育加成}`);
+      }
+    } else {
+      total += 1;
+      parts.push('满星共鸣 +1');
+    }
   }
   return { total, parts };
 }

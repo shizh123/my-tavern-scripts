@@ -13,7 +13,7 @@
 
 import type { SchemaType } from '../../schema';
 import { getStageByCorruption } from '../../stageConfig';
-import { getEquipBoost, getCultivationSlots, getOutfitStars, hasEscalationKey, queueItemEvent } from './shopSystem';
+import { ROUTE_FULLSTAR, getEquipBoost, getCultivationSlots, getOutfitStars, hasEscalationKey, queueItemEvent } from './shopSystem';
 import { isSuwenInAccelerationRoom } from './suwenRoutine';
 
 /** 念头类型（10大类 + 待判定），沿用旧版 */
@@ -361,10 +361,17 @@ export function tickThoughtProgress(
       equipBoost = getEquipBoost(data, characterKey, thought.类型);
       progress += equipBoost;
     }
-    // 满星全套加成（v0.22）：4 槽网店装备 + 体改齐备 → 所有培育中念头 +1/楼，无视类型匹配
-    // （代价：满星期间苏文疑心 +1/楼，结算在 index.ts）
-    if (getOutfitStars(data, characterKey).full) {
-      progress += 1;
+    // 路线满星加成（v0.35 替代 v0.22 无差别 +1）：6 槽同路线齐备 → 只喂本路线类型，定向 +2/楼
+    // （疑心代价按路线分档，结算在 index.ts；调试满星 route=null 保持旧口径全类型 +1）
+    const stars = getOutfitStars(data, characterKey);
+    if (stars.full) {
+      if (stars.route) {
+        if (thought.类型 !== '待判定' && ROUTE_FULLSTAR[stars.route].培育类型.includes(thought.类型)) {
+          progress += ROUTE_FULLSTAR[stars.route].培育加成;
+        }
+      } else {
+        progress += 1;
+      }
     }
 
     thought.开发进度 += progress;

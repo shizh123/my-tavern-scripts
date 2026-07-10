@@ -15,6 +15,7 @@ import type { SchemaType } from '../../schema';
 import { Schema } from '../../schema';
 import { getStageByCorruption, getStageTitle } from '../../stageConfig';
 import {
+  ROUTE_FULLSTAR,
   getBodyModNames,
   getDaringEquippedNames,
   getEquippedNames,
@@ -264,8 +265,10 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
     // 满星附加（v0.31补2：仅在场生效）——不在场谈不上"被他看见"；
     // 也堵住 _调试满星 全局旗标给缺席角色暗涨疑心的坑（玩家实测：苏梦离场后
     // 疑心自涨到跨档，打断砸进秦璐的剧情）
-    const full = getOutfitStars(data, charKey).full && present.includes(name);
-    if (full) rise += 1;
+    // v0.35 按路线分档：淫荡/性奴+2、恋人+1、爱妻+0（贤惠是最好的伪装）；调试满星走旧口径+1
+    const stars = getOutfitStars(data, charKey);
+    const full = stars.full && present.includes(name);
+    if (full) rise += stars.route ? ROUTE_FULLSTAR[stars.route].疑心每楼 : 1;
 
     const before = data.苏文状态[susKey];
     const floorMin = getSuspicionFloor(data, charKey);
@@ -279,7 +282,7 @@ function settleSuspicion(data: SchemaType, currentFloor: number): void {
     if (after !== before) {
       data.苏文状态[susKey] = after;
       console.info(
-        `[疑心] 苏文对${name} ${before}→${after}（涨${rise}${full ? ' 含满星' : ''}，下限${floorMin}）`,
+        `[疑心] 苏文对${name} ${before}→${after}（涨${rise}${full ? ` 含满星${stars.route ?? '·调试'}` : ''}，下限${floorMin}）`,
       );
     }
     // 触顶 → 坏结局锁定（下一轮快照只注入终局指引，引擎/商店全停）
@@ -554,9 +557,20 @@ function buildStatusSnapshot(data: SchemaType, promptFloor: number): string {
     // 满星时追加动态全套清单（按玩家实际装备生成，不做任何"来历/谁知情"的叙事断言——
     // 玩家路线各异，尤其不能让写苏文心理的 AI 把这份信息泄进苏文视角）
     const daring = getDaringEquippedNames(data, charKey);
+    const stars = getOutfitStars(data, charKey);
+    // 路线共鸣呈现（v0.35）：同路线满星时注入整体气质方向（方向性文案不写死动作，演绎交给 AI）。
+    // 独立成行不挂在装扮意识下——恋人线整套风险可为 0，daring 为空也要有呈现
+    if (stars.full && stars.route) {
+      const mods = getBodyModNames(data, charKey);
+      lines.push(
+        `【${name}·路线共鸣】${ROUTE_FULLSTAR[stars.route].呈现}（她今天的整套：${getEquippedNames(data, charKey).join('、')}${
+          mods.length > 0 ? `，身上还有${mods.join('、')}` : ''
+        }）——演绎中体现这种从内到外的整体意识。此信息仅属于她的私密认知，苏文等其他角色并不知情（除非正文中已被发现）`,
+      );
+    }
     if (daring.length > 0) {
       let fullSet = '';
-      if (getOutfitStars(data, charKey).full) {
+      if (stars.full && !stars.route) {
         const mods = getBodyModNames(data, charKey);
         fullSet = `。她今天从内到外的整套装扮：${getEquippedNames(data, charKey).join('、')}${
           mods.length > 0 ? `，身上还有${mods.join('、')}` : ''
