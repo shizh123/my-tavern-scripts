@@ -872,7 +872,16 @@ $(() => {
       try {
         const messageId = getCurrentFloor();
         const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-        const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
+        // v0.38 毒快照防御（玩家实测"状态栏突然初始化，仅习惯/念头幸存"）：
+        // stat_data 偶发缺失时 parse({}) 会凭空造全默认值数据——被捕获成保护快照后，
+        // 下一轮回滚就把初始数值盖回去（习惯/念头列表回滚从不整体覆盖，恰好幸存）。
+        // 缺失即跳过本轮捕获与注入，沿用上一轮的真快照
+        const rawStat = _.get(vars, 'stat_data');
+        if (!rawStat || _.isEmpty(rawStat)) {
+          console.warn('[秦璐重置版] PROMPT_READY: stat_data 缺失，跳过本轮快照捕获与注入（保留旧快照）');
+          return;
+        }
+        const data = Schema.parse(rawStat) as SchemaType;
 
         // 1. 心防松动窗口：脚本后写覆盖当前情绪（对所有在场角色生效；坏结局/苏文视角期间不覆写）
         //    楼层 % 10 <= 3 → 覆写为"心防松动"（已确认方向，待界面发光字体配合）
@@ -927,9 +936,15 @@ $(() => {
         // 苏文位置/疑心/货币等脚本管理字段全部漂移。改为"只恢复不推进"：
         // 有快照就把脚本管理字段拉回真值再写回（幂等，可反复点；快照总来自最新楼，
         // 与手动重处理的作用对象一致——旧楼在本卡 UI 里只读）。刷新后无快照则维持原状不动。
+        // v0.38 毒快照防御：stat_data 缺失时绝不 parse({}) 造默认值写回——直接跳过
+        const rawStat = _.get(新变量, 'stat_data');
+        if (!rawStat || _.isEmpty(rawStat)) {
+          console.warn('[秦璐重置版] VARIABLE_UPDATE_ENDED: stat_data 缺失，跳过处理');
+          return;
+        }
         if (!_isInAiCycle) {
           if (_protSnapshot) {
-            const restored = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
+            const restored = Schema.parse(rawStat) as SchemaType;
             rollbackProtectedFields(restored);
             _.set(新变量, 'stat_data', restored);
             console.info('[秦璐重置版] 非生成周期的变量重处理：脚本管理字段已按快照恢复（引擎未推进）');
@@ -938,7 +953,7 @@ $(() => {
         }
         if (!_protSnapshot) return;
 
-        const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
+        const newData = Schema.parse(rawStat) as SchemaType;
         const currentFloor = getCurrentFloor();
         const playerInput = getLastUserMessage();
 
@@ -1127,7 +1142,13 @@ $(() => {
         // 刷新保护快照（AI 回复后数据已落地）
         const messageId = getCurrentFloor();
         const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
-        const data = Schema.parse(_.get(vars, 'stat_data') ?? {}) as SchemaType;
+        // v0.38 毒快照防御：MESSAGE_RECEIVED 可能先于 MVU 落数据（竞态）——缺失就不刷新，保留旧快照
+        const rawStat = _.get(vars, 'stat_data');
+        if (!rawStat || _.isEmpty(rawStat)) {
+          console.warn('[秦璐重置版] MESSAGE_RECEIVED: stat_data 缺失，跳过快照刷新（保留旧快照）');
+          return;
+        }
+        const data = Schema.parse(rawStat) as SchemaType;
         captureProtectionSnapshot(data);
         console.info('[秦璐重置版] MESSAGE_RECEIVED 快照已刷新');
       } catch (err) {
