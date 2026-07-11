@@ -1764,14 +1764,11 @@ export function buyBodyMod(data: SchemaType, charKey: CharKey, name: string): st
       break;
   }
 
-  // 堕落度结算 + 阶段校正（体改 = 花钱买的堕落刻度）
+  // 堕落度结算（体改 = 花钱买的堕落刻度）。v0.37 手动晋阶：达标只记待晋，不再即时跳阶
   if (item.堕落度加成) {
     data[charKey].堕落度 = Math.min(100, data[charKey].堕落度 + item.堕落度加成);
-    const ns = getStageByCorruption(data[charKey].堕落度);
-    if (ns > data[charKey].当前阶段) {
-      data[charKey].当前阶段 = ns;
-      data[charKey].阶段标题 = getStageTitle(ns) as any;
-      console.info(`[体改] ${charKey} 阶段提升 → ${ns}`);
+    if (getStageByCorruption(data[charKey].堕落度) > data[charKey].当前阶段) {
+      console.info(`[体改] ${charKey} 堕落度已越过下一阶段门槛（待玩家晋阶）`);
     }
   }
 
@@ -1845,6 +1842,29 @@ export function getOutfitStars(data: SchemaType, charKey: CharKey): OutfitStars 
   );
   const count = lit.filter(Boolean).length;
   return { lit, count, full: count === OUTFIT_STAR_SLOTS.length, route };
+}
+
+/**
+ * 手动晋阶（v0.37 玩家反馈"阶段自动跃迁太快没感觉"）：堕落度越过下一阶段门槛后，
+ * 由玩家在状态栏点击确认晋阶——一次一阶（跨两档点两次，各演一次转变），
+ * 并注入方向性晋阶事件让 AI 演绎这道心理门槛的松动。滞留低阶自带代价：
+ * 高阶念头被越级闸门退回、高阶商品买不了。返回错误信息，null=成功
+ */
+export function promoteStage(data: SchemaType, charKey: CharKey): string | null {
+  if (data.系统._坏结局) return '结局已锁定';
+  const char = data[charKey];
+  if (getStageByCorruption(char.堕落度) <= char.当前阶段) return '堕落度还没越过下一阶段的门槛';
+  if (char.当前阶段 >= 5) return '已是最终阶段';
+  const fromTitle = getStageTitle(char.当前阶段);
+  char.当前阶段 += 1;
+  char.阶段标题 = getStageTitle(char.当前阶段) as any;
+  queueItemEvent(
+    data,
+    charKey,
+    `【晋阶】她心里某道门槛在这段日子后彻底松了——从「${fromTitle}」进入「${char.阶段标题}」。这不是突变，是她终于承认了已经发生的变化。本轮起她的整体状态按新阶段呈现，请自然体现这次内在转变（一个眼神、一次没躲开、一句以前不会说的话），不要写成戏剧化的宣告`,
+  );
+  console.info(`[晋阶] ${charKey} ${fromTitle} → ${char.阶段标题}（第${char.当前阶段}阶段）`);
+  return null;
 }
 
 /**
@@ -2101,11 +2121,9 @@ export function showTape(data: SchemaType, charKey: CharKey, tapeId: string): st
   if (tape.状态 !== '已就绪' || !tape.摘要) return '影像还在归档中（等 AI 下一轮整理摘要）';
 
   data[charKey].堕落度 = Math.min(100, data[charKey].堕落度 + TAPE_CORRUPTION_GAIN);
-  const ns = getStageByCorruption(data[charKey].堕落度);
-  if (ns > data[charKey].当前阶段) {
-    data[charKey].当前阶段 = ns;
-    data[charKey].阶段标题 = getStageTitle(ns) as any;
-    console.info(`[录像] ${charKey} 观后阶段提升 → ${ns}`);
+  // v0.37 手动晋阶：达标只记待晋，不再即时跳阶
+  if (getStageByCorruption(data[charKey].堕落度) > data[charKey].当前阶段) {
+    console.info(`[录像] ${charKey} 观后堕落度已越过下一阶段门槛（待玩家晋阶）`);
   }
   queueItemEvent(
     data,

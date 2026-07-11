@@ -138,6 +138,59 @@ function captureProtectionSnapshot(data: SchemaType): void {
       _打断冷却至楼层: data.系统._打断冷却至楼层,
     } as any,
   };
+  syncInterruptMirror();
+}
+
+/**
+ * 打断状态 chat 级镜像（v0.37 修玩家反馈"疑心10打断同档重复触发"）：
+ * v0.28 的保护只靠模块内存快照——页面刷新/切聊天/重启后快照归零，此时重roll打断楼
+ * （MVU 从上一楼重建）档位标记与 12 楼冷却全丢 → 同档重发。镜像持久在 chat 变量里兜底：
+ * 每次捕获快照时并集回填再回写；玩家主动回档到镜像楼层之前则作废镜像（保留回档重演语义）。
+ */
+const INTERRUPT_MIRROR_KEY = '秦璐重置版_打断镜像';
+
+function syncInterruptMirror(): void {
+  if (!_protSnapshot?.系统) return;
+  const sys = _protSnapshot.系统 as any;
+  try {
+    const floor = getCurrentFloor();
+    const mirror = _.get(getVariables({ type: 'chat' }), INTERRUPT_MIRROR_KEY) as
+      | {
+          楼层: number;
+          已触发打断档位: Record<string, boolean>;
+          打断冷却至楼层: number;
+          打断余波至楼层: number;
+          苏文视角: SchemaType['系统']['_苏文视角'];
+        }
+      | undefined;
+    const povActive = (p: any) => !!p && (p.待看 || (p.剩余楼 ?? 0) > 0);
+    // 镜像楼层 ≤ 当前楼 → 并集回填内存快照（随后 rollback 沿用既有并集/取大逻辑恢复进数据）；
+    // 镜像楼层 > 当前楼 = 玩家回档到打断之前 → 不回填，本次回写直接用当前数据覆盖
+    if (mirror && mirror.楼层 <= floor) {
+      for (const [k, v] of Object.entries(mirror.已触发打断档位 ?? {})) {
+        if (v) sys._已触发打断档位[k] = true;
+      }
+      sys._打断冷却至楼层 = Math.max(sys._打断冷却至楼层, mirror.打断冷却至楼层 ?? -1);
+      sys._打断余波至楼层 = Math.max(sys._打断余波至楼层, mirror.打断余波至楼层 ?? -1);
+      if (!povActive(sys._苏文视角) && povActive(mirror.苏文视角)) {
+        sys._苏文视角 = { ...mirror.苏文视角 };
+      }
+    }
+    void insertOrAssignVariables(
+      {
+        [INTERRUPT_MIRROR_KEY]: {
+          楼层: floor,
+          已触发打断档位: { ...sys._已触发打断档位 },
+          打断冷却至楼层: sys._打断冷却至楼层,
+          打断余波至楼层: sys._打断余波至楼层,
+          苏文视角: { ...sys._苏文视角 },
+        },
+      },
+      { type: 'chat' },
+    ).catch((e: unknown) => console.error('[秦璐重置版] 打断镜像写入失败', e));
+  } catch (e) {
+    console.error('[秦璐重置版] 打断镜像同步失败', e);
+  }
 }
 
 /**
@@ -984,12 +1037,13 @@ $(() => {
               resolveThoughtType(newData, charKey, id, thought.类型 as ThoughtCategoryValue, currentFloor);
             }
           }
-          // 阶段校正（由堕落度派生）
+          // 阶段校正（v0.37 手动晋阶后只向下钳制）：当前阶段可以落后于堕落度派生档（待玩家晋阶），
+          // 但不允许超前（防坏档/旧逻辑残留）——升阶只走玩家点击的 promoteStage
           const newStage = getStageByCorruption(char.堕落度);
-          if (newStage !== char.当前阶段) {
+          if (char.当前阶段 > newStage) {
             char.当前阶段 = newStage;
             char.阶段标题 = getStageTitle(newStage) as any;
-            console.info(`[秦璐重置版] ${charKey} 阶段校正 → ${newStage}「${getStageTitle(newStage)}」`);
+            console.info(`[秦璐重置版] ${charKey} 阶段超前钳回 → ${newStage}「${getStageTitle(newStage)}」`);
           }
         }
 

@@ -10,6 +10,15 @@
             <b class="stage-title">{{ char?.阶段标题 ?? '抵抗' }}</b>
             <small>第{{ char?.当前阶段 ?? 1 }}阶段 · {{ isPresent ? '在场' : '不在场' }}</small>
           </div>
+          <!-- v0.37 手动晋阶：堕落度越过门槛后由玩家确认，下一轮 AI 演绎这次转变 -->
+          <button
+            v-if="canPromote"
+            class="promote"
+            title="堕落度已越过下一阶段的门槛——点击晋阶，下一轮演绎她跨过这道心理门槛"
+            @click="promoteUi"
+          >
+            晋阶 ▲
+          </button>
         </div>
         <span :class="['emotion', { vuln: isVulnerable }]" :title="char?.当前情绪 ?? '平静'">{{
           char?.当前情绪 ?? '平静'
@@ -117,7 +126,10 @@
         </div>
         <div v-if="t.状态 === '未达标'" class="t-reject">
           <span v-if="crackLeft > 0">她的心防上有一道裂缝（剩{{ crackLeft }}楼）——趁现在</span>
-          <span v-else>她还接受不了，需先推进关系</span>
+          <!-- v0.37：显示退回原因（此前只有一句"接受不了"，玩家不知道差多少） -->
+          <span v-else :title="`越级手段（松动/裂缝/药物/越级钥匙）合计最多把有效阶段抬高 2 级`">{{
+            rejectReason(t)
+          }}</span>
           <button
             v-if="!sysBadEnd && crackLeft > 0"
             class="ghost retry"
@@ -216,9 +228,10 @@ import {
   getEquipBoost,
   getOutfitStars,
   getThoughtMaxLen,
+  promoteStage,
 } from '../../../脚本/游戏逻辑/shopSystem';
 import { isSuwenInAccelerationRoom } from '../../../脚本/游戏逻辑/suwenRoutine';
-import { HABIT_SELL_PRICE, countActiveThoughts, forceImplant, retryImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
+import { CATEGORY_STAGE, HABIT_SELL_PRICE, countActiveThoughts, forceImplant, retryImplant } from '../../../脚本/游戏逻辑/thoughtEngine';
 import { useDataStore } from '../store';
 
 const props = defineProps<{ name: '秦璐' | '苏梦' }>();
@@ -232,6 +245,36 @@ const char = computed(() => data.value?.[charKey.value] ?? null);
 
 const isPresent = computed(() => data.value?.系统?.在场角色?.[props.name] ?? (props.name === '秦璐'));
 const isVulnerable = computed(() => char.value?.当前情绪 === VULNERABLE_EMOTION);
+
+// ━━━ 手动晋阶（v0.37）：堕落度越过下一阶段门槛 → 亮按钮，玩家确认才升 ━━━
+const canPromote = computed(() => {
+  const c = char.value;
+  if (!c || data.value?.系统?._坏结局) return false;
+  return getStageByCorruption(c.堕落度 ?? 0) > (c.当前阶段 ?? 1);
+});
+async function promoteUi() {
+  try {
+    const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
+    const d = _.get(vars, 'stat_data') as any;
+    if (!d) return;
+    const err = promoteStage(d, charKey.value);
+    if (err) {
+      showMsg(err, 'warn');
+      return;
+    }
+    await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    showMsg(`${props.name}进入第${d[charKey.value].当前阶段}阶段「${d[charKey.value].阶段标题}」——下一轮她会呈现这次转变`, 'success');
+  } catch (e) {
+    console.error('[秦璐重置版] 晋阶失败', e);
+  }
+}
+
+/** 未达标退回原因（v0.37）：点名类型的推荐阶段，玩家能算出差距 */
+function rejectReason(t: any): string {
+  const need = t.类型 && t.类型 !== '待判定' ? (CATEGORY_STAGE as any)[t.类型] : undefined;
+  if (!need) return '她还接受不了，需先推进关系';
+  return `她还接受不了——「${t.类型}」通常要到第${need}阶段（当前第${char.value?.当前阶段 ?? 1}阶段）`;
+}
 
 const thoughtContent = ref('');
 const implantMsg = ref('');
@@ -565,12 +608,9 @@ function backfillMatureThoughts(d: any, key: string): void {
     delete d[key].念头列表[pid];
     console.info(`[习惯腾位补转] ${key} ${pid} 补转入习惯`);
   }
-  // 补转入后阶段校正（由堕落度派生）
-  const ns = getStageByCorruption(d[key].堕落度);
-  if (ns > d[key].当前阶段) {
-    d[key].当前阶段 = ns;
-    d[key].阶段标题 = getStageTitle(ns) as any;
-    console.info(`[习惯腾位补转] ${key} 阶段提升 → ${ns}`);
+  // v0.37 手动晋阶：补转后达标只记待晋（"可晋阶"按钮会亮），不再自动跳阶
+  if (getStageByCorruption(d[key].堕落度) > d[key].当前阶段) {
+    console.info(`[习惯腾位补转] ${key} 堕落度已越过下一阶段门槛（待玩家晋阶）`);
   }
 }
 
@@ -683,6 +723,29 @@ $serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+/* v0.37 手动晋阶按钮：金色呼吸提示"门槛已到" */
+.promote {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 200, 87, 0.6);
+  background: linear-gradient(90deg, rgba(255, 200, 87, 0.2), rgba(255, 200, 87, 0.05));
+  color: #ffc857;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  animation: promote-pulse 2.2s ease-in-out infinite;
+}
+@keyframes promote-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 200, 87, 0);
+  }
+  50% {
+    box-shadow: 0 0 10px 1px rgba(255, 200, 87, 0.35);
+  }
 }
 .stage-no {
   flex: none;

@@ -30,8 +30,8 @@ export type ThoughtCategoryValue =
   | '绝对服从'
   | '家庭替代';
 
-/** 类型对应的推荐阶段（用于算难度=相对当前阶段的跨度） */
-const CATEGORY_STAGE: Record<Exclude<ThoughtCategoryValue, '待判定'>, number> = {
+/** 类型对应的推荐阶段（用于算难度=相对当前阶段的跨度；导出供 UI 显示未达标原因） */
+export const CATEGORY_STAGE: Record<Exclude<ThoughtCategoryValue, '待判定'>, number> = {
   陪伴交流: 1,
   情感依赖: 1,
   肢体亲近: 2,
@@ -106,29 +106,40 @@ export function calcDifficultyAndFloors(
 }
 
 /**
- * 检查越级是否被允许（心防松动窗口 / 道具解锁）
- * 返回有效阶段（用于判断该类型是否合法）
+ * 检查越级是否被允许（心防松动窗口 / 道具解锁），返回有效阶段。
+ * v0.37 封顶（玩家反馈"阶段闸门形同虚设"）：各越级手段可叠，但加成总和最多 +2——
+ * 此前 松动+1/裂纹+1/头孢酒+2/越级钥匙+1 可叠到 +5，阶1能收阶5念头。
  */
-function getEffectiveStage(data: SchemaType, characterKey: '秦璐状态' | '苏梦状态', currentFloor: number): number {
+function getEffectiveStage(
+  data: SchemaType,
+  characterKey: '秦璐状态' | '苏梦状态',
+  currentFloor: number,
+  category?: Exclude<ThoughtCategoryValue, '待判定'>,
+): number {
   const char = data[characterKey];
-  let stage = char.当前阶段;
+  let bonus = 0;
 
-  // 心防松动窗口：阶段+1
+  // 心防松动窗口：+1
   if (isInVulnerableWindow(currentFloor)) {
-    stage += 1;
+    bonus += 1;
   }
 
-  // 裂纹窗口（v0.25）：强植被排异弹回后 3 楼内，她的心防带着裂缝——阶段+1（可与药效/松动叠加）
+  // 裂纹窗口（v0.25）：强植被排异弹回后 3 楼内，她的心防带着裂缝——+1
   if (char._裂纹至楼层 >= 0 && currentFloor <= char._裂纹至楼层) {
-    stage += 1;
+    bonus += 1;
   }
 
   // 道具越级药效（安神药+1/头孢酒+2，消耗品使用后在有效楼数内生效）
   if (char._越级加成 > 0 && currentFloor <= char._越级加成至楼层) {
-    stage += char._越级加成;
+    bonus += char._越级加成;
   }
 
-  return Math.min(stage, 5);
+  // 越级钥匙装备（匹配类型 +1）
+  if (category && hasEscalationKey(data, characterKey, category)) {
+    bonus += 1;
+  }
+
+  return Math.min(char.当前阶段 + Math.min(2, bonus), 5);
 }
 
 /**
@@ -210,15 +221,14 @@ export function resolveThoughtType(
   thought.难度 = 难度;
   thought.需要楼数 = 需要楼数;
 
-  // 越级闸门（v0.24 恢复）：类型推荐阶段 > 有效阶段 → 退回（未达标）
-  // 有效阶段 = 基础阶段 + 心防松动窗口(+1) + 药效越级(安神药+1/头孢酒+2) + 越级钥匙装备(匹配类型+1)
-  const keyBonus = hasEscalationKey(data, characterKey, category) ? 1 : 0;
-  const effectiveStage = Math.min(5, getEffectiveStage(data, characterKey, currentFloor) + keyBonus);
+  // 越级闸门（v0.24 恢复；v0.37 加成封顶+2）：类型推荐阶段 > 有效阶段 → 退回（未达标）
+  // 有效阶段 = 基础阶段 + min(2, 松动+裂纹+药效+越级钥匙)
+  const effectiveStage = getEffectiveStage(data, characterKey, currentFloor, category);
   const catStage = CATEGORY_STAGE[category];
   if (catStage > effectiveStage) {
     thought.状态 = '未达标';
     console.info(
-      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}${keyBonus ? '·含越级钥匙' : ''}) → 未达标退回`,
+      `[念头判定] ${thoughtId} 类型=${category} 越级(需阶段${catStage}，有效阶段${effectiveStage}) → 未达标退回`,
     );
     return;
   }
@@ -287,8 +297,7 @@ export function retryImplant(
   if (countActiveThoughts(data, characterKey) >= slots) return `培育槽已满（${slots}）`;
 
   const category = thought.类型 as Exclude<ThoughtCategoryValue, '待判定'>;
-  const keyBonus = hasEscalationKey(data, characterKey, category) ? 1 : 0;
-  const effectiveStage = Math.min(5, getEffectiveStage(data, characterKey, currentFloor) + keyBonus);
+  const effectiveStage = getEffectiveStage(data, characterKey, currentFloor, category);
   const catStage = CATEGORY_STAGE[category];
   if (catStage > effectiveStage) {
     return `她仍然接受不了（需阶段${catStage}，当前有效阶段${effectiveStage}）`;
@@ -449,11 +458,10 @@ function transferThoughtToHabit(
   if (isHard) suwenDecrease = Math.floor(suwenDecrease * 1.2);
   character.对苏文依存度 += suwenDecrease;
 
-  // 阶段更新（由堕落度派生）
+  // 手动晋阶（v0.37 玩家反馈）：堕落度达标不再自动跳阶，只记待晋——由玩家在状态栏点"晋阶"确认
   const newStage = getStageByCorruption(character.堕落度);
   if (newStage > character.当前阶段) {
-    character.当前阶段 = newStage;
-    console.info(`[念头成熟] ${characterKey} 阶段提升 → ${newStage}`);
+    console.info(`[念头成熟] ${characterKey} 堕落度已越过阶段${newStage}门槛（待玩家晋阶）`);
   }
 
   // 删除已转入习惯的念头
