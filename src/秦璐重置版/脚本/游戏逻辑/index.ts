@@ -919,8 +919,21 @@ $(() => {
     // ─────────────────────────────────────────────────────
     eventOn(Mvu.events.VARIABLE_UPDATE_ENDED, (新变量: object, _旧变量: object) => {
       try {
-        // 守卫：仅在 AI 生成周期内处理
-        if (!_isInAiCycle || !_protSnapshot) return;
+        // 守卫：引擎只在 AI 生成周期内推进（防双重推进）。
+        // v0.37补（玩家实测）：手动"重新处理变量"此前直接跳过 → MVU 按 AI 指令从上一楼重建，
+        // 苏文位置/疑心/货币等脚本管理字段全部漂移。改为"只恢复不推进"：
+        // 有快照就把脚本管理字段拉回真值再写回（幂等，可反复点；快照总来自最新楼，
+        // 与手动重处理的作用对象一致——旧楼在本卡 UI 里只读）。刷新后无快照则维持原状不动。
+        if (!_isInAiCycle) {
+          if (_protSnapshot) {
+            const restored = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
+            rollbackProtectedFields(restored);
+            _.set(新变量, 'stat_data', restored);
+            console.info('[秦璐重置版] 非生成周期的变量重处理：脚本管理字段已按快照恢复（引擎未推进）');
+          }
+          return;
+        }
+        if (!_protSnapshot) return;
 
         const newData = Schema.parse(_.get(新变量, 'stat_data') ?? {}) as SchemaType;
         const currentFloor = getCurrentFloor();
