@@ -16,16 +16,11 @@
         <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
       </header>
 
-      <!-- 角色切换 -->
+      <!-- 单角色标签（v2：仅秦璐） -->
       <nav class="char-tabs">
-        <div
-          v-for="c in ['秦璐', '苏梦']"
-          :key="c"
-          :class="['tab-item', { active: activeCharacter === c }]"
-          @click="selectCharacter(c)"
-        >
-          <span class="char-name">{{ c }}</span>
-          <span class="char-role">{{ c === '秦璐' ? '母亲' : '姐姐' }}</span>
+        <div class="tab-item active">
+          <span class="char-name">秦璐</span>
+          <span class="char-role">苏秦集团 · 暗面女王</span>
         </div>
       </nav>
 
@@ -37,7 +32,7 @@
           <span class="decor-line"></span>
         </div>
         <div class="input-group">
-          <div class="target-hint">植入对象：<strong>{{ activeCharacter }}</strong></div>
+          <div class="target-hint">植入对象：<strong>秦璐</strong></div>
           <div class="input-wrapper">
             <input
               v-model="thoughtContent"
@@ -66,11 +61,11 @@
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
                 <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 5) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 4) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               </svg>
               <div class="stage-text">
                 <span class="label">阶段</span>
-                <span class="value">{{ char?.阶段标题 ?? '初始' }}</span>
+                <span class="value">{{ char?.阶段标题 ?? '掌控' }}</span>
               </div>
             </div>
           </div>
@@ -79,21 +74,21 @@
           <div class="stats-group">
             <div class="stat-item">
               <div class="stat-header">
-                <span class="name">🔥 堕落度</span>
-                <span class="num">{{ char?.堕落度 ?? 0 }}</span>
+                <span class="name">🖤 沦陷度</span>
+                <span class="num">{{ char?.沦陷度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.堕落度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.沦陷度 ?? 0) + '%' }"></div></div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
-                <span class="name">💕 {{ activeCharacter === '秦璐' ? '儿子依存' : '弟弟依存' }}</span>
+                <span class="name">💕 儿子依存</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track"><div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div></div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
-                <span class="name">💔 {{ activeCharacter === '秦璐' ? '丈夫依存' : '爸爸依存' }}</span>
+                <span class="name">💔 丈夫依存</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
               <div class="progress-track"><div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div></div>
@@ -134,7 +129,7 @@
             <div class="section-title">💭 心境</div>
             <div class="emotion-row">
               <span class="label">情绪</span>
-              <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '平静' }}</span>
+              <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '冷静' }}</span>
             </div>
             <div v-if="isVulnerable" class="vulnerable-hint">
               <span>⚡</span><span>心防松动 · 可植入越级念头</span>
@@ -176,21 +171,21 @@
             <div v-if="habitList.length >= 5" class="habit-full-tip">⚠ 习惯已满，出售腾位后可接纳新习惯</div>
           </div>
 
-          <!-- 仪容（外观，后续接道具系统） -->
+          <!-- 仪容 -->
           <div class="detail-card">
             <div class="section-title">👗 仪容</div>
             <div class="attire-tags">
-              <span class="mini-tag">{{ char?.服装细节?.整体风格 ?? '居家贤妻' }}</span>
+              <span class="mini-tag">{{ char?.服装细节?.整体风格 ?? '居家但精致的冷艳' }}</span>
               <span class="mini-tag outline">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
             </div>
             <div class="clothing-list">
-              <span class="clothing-item"><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '米色针织开衫' }}</span>
-              <span class="clothing-item"><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '深灰长裙' }}</span>
-              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '肉色棉质文胸' }}</span>
-              <span class="clothing-item"><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '棉质内裤' }}</span>
-              <span class="clothing-item"><span class="cl">袜</span>{{ char?.服装细节?.袜裤 ?? '肉色丝袜' }}</span>
+              <span class="clothing-item"><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '黑色丝绸衬衫' }}</span>
+              <span class="clothing-item"><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '烟灰色高腰西裤' }}</span>
+              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '黑色蕾丝无钢圈文胸' }}</span>
+              <span class="clothing-item"><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '黑色蕾丝丁字裤' }}</span>
+              <span class="clothing-item"><span class="cl">袜</span>{{ char?.服装细节?.袜裤 ?? '无' }}</span>
             </div>
-            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '清新自然' }}</div>
+            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '冷艳精致' }}</div>
           </div>
         </div>
       </main>
@@ -208,7 +203,6 @@ const MAX_LEN = 20;
 const VULNERABLE_EMOTION = '心防松动';
 
 const data = ref<SchemaType | null>(null);
-const activeCharacter = ref<'秦璐' | '苏梦'>('秦璐');
 const thoughtContent = ref('');
 const implantMsg = ref('');
 const implantMsgType = ref<'success' | 'error' | 'warn'>('error');
@@ -222,19 +216,11 @@ async function refreshData() {
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     data.value = (_.get(vars, 'stat_data') as SchemaType) ?? null;
   } catch (e) {
-    console.warn('[秦璐重置版] 刷新数据失败', e);
+    console.warn('[秦璐重置版 v2] 刷新数据失败', e);
   }
 }
 
-function selectCharacter(c: '秦璐' | '苏梦') {
-  activeCharacter.value = c;
-  refreshData();
-}
-
-const char = computed(() => {
-  const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
-  return data.value?.[key] ?? null;
-});
+const char = computed(() => data.value?.秦璐状态 ?? null);
 
 const safeWorld = computed(
   () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' },
@@ -260,17 +246,12 @@ const isAccelerating = computed(() => {
   return p === '餐厅' || p === '客厅' || p === '主卧';
 });
 
-const suspicion = computed(() =>
-  activeCharacter.value === '秦璐'
-    ? suwen.value?.对秦璐疑心值 ?? 0
-    : suwen.value?.对苏梦疑心值 ?? 0,
-);
+const suspicion = computed(() => suwen.value?.对秦璐疑心值 ?? 0);
 
 const isVulnerable = computed(() => char.value?.当前情绪 === VULNERABLE_EMOTION);
 
 const thoughtList = computed(() => {
-  const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
-  const thoughts = data.value?.[key]?.念头列表 ?? {};
+  const thoughts = data.value?.秦璐状态?.念头列表 ?? {};
   return Object.entries(thoughts).map(([id, t]) => ({ id, ...t }));
 });
 
@@ -298,16 +279,15 @@ async function implantThought() {
   const content = thoughtContent.value.trim();
   if (!content) return;
   try {
-    const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     const d = _.get(vars, 'stat_data') as SchemaType | undefined;
-    if (!d || !d[key]) {
+    if (!d || !d.秦璐状态) {
       showMsg('变量未初始化，请先发一条消息让 AI 回复后再植入', 'warn');
       return;
     }
     const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    if (!d[key].念头列表) d[key].念头列表 = {};
-    d[key].念头列表[id] = {
+    if (!d.秦璐状态.念头列表) d.秦璐状态.念头列表 = {};
+    d.秦璐状态.念头列表[id] = {
       内容: content,
       类型: '待判定',
       状态: '判定中',
@@ -321,40 +301,38 @@ async function implantThought() {
     showMsg(`已植入：${content}`, 'success');
     await refreshData();
   } catch (e) {
-    console.error('[秦璐重置版] 植入失败', e);
+    console.error('[秦璐重置版 v2] 植入失败', e);
     showMsg('植入失败：' + (e instanceof Error ? e.message : String(e)), 'error');
   }
 }
 
 async function discardThought(id: string) {
   try {
-    const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     const d = _.get(vars, 'stat_data') as SchemaType;
-    delete d[key].念头列表[id];
+    delete d.秦璐状态.念头列表[id];
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     await refreshData();
   } catch (e) {
-    console.error('[秦璐重置版] 退回失败', e);
+    console.error('[秦璐重置版 v2] 退回失败', e);
   }
 }
 
 async function sellHabit(index: number) {
   try {
-    const key = `${activeCharacter.value}状态` as '秦璐状态' | '苏梦状态';
     const vars = Mvu.getMvuData({ type: 'message', message_id: -1 });
     const d = _.get(vars, 'stat_data') as SchemaType;
-    if (d[key].习惯列表.length < 5) {
+    if (d.秦璐状态.习惯列表.length < 5) {
       showMsg('习惯未满5，不可出售', 'warn');
       return;
     }
-    d[key].习惯列表.splice(index, 1);
+    d.秦璐状态.习惯列表.splice(index, 1);
     d.系统.货币 += 100;
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
     showMsg('变卖习惯 +100货币', 'success');
     await refreshData();
   } catch (e) {
-    console.error('[秦璐重置版] 变卖失败', e);
+    console.error('[秦璐重置版 v2] 变卖失败', e);
   }
 }
 
@@ -438,29 +416,19 @@ $c-border: #333;
   letter-spacing: 1px;
 }
 
-// 角色切换
+// 角色标签（v2：单角色）
 .char-tabs {
   display: flex;
-  gap: 10px;
   margin-bottom: 14px;
 }
 .tab-item {
   flex: 1;
   text-align: center;
   padding: 10px;
-  border: 1px solid $c-border;
+  border: 1px solid $c-gold;
   border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.25s;
-  background: $c-panel;
-}
-.tab-item.active {
-  border-color: $c-gold;
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.03) 100%);
   box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
-}
-.tab-item:hover {
-  border-color: $c-gold-dim;
 }
 .char-name {
   display: block;
@@ -475,566 +443,127 @@ $c-border: #333;
   margin-top: 2px;
 }
 
-// 植入
-.implant-control {
-  margin-bottom: 14px;
-}
-.control-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.decor-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, $c-gold-dim, transparent);
-}
-.control-header .title {
-  color: $c-gold-bright;
-  font-size: 14px;
-  letter-spacing: 2px;
-  font-weight: 600;
-}
-.target-hint {
-  font-size: 12px;
-  color: $c-text-dim;
-  margin-bottom: 8px;
-}
-.target-hint strong {
-  color: $c-gold;
-}
-.input-wrapper {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.input-wrapper input {
-  flex: 1;
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 5px;
-  padding: 7px 10px;
-  color: $c-text;
-  font-size: 13px;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-.input-wrapper input:focus {
-  border-color: $c-gold-dim;
-  outline: none;
-}
-.char-count {
-  font-size: 10px;
-  color: #555;
-}
-.char-count.at-limit {
-  color: $c-red;
-}
-.submit-btn {
-  padding: 7px 18px;
-  background: linear-gradient(135deg, $c-gold-dim, $c-gold);
-  border: none;
-  border-radius: 5px;
-  color: #000;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-.submit-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, $c-gold, $c-gold-bright);
-}
-.submit-btn:disabled {
-  opacity: 0.35;
-}
-.implant-msg {
-  font-size: 12px;
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-.implant-msg.success {
-  color: $c-green;
-  background: rgba(76, 175, 80, 0.1);
-}
-.implant-msg.error {
-  color: $c-red;
-  background: rgba(196, 75, 75, 0.1);
-}
-.implant-msg.warn {
-  color: $c-orange;
-  background: rgba(255, 152, 0, 0.1);
-}
+// 植入（保留原样）
+.implant-control { margin-bottom: 14px; }
+.control-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.decor-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, $c-gold-dim, transparent); }
+.control-header .title { color: $c-gold-bright; font-size: 14px; letter-spacing: 2px; font-weight: 600; }
+.target-hint { font-size: 12px; color: $c-text-dim; margin-bottom: 8px; }
+.target-hint strong { color: $c-gold; }
+.input-wrapper { display: flex; gap: 8px; align-items: center; }
+.input-wrapper input { flex: 1; background: $c-panel; border: 1px solid $c-border; border-radius: 5px; padding: 7px 10px; color: $c-text; font-size: 13px; font-family: inherit; transition: border-color 0.2s; }
+.input-wrapper input:focus { border-color: $c-gold-dim; outline: none; }
+.char-count { font-size: 10px; color: #555; }
+.char-count.at-limit { color: $c-red; }
+.submit-btn { padding: 7px 18px; background: linear-gradient(135deg, $c-gold-dim, $c-gold); border: none; border-radius: 5px; color: #000; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
+.submit-btn:hover:not(:disabled) { background: linear-gradient(135deg, $c-gold, $c-gold-bright); }
+.submit-btn:disabled { opacity: 0.35; }
+.implant-msg { font-size: 12px; margin-top: 6px; padding: 4px 8px; border-radius: 4px; }
+.implant-msg.success { color: $c-green; background: rgba(76, 175, 80, 0.1); }
+.implant-msg.error { color: $c-red; background: rgba(196, 75, 75, 0.1); }
+.implant-msg.warn { color: $c-orange; background: rgba(255, 152, 0, 0.1); }
 
 // 状态展示
-.status-display {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
-  gap: 14px;
-}
-
-.col-left {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.status-display { display: grid; grid-template-columns: 1fr 1.15fr; gap: 14px; }
+.col-left { display: flex; flex-direction: column; gap: 12px; }
 
 // 阶段圆环
-.stage-card {
-  text-align: center;
-  padding: 4px 0;
-}
-.stage-ring {
-  position: relative;
-  width: 90px;
-  height: 90px;
-  margin: 0 auto;
-}
-.circular-chart {
-  width: 100%;
-  height: 100%;
-  transform: rotate(0deg);
-}
-.circle-bg {
-  fill: none;
-  stroke: #2a2a2a;
-  stroke-width: 2;
-}
-.circle {
-  fill: none;
-  stroke: $c-gold;
-  stroke-width: 2.8;
-  stroke-linecap: round;
-  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
-  transition: stroke-dasharray 0.5s;
-}
-.stage-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-.stage-text .label {
-  font-size: 10px;
-  color: $c-text-dim;
-  letter-spacing: 1px;
-}
-.stage-text .value {
-  font-size: 15px;
-  color: $c-gold-bright;
-  font-weight: 600;
-  margin-top: 2px;
-}
+.stage-card { text-align: center; padding: 4px 0; }
+.stage-ring { position: relative; width: 90px; height: 90px; margin: 0 auto; }
+.circular-chart { width: 100%; height: 100%; transform: rotate(0deg); }
+.circle-bg { fill: none; stroke: #2a2a2a; stroke-width: 2; }
+.circle { fill: none; stroke: $c-gold; stroke-width: 2.8; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4)); transition: stroke-dasharray 0.5s; }
+.stage-text { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.stage-text .label { font-size: 10px; color: $c-text-dim; letter-spacing: 1px; }
+.stage-text .value { font-size: 15px; color: $c-gold-bright; font-weight: 600; margin-top: 2px; }
 
 // 数值条
-.stats-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.stat-item {
-  background: $c-panel;
-  border-radius: 6px;
-  padding: 8px 10px;
-}
-.stat-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  margin-bottom: 4px;
-}
-.stat-header .name {
-  color: $c-text-dim;
-}
-.stat-header .num {
-  color: $c-gold;
-  font-weight: 600;
-}
-.progress-track {
-  height: 6px;
-  background: #1a1a1a;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.progress-bar {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-.stat-corruption {
-  background: linear-gradient(90deg, $c-orange, $c-red);
-  box-shadow: 0 0 6px rgba(196, 75, 75, 0.3);
-}
-.stat-desire {
-  background: linear-gradient(90deg, #c54b8f, $c-pink);
-}
-.stat-husband {
-  background: linear-gradient(90deg, #555, #999);
-}
+.stats-group { display: flex; flex-direction: column; gap: 10px; }
+.stat-item { background: $c-panel; border-radius: 6px; padding: 8px 10px; }
+.stat-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.stat-header .name { color: $c-text-dim; }
+.stat-header .num { color: $c-gold; font-weight: 600; }
+.progress-track { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }
+.progress-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.stat-corruption { background: linear-gradient(90deg, #8a2be2, #c54b8f); box-shadow: 0 0 6px rgba(197, 75, 143, 0.3); }
+.stat-desire { background: linear-gradient(90deg, #c54b8f, $c-pink); }
+.stat-husband { background: linear-gradient(90deg, #555, #999); }
 
 // 苏文卡
-.suwen-card {
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px;
-}
-.suwen-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-.suwen-header .name {
-  color: $c-gold;
-  font-size: 14px;
-  font-weight: 600;
-}
-.status-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: $c-panel-light;
-}
-.status-tag.home {
-  background: rgba(196, 75, 75, 0.25);
-  color: $c-red;
-}
-.status-tag.away {
-  background: rgba(76, 175, 80, 0.25);
-  color: $c-green;
-}
-.status-tag.sleeping {
-  background: rgba(79, 195, 247, 0.25);
-  color: $c-cyan;
-}
-.suwen-location {
-  font-size: 12px;
-  color: $c-text-dim;
-  margin-bottom: 8px;
-}
-.suspicion-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-.suspicion-row .label {
-  color: $c-text-dim;
-}
-.suspicion-track {
-  flex: 1;
-  height: 6px;
-  background: #1a1a1a;
-  border-radius: 3px;
-  overflow: hidden;
-}
-.suspicion-fill {
-  height: 100%;
-  background: $c-orange;
-  border-radius: 3px;
-  transition: width 0.4s;
-}
-.suspicion-fill.danger {
-  background: $c-red;
-  box-shadow: 0 0 6px rgba(196, 75, 75, 0.5);
-}
-.suspicion-row .val {
-  color: $c-gold;
-  font-weight: 600;
-}
-.accel-hint {
-  font-size: 12px;
-  color: $c-orange;
-  margin-top: 8px;
-  padding: 4px 8px;
-  background: rgba(255, 152, 0, 0.1);
-  border-left: 2px solid $c-orange;
-  border-radius: 3px;
-}
-.safe-indicator {
-  font-size: 12px;
-  color: $c-green;
-  margin-top: 8px;
-  display: flex;
-  gap: 5px;
-  align-items: center;
-}
+.suwen-card { background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px; }
+.suwen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.suwen-header .name { color: $c-gold; font-size: 14px; font-weight: 600; }
+.status-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: $c-panel-light; }
+.status-tag.home { background: rgba(196, 75, 75, 0.25); color: $c-red; }
+.status-tag.away { background: rgba(76, 175, 80, 0.25); color: $c-green; }
+.status-tag.sleeping { background: rgba(79, 195, 247, 0.25); color: $c-cyan; }
+.suwen-location { font-size: 12px; color: $c-text-dim; margin-bottom: 8px; }
+.suspicion-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.suspicion-row .label { color: $c-text-dim; }
+.suspicion-track { flex: 1; height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }
+.suspicion-fill { height: 100%; background: $c-orange; border-radius: 3px; transition: width 0.4s; }
+.suspicion-fill.danger { background: $c-red; box-shadow: 0 0 6px rgba(196, 75, 75, 0.5); }
+.suspicion-row .val { color: $c-gold; font-weight: 600; }
+.accel-hint { font-size: 12px; color: $c-orange; margin-top: 8px; padding: 4px 8px; background: rgba(255, 152, 0, 0.1); border-left: 2px solid $c-orange; border-radius: 3px; }
+.safe-indicator { font-size: 12px; color: $c-green; margin-top: 8px; display: flex; gap: 5px; align-items: center; }
 
 // 货币
-.currency-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px 14px;
-}
-.currency-card .label {
-  color: $c-text-dim;
-  font-size: 13px;
-}
-.currency-card .val {
-  color: $c-gold-bright;
-  font-size: 18px;
-  font-weight: 700;
-}
+.currency-card { display: flex; justify-content: space-between; align-items: center; background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px 14px; }
+.currency-card .label { color: $c-text-dim; font-size: 13px; }
+.currency-card .val { color: $c-gold-bright; font-size: 18px; font-weight: 700; }
 
 // 右栏
-.col-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.detail-card {
-  background: $c-panel;
-  border: 1px solid $c-border;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.section-title {
-  color: $c-gold;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  border-bottom: 1px solid $c-border;
-  padding-bottom: 4px;
-  letter-spacing: 0.5px;
-}
-.section-title .count {
-  color: $c-text-dim;
-  font-weight: 400;
-  font-size: 11px;
-}
+.col-right { display: flex; flex-direction: column; gap: 12px; }
+.detail-card { background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px 12px; }
+.section-title { color: $c-gold; font-size: 13px; font-weight: 600; margin-bottom: 8px; border-bottom: 1px solid $c-border; padding-bottom: 4px; letter-spacing: 0.5px; }
+.section-title .count { color: $c-text-dim; font-weight: 400; font-size: 11px; }
 
 // 心境
-.emotion-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 13px;
-  margin-bottom: 6px;
-}
-.emotion-row .label {
-  color: $c-text-dim;
-}
-.emotion-val {
-  color: $c-gold;
-}
-.emotion-val.vulnerable-glow {
-  color: $c-pink;
-  font-weight: 700;
-  text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
-  animation: vuln-pulse 1.5s ease-in-out infinite;
-}
-@keyframes vuln-pulse {
-  0%, 100% {
-    opacity: 1;
-    text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
-  }
-  50% {
-    opacity: 0.75;
-    text-shadow: 0 0 14px rgba(255, 93, 143, 0.9);
-  }
-}
-.vulnerable-hint {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 5px 8px;
-  background: rgba(255, 93, 143, 0.1);
-  border: 1px solid rgba(255, 93, 143, 0.35);
-  border-radius: 5px;
-  font-size: 11px;
-  color: $c-pink;
-  margin-bottom: 6px;
-}
-.thought-bubble {
-  font-size: 12px;
-  color: #bbb;
-  font-style: italic;
-  margin-bottom: 4px;
-}
-.temperament {
-  font-size: 11px;
-  color: $c-text-dim;
-}
+.emotion-row { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
+.emotion-row .label { color: $c-text-dim; }
+.emotion-val { color: $c-gold; }
+.emotion-val.vulnerable-glow { color: $c-pink; font-weight: 700; text-shadow: 0 0 8px rgba(255, 93, 143, 0.6); animation: vuln-pulse 1.5s ease-in-out infinite; }
+@keyframes vuln-pulse { 0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(255, 93, 143, 0.6); } 50% { opacity: 0.75; text-shadow: 0 0 14px rgba(255, 93, 143, 0.9); } }
+.vulnerable-hint { display: flex; gap: 6px; align-items: center; padding: 5px 8px; background: rgba(255, 93, 143, 0.1); border: 1px solid rgba(255, 93, 143, 0.35); border-radius: 5px; font-size: 11px; color: $c-pink; margin-bottom: 6px; }
+.thought-bubble { font-size: 12px; color: #bbb; font-style: italic; margin-bottom: 4px; }
+.temperament { font-size: 11px; color: $c-text-dim; }
 
 // 念头
-.empty {
-  font-size: 12px;
-  color: #444;
-  text-align: center;
-  padding: 8px 0;
-}
-.thought-item {
-  background: $c-panel-light;
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin-bottom: 7px;
-  border-left: 2px solid transparent;
-  transition: border-color 0.2s;
-}
-.thought-item:hover {
-  border-left-color: $c-gold-dim;
-}
-.thought-head {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
-}
-.status-tag.growing {
-  background: rgba(76, 175, 80, 0.25);
-  color: $c-green;
-}
-.status-tag.pending {
-  background: rgba(79, 195, 247, 0.25);
-  color: $c-cyan;
-}
-.status-tag.rejected {
-  background: rgba(196, 75, 75, 0.25);
-  color: $c-red;
-}
-.status-tag.mature {
-  background: rgba(212, 175, 55, 0.25);
-  color: $c-gold;
-}
-.thought-type {
-  font-size: 11px;
-  color: $c-text-dim;
-}
-.thought-diff {
-  font-size: 10px;
-  color: $c-orange;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: rgba(255, 152, 0, 0.1);
-}
-.thought-content {
-  font-size: 13px;
-  color: #ddd;
-  margin-bottom: 5px;
-}
-.thought-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.thought-progress .progress-bar {
-  background: linear-gradient(90deg, $c-gold-dim, $c-gold);
-}
-.progress-text {
-  font-size: 10px;
-  color: $c-text-dim;
-  white-space: nowrap;
-}
-.thought-reject {
-  font-size: 11px;
-  color: $c-red;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.mini-btn {
-  font-size: 10px;
-  padding: 2px 10px;
-  background: transparent;
-  border: 1px solid $c-red;
-  border-radius: 3px;
-  color: $c-red;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.mini-btn:hover {
-  background: rgba(196, 75, 75, 0.2);
-}
+.empty { font-size: 12px; color: #444; text-align: center; padding: 8px 0; }
+.thought-item { background: $c-panel-light; border-radius: 6px; padding: 8px 10px; margin-bottom: 7px; border-left: 2px solid transparent; transition: border-color 0.2s; }
+.thought-item:hover { border-left-color: $c-gold-dim; }
+.thought-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+.status-tag.growing { background: rgba(76, 175, 80, 0.25); color: $c-green; }
+.status-tag.pending { background: rgba(79, 195, 247, 0.25); color: $c-cyan; }
+.status-tag.rejected { background: rgba(196, 75, 75, 0.25); color: $c-red; }
+.status-tag.mature { background: rgba(212, 175, 55, 0.25); color: $c-gold; }
+.thought-type { font-size: 11px; color: $c-text-dim; }
+.thought-diff { font-size: 10px; color: $c-orange; padding: 1px 5px; border-radius: 3px; background: rgba(255, 152, 0, 0.1); }
+.thought-content { font-size: 13px; color: #ddd; margin-bottom: 5px; }
+.thought-progress { display: flex; align-items: center; gap: 8px; }
+.thought-progress .progress-bar { background: linear-gradient(90deg, $c-gold-dim, $c-gold); }
+.progress-text { font-size: 10px; color: $c-text-dim; white-space: nowrap; }
+.thought-reject { font-size: 11px; color: $c-red; display: flex; justify-content: space-between; align-items: center; }
+.mini-btn { font-size: 10px; padding: 2px 10px; background: transparent; border: 1px solid $c-red; border-radius: 3px; color: $c-red; cursor: pointer; transition: all 0.2s; }
+.mini-btn:hover { background: rgba(196, 75, 75, 0.2); }
 
 // 习惯
-.habit-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: $c-panel-light;
-  border-radius: 5px;
-  padding: 6px 10px;
-  margin-bottom: 5px;
-  font-size: 13px;
-}
-.habit-text {
-  color: $c-green;
-}
-.sell-btn {
-  font-size: 10px;
-  padding: 3px 10px;
-  background: rgba(212, 175, 55, 0.15);
-  border: 1px solid $c-gold-dim;
-  border-radius: 4px;
-  color: $c-gold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.sell-btn:hover {
-  background: rgba(212, 175, 55, 0.25);
-}
-.habit-full-tip {
-  font-size: 11px;
-  color: $c-orange;
-  margin-top: 6px;
-  padding: 4px 8px;
-  background: rgba(255, 152, 0, 0.08);
-  border-radius: 4px;
-}
+.habit-item { display: flex; justify-content: space-between; align-items: center; background: $c-panel-light; border-radius: 5px; padding: 6px 10px; margin-bottom: 5px; font-size: 13px; }
+.habit-text { color: $c-green; }
+.sell-btn { font-size: 10px; padding: 3px 10px; background: rgba(212, 175, 55, 0.15); border: 1px solid $c-gold-dim; border-radius: 4px; color: $c-gold; cursor: pointer; transition: all 0.2s; }
+.sell-btn:hover { background: rgba(212, 175, 55, 0.25); }
+.habit-full-tip { font-size: 11px; color: $c-orange; margin-top: 6px; padding: 4px 8px; background: rgba(255, 152, 0, 0.08); border-radius: 4px; }
 
 // 仪容
-.attire-tags {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-.mini-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: rgba(212, 175, 55, 0.1);
-  color: $c-gold;
-}
-.mini-tag.outline {
-  background: transparent;
-  border: 1px solid $c-gold-dim;
-}
-.clothing-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 6px;
-}
-.clothing-item {
-  font-size: 12px;
-  color: #ccc;
-}
-.clothing-item .cl {
-  display: inline-block;
-  width: 30px;
-  color: $c-text-dim;
-  font-size: 11px;
-}
-.makeup-line {
-  font-size: 12px;
-  color: $c-text-dim;
-  padding-top: 4px;
-  border-top: 1px solid #2a2a2a;
-}
+.attire-tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.mini-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(212, 175, 55, 0.1); color: $c-gold; }
+.mini-tag.outline { background: transparent; border: 1px solid $c-gold-dim; }
+.clothing-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.clothing-item { font-size: 12px; color: #ccc; }
+.clothing-item .cl { display: inline-block; width: 30px; color: $c-text-dim; font-size: 11px; }
+.makeup-line { font-size: 12px; color: $c-text-dim; padding-top: 4px; border-top: 1px solid #2a2a2a; }
 
 @media (max-width: 480px) {
-  .status-display {
-    grid-template-columns: 1fr;
-  }
+  .status-display { grid-template-columns: 1fr; }
 }
 </style>

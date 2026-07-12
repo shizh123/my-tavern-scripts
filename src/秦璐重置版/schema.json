@@ -7,12 +7,12 @@
       "type": "object",
       "properties": {
         "时间": {
-          "default": "清晨",
+          "default": "夜晚",
           "description": "仅氛围显示，AI 自由维护，脚本不参与计算",
           "$ref": "#/$defs/__schema0"
         },
         "日期": {
-          "default": "",
+          "default": "2024/11/20",
           "description": "仅氛围显示，AI 自由维护",
           "$ref": "#/$defs/__schema1"
         },
@@ -22,180 +22,25 @@
         },
         "环境氛围": {
           "default": "日常",
-          "type": "string"
+          "description": "场景氛围：日常/暧昧/紧张/情色/剑拔弩张等",
+          "$ref": "#/$defs/__schema2"
         }
       }
     },
     "秦璐状态": {
       "default": {},
-      "$ref": "#/$defs/__schema2"
-    },
-    "苏梦状态": {
-      "default": {
-        "堕落度": 0,
-        "对主角依存度": 25,
-        "对苏文依存度": 70,
-        "服装细节": {
-          "头部": "黑色发圈",
-          "上装": "白色棉麻衬衫",
-          "下装": "浅蓝牛仔裤",
-          "内衣": {
-            "上": "白色蕾丝文胸",
-            "下": "白色棉质内裤"
-          },
-          "袜裤": "白色短袜",
-          "鞋子": "帆布鞋",
-          "整体风格": "青春休闲"
-        },
-        "妆容细节": {
-          "浓淡程度": "素颜"
-        },
-        "气质描述": "活泼开朗的大学生",
-        "当前位置": "苏梦房间"
-      },
-      "$ref": "#/$defs/__schema2"
-    },
-    "苏文状态": {
-      "default": {},
       "type": "object",
       "properties": {
-        "当前状态": {
-          "default": "在家",
-          "type": "string",
-          "enum": [
-            "在家",
-            "外出",
-            "睡眠"
-          ]
-        },
-        "当前位置": {
-          "default": "客厅",
-          "description": "脚本按楼层作息算出，AI 不要改",
-          "$ref": "#/$defs/__schema4"
-        },
-        "当前情绪": {
-          "default": "平静",
-          "type": "string"
-        },
-        "对秦璐疑心值": {
-          "default": 0,
-          "type": "number"
-        },
-        "对苏梦疑心值": {
-          "default": 0,
-          "type": "number"
-        },
-        "对秦璐疑心值冻结": {
-          "default": {},
-          "$ref": "#/$defs/__schema18"
-        },
-        "对苏梦疑心值冻结": {
-          "default": {},
-          "$ref": "#/$defs/__schema18"
-        }
-      }
-    },
-    "系统": {
-      "default": {},
-      "type": "object",
-      "properties": {
-        "货币": {
-          "default": 0,
-          "type": "number"
-        },
-        "道具状态": {
-          "default": {},
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "type": "string",
-            "enum": [
-              "未购买",
-              "已购买",
-              "使用中"
-            ]
-          }
-        },
-        "当前角色": {
-          "default": "秦璐",
-          "type": "string",
-          "enum": [
-            "秦璐",
-            "苏梦"
-          ]
-        },
-        "念头植入日志": {
-          "default": [],
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "目标": {
-                "type": "string",
-                "enum": [
-                  "秦璐",
-                  "苏梦"
-                ]
-              },
-              "念头ID": {
-                "type": "string"
-              },
-              "内容": {
-                "type": "string"
-              },
-              "植入楼层": {
-                "type": "number"
-              },
-              "已通知AI": {
-                "default": false,
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "目标",
-              "念头ID",
-              "内容",
-              "植入楼层"
-            ]
-          }
-        },
-        "_待发送道具事件": {
-          "default": "",
-          "type": "string"
-        },
-        "_苏文作息游标": {
-          "default": 0,
-          "type": "number"
-        },
-        "_上次处理楼层": {
-          "default": -1,
-          "type": "number"
-        }
-      }
-    }
-  },
-  "$defs": {
-    "__schema0": {
-      "type": "string"
-    },
-    "__schema1": {
-      "type": "string"
-    },
-    "__schema2": {
-      "type": "object",
-      "properties": {
-        "堕落度": {
+        "沦陷度": {
           "default": 0,
           "type": "number"
         },
         "对主角依存度": {
-          "default": 20,
+          "default": 5,
           "type": "number"
         },
         "对苏文依存度": {
-          "default": 80,
+          "default": 0,
           "type": "number"
         },
         "当前阶段": {
@@ -203,23 +48,22 @@
           "type": "number"
         },
         "阶段标题": {
-          "default": "抵抗",
+          "default": "掌控",
           "type": "string",
           "enum": [
-            "抵抗",
+            "掌控",
             "动摇",
-            "沉溺",
-            "疯狂",
-            "圆满"
+            "陷落",
+            "臣服"
           ]
         },
         "当前心理想法": {
-          "default": "",
-          "description": "内心独白，AI 每轮更新",
+          "default": "交易所下个月的拍卖名单该定了。{{user}}最近的训练可以加点料——他太顺了。",
+          "description": "80-150字第一人称内心独白，AI 每轮更新。必须冷、锋利、自我意识清晰",
           "$ref": "#/$defs/__schema3"
         },
         "当前情绪": {
-          "default": "平静",
+          "default": "冷静",
           "type": "string"
         },
         "当前位置": {
@@ -236,11 +80,11 @@
               "$ref": "#/$defs/__schema5"
             },
             "上装": {
-              "default": "米色针织开衫",
+              "default": "黑色丝绸衬衫，领口解开两颗扣子",
               "type": "string"
             },
             "下装": {
-              "default": "深灰长裙",
+              "default": "烟灰色高腰西裤",
               "type": "string"
             },
             "内衣": {
@@ -248,21 +92,21 @@
               "type": "object",
               "properties": {
                 "上": {
-                  "default": "肉色棉质文胸",
+                  "default": "黑色蕾丝无钢圈文胸",
                   "type": "string"
                 },
                 "下": {
-                  "default": "棉质内裤",
+                  "default": "黑色蕾丝丁字裤",
                   "type": "string"
                 }
               }
             },
             "袜裤": {
-              "default": "肉色丝袜",
+              "default": "无",
               "type": "string"
             },
             "鞋子": {
-              "default": "室内拖鞋",
+              "default": "室内绒面拖鞋",
               "type": "string"
             },
             "外套": {
@@ -271,17 +115,17 @@
               "$ref": "#/$defs/__schema6"
             },
             "配饰": {
-              "default": "婚戒",
+              "default": "婚戒、珍珠耳钉",
               "description": "首饰、手表等",
               "$ref": "#/$defs/__schema7"
             },
             "特殊装饰": {
-              "default": "无",
+              "default": "左手腕一道极淡的旧疤痕",
               "description": "项圈、手铐等",
               "$ref": "#/$defs/__schema8"
             },
             "整体风格": {
-              "default": "居家贤妻",
+              "default": "居家但精致的冷艳",
               "type": "string"
             },
             "暴露程度": {
@@ -296,7 +140,7 @@
               ]
             },
             "整洁度": {
-              "default": "整洁",
+              "default": "一丝不苟",
               "type": "string",
               "enum": [
                 "整洁",
@@ -313,19 +157,19 @@
           "type": "object",
           "properties": {
             "底妆": {
-              "default": "素颜淡妆",
+              "default": "轻薄粉底，自然肤色",
               "type": "string"
             },
             "眼妆": {
-              "default": "无",
+              "default": "淡棕色眼影，极细眼线",
               "type": "string"
             },
             "唇妆": {
-              "default": "淡粉色唇彩",
+              "default": "豆沙色哑光唇釉",
               "type": "string"
             },
             "腮红": {
-              "default": "自然红晕",
+              "default": "自然修容",
               "type": "string"
             },
             "特殊妆容": {
@@ -333,8 +177,13 @@
               "description": "纹身妆、泪痕妆等",
               "$ref": "#/$defs/__schema9"
             },
+            "香氛": {
+              "default": "淡淡的檀木与白麝香",
+              "description": "香水气息",
+              "$ref": "#/$defs/__schema10"
+            },
             "整体风格": {
-              "default": "清新自然",
+              "default": "冷艳精致",
               "type": "string"
             },
             "浓淡程度": {
@@ -357,7 +206,7 @@
             "纹身": {
               "description": "部位: 纹身内容",
               "default": {},
-              "$ref": "#/$defs/__schema10"
+              "$ref": "#/$defs/__schema11"
             },
             "穿刺": {
               "default": {},
@@ -403,27 +252,27 @@
             "乳晕改造": {
               "default": "无",
               "description": "如：增大、变色、穿刺等",
-              "$ref": "#/$defs/__schema11"
+              "$ref": "#/$defs/__schema12"
             },
             "永久标记": {
               "default": [],
               "description": "烙印、伤疤等",
-              "$ref": "#/$defs/__schema12"
+              "$ref": "#/$defs/__schema13"
             },
             "临时标记": {
               "default": [],
               "description": "吻痕、精液痕迹等",
-              "$ref": "#/$defs/__schema13"
+              "$ref": "#/$defs/__schema14"
             },
             "体态变化": {
               "default": "无",
               "description": "因开发导致的身体变化",
-              "$ref": "#/$defs/__schema14"
+              "$ref": "#/$defs/__schema15"
             }
           }
         },
         "气质描述": {
-          "default": "温柔贤淑的家庭主妇",
+          "default": "冷艳危险的豪门主母，苏秦集团暗面女王",
           "type": "string"
         },
         "念头列表": {
@@ -442,7 +291,7 @@
               "类型": {
                 "default": "待判定",
                 "description": "唯一让 AI 判定写入的字段",
-                "$ref": "#/$defs/__schema15"
+                "$ref": "#/$defs/__schema16"
               },
               "状态": {
                 "default": "判定中",
@@ -467,12 +316,12 @@
               "需要楼数": {
                 "default": 0,
                 "description": "成熟所需楼层数，类型判定后由脚本按难度设定",
-                "$ref": "#/$defs/__schema16"
+                "$ref": "#/$defs/__schema17"
               },
               "开发进度": {
                 "default": 0,
                 "description": "累积楼层进度（含加速）",
-                "$ref": "#/$defs/__schema17"
+                "$ref": "#/$defs/__schema18"
               },
               "植入楼层": {
                 "default": -1,
@@ -506,6 +355,172 @@
         }
       }
     },
+    "苏文状态": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "当前状态": {
+          "default": "在家",
+          "type": "string",
+          "enum": [
+            "在家",
+            "外出",
+            "睡眠"
+          ]
+        },
+        "当前位置": {
+          "default": "客厅",
+          "description": "脚本按楼层作息算出，AI 不要改",
+          "$ref": "#/$defs/__schema4"
+        },
+        "当前情绪": {
+          "default": "疲惫",
+          "type": "string"
+        },
+        "当前心理想法": {
+          "default": "今天的董事会又被她抢了话。算了——争不过。{{user}}最近好像和她走得更近了……应该是我的错觉。",
+          "description": "AI 每轮更新，不论在不在场。被瞒在鼓里的丈夫视角，对家中微妙变化的感知与自我解释",
+          "$ref": "#/$defs/__schema19"
+        },
+        "对秦璐疑心值": {
+          "default": 0,
+          "type": "number"
+        },
+        "对秦璐疑心值冻结": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "是否冻结": {
+              "default": false,
+              "type": "boolean"
+            },
+            "借口内容": {
+              "default": "",
+              "type": "string"
+            },
+            "冻结结束楼层": {
+              "default": -1,
+              "description": "当前楼层 >= 此值则解冻",
+              "$ref": "#/$defs/__schema20"
+            }
+          }
+        }
+      }
+    },
+    "系统": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "货币": {
+          "default": 0,
+          "type": "number"
+        },
+        "道具状态": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "未购买",
+              "已购买",
+              "使用中"
+            ]
+          }
+        },
+        "当前角色": {
+          "default": "秦璐",
+          "type": "string",
+          "enum": [
+            "秦璐"
+          ]
+        },
+        "在场角色": {
+          "default": {},
+          "type": "object",
+          "properties": {
+            "秦璐": {
+              "default": true,
+              "type": "boolean"
+            }
+          }
+        },
+        "念头植入日志": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "目标": {
+                "type": "string",
+                "enum": [
+                  "秦璐"
+                ]
+              },
+              "念头ID": {
+                "type": "string"
+              },
+              "内容": {
+                "type": "string"
+              },
+              "植入楼层": {
+                "type": "number"
+              },
+              "已通知AI": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "目标",
+              "念头ID",
+              "内容",
+              "植入楼层"
+            ]
+          }
+        },
+        "本轮相关念头": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "default": 0,
+            "type": "number"
+          }
+        },
+        "_待发送道具事件": {
+          "default": "",
+          "type": "string"
+        },
+        "_苏文作息游标": {
+          "default": 0,
+          "type": "number"
+        },
+        "_上次处理楼层": {
+          "default": -1,
+          "type": "number"
+        },
+        "_在场锁定": {
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "__schema0": {
+      "type": "string"
+    },
+    "__schema1": {
+      "type": "string"
+    },
+    "__schema2": {
+      "type": "string"
+    },
     "__schema3": {
       "type": "string"
     },
@@ -517,9 +532,11 @@
         "厨房",
         "主卧",
         "浴室",
+        "秦璐书房",
         "秦璐房间",
-        "苏梦房间",
         "主角房间",
+        "庭院",
+        "交易所",
         "外面"
       ]
     },
@@ -539,6 +556,9 @@
       "type": "string"
     },
     "__schema10": {
+      "type": "string"
+    },
+    "__schema11": {
       "type": "object",
       "propertyNames": {
         "type": "string"
@@ -547,14 +567,8 @@
         "type": "string"
       }
     },
-    "__schema11": {
-      "type": "string"
-    },
     "__schema12": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+      "type": "string"
     },
     "__schema13": {
       "type": "array",
@@ -563,49 +577,40 @@
       }
     },
     "__schema14": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "__schema15": {
+      "type": "string"
+    },
+    "__schema16": {
       "type": "string",
       "enum": [
         "待判定",
-        "陪伴交流",
+        "渐生依恋",
         "情感依赖",
-        "肢体亲近",
-        "暧昧互动",
-        "亲密接触",
-        "身体开放",
-        "性行为",
-        "身份认同",
-        "绝对服从",
-        "家庭替代"
+        "触电感",
+        "玩火自焚",
+        "越界",
+        "身不由己",
+        "沦陷",
+        "身份瓦解",
+        "臣服",
+        "独占欲"
       ]
-    },
-    "__schema16": {
-      "type": "number"
     },
     "__schema17": {
       "type": "number"
     },
     "__schema18": {
-      "type": "object",
-      "properties": {
-        "是否冻结": {
-          "default": false,
-          "type": "boolean"
-        },
-        "借口内容": {
-          "default": "",
-          "type": "string"
-        },
-        "冻结结束楼层": {
-          "default": -1,
-          "description": "当前楼层 >= 此值则解冻",
-          "$ref": "#/$defs/__schema19"
-        }
-      }
+      "type": "number"
     },
     "__schema19": {
+      "type": "string"
+    },
+    "__schema20": {
       "type": "number"
     }
   }
