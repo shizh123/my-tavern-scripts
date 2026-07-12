@@ -119,7 +119,7 @@ function buildStatusSnapshot(data: SchemaType): string {
   lines.push(`【当前调教对象】秦璐`);
   lines.push(`【沦陷度】${char.沦陷度} → 第${char.当前阶段}阶段「${char.阶段标题}」`);
   if ((char.对念头植入警觉度 ?? 0) > 0) {
-    const pct = ((1 - (char.对念头植入警觉度 ?? 0) / 100)).toFixed(2);
+    const pct = (1 - (char.对念头植入警觉度 ?? 0) / 100).toFixed(2);
     lines.push(`【警觉度】${char.对念头植入警觉度}（念头培育速度×${pct}）`);
   }
   lines.push(`【对主角依存】${char.对主角依存度} / 【对苏文依存】${char.对苏文依存度}`);

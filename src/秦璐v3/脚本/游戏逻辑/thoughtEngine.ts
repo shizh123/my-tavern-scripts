@@ -175,7 +175,7 @@ export function tickThoughtProgress(data: SchemaType, currentFloor: number): voi
     }
     // 秦璐警觉度 → 抵抗减速（0=不设防，100=完全戒备）
     const alert = character.对念头植入警觉度 ?? 0;
-    progress *= (1 - alert / 100);
+    progress *= 1 - alert / 100;
     // 阶段修正系数（越高阶段念头生长越快，已有字段，现接入）
     const stageMod = getStageTimeModifier(character.当前阶段);
     progress /= stageMod;

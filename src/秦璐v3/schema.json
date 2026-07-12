@@ -43,6 +43,10 @@
           "default": 0,
           "type": "number"
         },
+        "对念头植入警觉度": {
+          "default": 50,
+          "type": "number"
+        },
         "当前阶段": {
           "default": 1,
           "type": "number"
