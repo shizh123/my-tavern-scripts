@@ -29,7 +29,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 // ============================================
 
 /** 阶段标题（4阶段，由沦陷度派生） */
-const StageTitle = z.enum(['掌控', '动摇', '陷落', '臣服']);
+const StageTitle = z.enum(['掌控', '失据', '陷落', '臣服']);
 
 /** 念头状态机 */
 const ThoughtStatus = z.enum(['判定中', '培育中', '未达标', '已成熟', '已过期']);
