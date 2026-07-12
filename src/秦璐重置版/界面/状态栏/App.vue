@@ -13,7 +13,9 @@
           <span class="divider">✦</span>
           <span class="info-item"><i>📍</i>{{ safeWorld.地点 || '——' }}</span>
         </div>
-        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">「 {{ safeWorld.环境氛围 }} 」</div>
+        <div v-if="safeWorld.环境氛围 && safeWorld.环境氛围 !== '日常'" class="environment">
+          「 {{ safeWorld.环境氛围 }} 」
+        </div>
       </header>
 
       <!-- 单角色标签（v2：仅秦璐） -->
@@ -60,8 +62,15 @@
           <div class="stage-card">
             <div class="stage-ring">
               <svg viewBox="0 0 36 36" class="circular-chart">
-                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                <path class="circle" :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 4) * 100}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path
+                  class="circle-bg"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  class="circle"
+                  :stroke-dasharray="`${((char?.当前阶段 ?? 1) / 4) * 100}, 100`"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
               </svg>
               <div class="stage-text">
                 <span class="label">阶段</span>
@@ -77,21 +86,33 @@
                 <span class="name">🖤 沦陷度</span>
                 <span class="num">{{ char?.沦陷度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-corruption" :style="{ width: (char?.沦陷度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div class="progress-bar stat-corruption" :style="{ width: (char?.沦陷度 ?? 0) + '%' }"></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💕 儿子依存</span>
                 <span class="num">{{ char?.对主角依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-desire" :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-desire"
+                  :style="{ width: Math.max(0, char?.对主角依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
             <div class="stat-item">
               <div class="stat-header">
                 <span class="name">💔 丈夫依存</span>
                 <span class="num">{{ char?.对苏文依存度 ?? 0 }}</span>
               </div>
-              <div class="progress-track"><div class="progress-bar stat-husband" :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"></div></div>
+              <div class="progress-track">
+                <div
+                  class="progress-bar stat-husband"
+                  :style="{ width: Math.max(0, char?.对苏文依存度 ?? 0) + '%' }"
+                ></div>
+              </div>
             </div>
           </div>
 
@@ -131,16 +152,16 @@
               <span class="label">情绪</span>
               <span :class="['emotion-val', { 'vulnerable-glow': isVulnerable }]">{{ char?.当前情绪 ?? '冷静' }}</span>
             </div>
-            <div v-if="isVulnerable" class="vulnerable-hint">
-              <span>⚡</span><span>心防松动 · 可植入越级念头</span>
-            </div>
+            <div v-if="isVulnerable" class="vulnerable-hint"><span>⚡</span><span>心防松动 · 可植入越级念头</span></div>
             <div class="thought-bubble" v-if="char?.当前心理想法">「 {{ char.当前心理想法 }} 」</div>
             <div class="temperament" v-if="char?.气质描述">— {{ char.气质描述 }}</div>
           </div>
 
           <!-- 念头列表 -->
           <div class="detail-card">
-            <div class="section-title">🌱 念头 <span class="count">({{ thoughtList.length }})</span></div>
+            <div class="section-title">
+              🌱 念头 <span class="count">({{ thoughtList.length }})</span>
+            </div>
             <div v-if="thoughtList.length === 0" class="empty">暂无念头</div>
             <div v-for="t in thoughtList" :key="t.id" class="thought-item">
               <div class="thought-head">
@@ -150,7 +171,9 @@
               </div>
               <div class="thought-content">{{ t.内容 }}</div>
               <div v-if="t.状态 === '培育中'" class="thought-progress">
-                <div class="progress-track"><div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div></div>
+                <div class="progress-track">
+                  <div class="progress-bar" :style="{ width: thoughtProgressPercent(t) + '%' }"></div>
+                </div>
                 <span class="progress-text">{{ Math.floor(t.开发进度) }}/{{ t.需要楼数 }}楼</span>
               </div>
               <div v-if="t.状态 === '未达标'" class="thought-reject">
@@ -162,7 +185,9 @@
 
           <!-- 习惯 -->
           <div class="detail-card">
-            <div class="section-title">💚 习惯 <span class="count">({{ habitList.length }}/5)</span></div>
+            <div class="section-title">
+              💚 习惯 <span class="count">({{ habitList.length }}/5)</span>
+            </div>
             <div v-if="habitList.length === 0" class="empty">暂无习惯</div>
             <div v-for="(h, i) in habitList" :key="i" class="habit-item">
               <span class="habit-text">{{ h.内容 }}</span>
@@ -179,13 +204,23 @@
               <span class="mini-tag outline">{{ char?.服装细节?.暴露程度 ?? '正常' }}</span>
             </div>
             <div class="clothing-list">
-              <span class="clothing-item"><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '黑色丝绸衬衫' }}</span>
-              <span class="clothing-item"><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '烟灰色高腰西裤' }}</span>
-              <span class="clothing-item"><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '黑色蕾丝无钢圈文胸' }}</span>
-              <span class="clothing-item"><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '黑色蕾丝丁字裤' }}</span>
+              <span class="clothing-item"
+                ><span class="cl">上装</span>{{ char?.服装细节?.上装 ?? '黑色丝绸衬衫' }}</span
+              >
+              <span class="clothing-item"
+                ><span class="cl">下装</span>{{ char?.服装细节?.下装 ?? '烟灰色高腰西裤' }}</span
+              >
+              <span class="clothing-item"
+                ><span class="cl">内衣</span>{{ char?.服装细节?.内衣?.上 ?? '黑色蕾丝无钢圈文胸' }}</span
+              >
+              <span class="clothing-item"
+                ><span class="cl">内裤</span>{{ char?.服装细节?.内衣?.下 ?? '黑色蕾丝丁字裤' }}</span
+              >
               <span class="clothing-item"><span class="cl">袜</span>{{ char?.服装细节?.袜裤 ?? '无' }}</span>
             </div>
-            <div class="makeup-line">💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '冷艳精致' }}</div>
+            <div class="makeup-line">
+              💄 {{ char?.妆容细节?.浓淡程度 ?? '淡妆' }} · {{ char?.妆容细节?.整体风格 ?? '冷艳精致' }}
+            </div>
           </div>
         </div>
       </main>
@@ -222,9 +257,7 @@ async function refreshData() {
 
 const char = computed(() => data.value?.秦璐状态 ?? null);
 
-const safeWorld = computed(
-  () => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' },
-);
+const safeWorld = computed(() => data.value?.世界 ?? { 时间: '', 日期: '', 地点: '', 环境氛围: '日常' });
 
 const suwen = computed(() => data.value?.苏文状态 ?? null);
 const suwenPos = computed(() => suwen.value?.当前位置 ?? '客厅');
@@ -373,7 +406,9 @@ $c-border: #333;
   background-image:
     radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.3) 1px, transparent 1px),
     radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.2) 1px, transparent 1px);
-  background-size: 30px 30px, 25px 25px;
+  background-size:
+    30px 30px,
+    25px 25px;
   pointer-events: none;
 }
 .main-panel {
@@ -444,126 +479,565 @@ $c-border: #333;
 }
 
 // 植入（保留原样）
-.implant-control { margin-bottom: 14px; }
-.control-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.decor-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, $c-gold-dim, transparent); }
-.control-header .title { color: $c-gold-bright; font-size: 14px; letter-spacing: 2px; font-weight: 600; }
-.target-hint { font-size: 12px; color: $c-text-dim; margin-bottom: 8px; }
-.target-hint strong { color: $c-gold; }
-.input-wrapper { display: flex; gap: 8px; align-items: center; }
-.input-wrapper input { flex: 1; background: $c-panel; border: 1px solid $c-border; border-radius: 5px; padding: 7px 10px; color: $c-text; font-size: 13px; font-family: inherit; transition: border-color 0.2s; }
-.input-wrapper input:focus { border-color: $c-gold-dim; outline: none; }
-.char-count { font-size: 10px; color: #555; }
-.char-count.at-limit { color: $c-red; }
-.submit-btn { padding: 7px 18px; background: linear-gradient(135deg, $c-gold-dim, $c-gold); border: none; border-radius: 5px; color: #000; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
-.submit-btn:hover:not(:disabled) { background: linear-gradient(135deg, $c-gold, $c-gold-bright); }
-.submit-btn:disabled { opacity: 0.35; }
-.implant-msg { font-size: 12px; margin-top: 6px; padding: 4px 8px; border-radius: 4px; }
-.implant-msg.success { color: $c-green; background: rgba(76, 175, 80, 0.1); }
-.implant-msg.error { color: $c-red; background: rgba(196, 75, 75, 0.1); }
-.implant-msg.warn { color: $c-orange; background: rgba(255, 152, 0, 0.1); }
+.implant-control {
+  margin-bottom: 14px;
+}
+.control-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.decor-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, $c-gold-dim, transparent);
+}
+.control-header .title {
+  color: $c-gold-bright;
+  font-size: 14px;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+.target-hint {
+  font-size: 12px;
+  color: $c-text-dim;
+  margin-bottom: 8px;
+}
+.target-hint strong {
+  color: $c-gold;
+}
+.input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.input-wrapper input {
+  flex: 1;
+  background: $c-panel;
+  border: 1px solid $c-border;
+  border-radius: 5px;
+  padding: 7px 10px;
+  color: $c-text;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.input-wrapper input:focus {
+  border-color: $c-gold-dim;
+  outline: none;
+}
+.char-count {
+  font-size: 10px;
+  color: #555;
+}
+.char-count.at-limit {
+  color: $c-red;
+}
+.submit-btn {
+  padding: 7px 18px;
+  background: linear-gradient(135deg, $c-gold-dim, $c-gold);
+  border: none;
+  border-radius: 5px;
+  color: #000;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, $c-gold, $c-gold-bright);
+}
+.submit-btn:disabled {
+  opacity: 0.35;
+}
+.implant-msg {
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.implant-msg.success {
+  color: $c-green;
+  background: rgba(76, 175, 80, 0.1);
+}
+.implant-msg.error {
+  color: $c-red;
+  background: rgba(196, 75, 75, 0.1);
+}
+.implant-msg.warn {
+  color: $c-orange;
+  background: rgba(255, 152, 0, 0.1);
+}
 
 // 状态展示
-.status-display { display: grid; grid-template-columns: 1fr 1.15fr; gap: 14px; }
-.col-left { display: flex; flex-direction: column; gap: 12px; }
+.status-display {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 14px;
+}
+.col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 // 阶段圆环
-.stage-card { text-align: center; padding: 4px 0; }
-.stage-ring { position: relative; width: 90px; height: 90px; margin: 0 auto; }
-.circular-chart { width: 100%; height: 100%; transform: rotate(0deg); }
-.circle-bg { fill: none; stroke: #2a2a2a; stroke-width: 2; }
-.circle { fill: none; stroke: $c-gold; stroke-width: 2.8; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4)); transition: stroke-dasharray 0.5s; }
-.stage-text { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-.stage-text .label { font-size: 10px; color: $c-text-dim; letter-spacing: 1px; }
-.stage-text .value { font-size: 15px; color: $c-gold-bright; font-weight: 600; margin-top: 2px; }
+.stage-card {
+  text-align: center;
+  padding: 4px 0;
+}
+.stage-ring {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto;
+}
+.circular-chart {
+  width: 100%;
+  height: 100%;
+  transform: rotate(0deg);
+}
+.circle-bg {
+  fill: none;
+  stroke: #2a2a2a;
+  stroke-width: 2;
+}
+.circle {
+  fill: none;
+  stroke: $c-gold;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.4));
+  transition: stroke-dasharray 0.5s;
+}
+.stage-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.stage-text .label {
+  font-size: 10px;
+  color: $c-text-dim;
+  letter-spacing: 1px;
+}
+.stage-text .value {
+  font-size: 15px;
+  color: $c-gold-bright;
+  font-weight: 600;
+  margin-top: 2px;
+}
 
 // 数值条
-.stats-group { display: flex; flex-direction: column; gap: 10px; }
-.stat-item { background: $c-panel; border-radius: 6px; padding: 8px 10px; }
-.stat-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
-.stat-header .name { color: $c-text-dim; }
-.stat-header .num { color: $c-gold; font-weight: 600; }
-.progress-track { height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }
-.progress-bar { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-.stat-corruption { background: linear-gradient(90deg, #8a2be2, #c54b8f); box-shadow: 0 0 6px rgba(197, 75, 143, 0.3); }
-.stat-desire { background: linear-gradient(90deg, #c54b8f, $c-pink); }
-.stat-husband { background: linear-gradient(90deg, #555, #999); }
+.stats-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stat-item {
+  background: $c-panel;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.stat-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.stat-header .name {
+  color: $c-text-dim;
+}
+.stat-header .num {
+  color: $c-gold;
+  font-weight: 600;
+}
+.progress-track {
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.stat-corruption {
+  background: linear-gradient(90deg, #8a2be2, #c54b8f);
+  box-shadow: 0 0 6px rgba(197, 75, 143, 0.3);
+}
+.stat-desire {
+  background: linear-gradient(90deg, #c54b8f, $c-pink);
+}
+.stat-husband {
+  background: linear-gradient(90deg, #555, #999);
+}
 
 // 苏文卡
-.suwen-card { background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px; }
-.suwen-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.suwen-header .name { color: $c-gold; font-size: 14px; font-weight: 600; }
-.status-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: $c-panel-light; }
-.status-tag.home { background: rgba(196, 75, 75, 0.25); color: $c-red; }
-.status-tag.away { background: rgba(76, 175, 80, 0.25); color: $c-green; }
-.status-tag.sleeping { background: rgba(79, 195, 247, 0.25); color: $c-cyan; }
-.suwen-location { font-size: 12px; color: $c-text-dim; margin-bottom: 8px; }
-.suspicion-row { display: flex; align-items: center; gap: 8px; font-size: 11px; }
-.suspicion-row .label { color: $c-text-dim; }
-.suspicion-track { flex: 1; height: 6px; background: #1a1a1a; border-radius: 3px; overflow: hidden; }
-.suspicion-fill { height: 100%; background: $c-orange; border-radius: 3px; transition: width 0.4s; }
-.suspicion-fill.danger { background: $c-red; box-shadow: 0 0 6px rgba(196, 75, 75, 0.5); }
-.suspicion-row .val { color: $c-gold; font-weight: 600; }
-.accel-hint { font-size: 12px; color: $c-orange; margin-top: 8px; padding: 4px 8px; background: rgba(255, 152, 0, 0.1); border-left: 2px solid $c-orange; border-radius: 3px; }
-.safe-indicator { font-size: 12px; color: $c-green; margin-top: 8px; display: flex; gap: 5px; align-items: center; }
+.suwen-card {
+  background: $c-panel;
+  border: 1px solid $c-border;
+  border-radius: 8px;
+  padding: 10px;
+}
+.suwen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.suwen-header .name {
+  color: $c-gold;
+  font-size: 14px;
+  font-weight: 600;
+}
+.status-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: $c-panel-light;
+}
+.status-tag.home {
+  background: rgba(196, 75, 75, 0.25);
+  color: $c-red;
+}
+.status-tag.away {
+  background: rgba(76, 175, 80, 0.25);
+  color: $c-green;
+}
+.status-tag.sleeping {
+  background: rgba(79, 195, 247, 0.25);
+  color: $c-cyan;
+}
+.suwen-location {
+  font-size: 12px;
+  color: $c-text-dim;
+  margin-bottom: 8px;
+}
+.suspicion-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.suspicion-row .label {
+  color: $c-text-dim;
+}
+.suspicion-track {
+  flex: 1;
+  height: 6px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.suspicion-fill {
+  height: 100%;
+  background: $c-orange;
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+.suspicion-fill.danger {
+  background: $c-red;
+  box-shadow: 0 0 6px rgba(196, 75, 75, 0.5);
+}
+.suspicion-row .val {
+  color: $c-gold;
+  font-weight: 600;
+}
+.accel-hint {
+  font-size: 12px;
+  color: $c-orange;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 152, 0, 0.1);
+  border-left: 2px solid $c-orange;
+  border-radius: 3px;
+}
+.safe-indicator {
+  font-size: 12px;
+  color: $c-green;
+  margin-top: 8px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
 
 // 货币
-.currency-card { display: flex; justify-content: space-between; align-items: center; background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px 14px; }
-.currency-card .label { color: $c-text-dim; font-size: 13px; }
-.currency-card .val { color: $c-gold-bright; font-size: 18px; font-weight: 700; }
+.currency-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: $c-panel;
+  border: 1px solid $c-border;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.currency-card .label {
+  color: $c-text-dim;
+  font-size: 13px;
+}
+.currency-card .val {
+  color: $c-gold-bright;
+  font-size: 18px;
+  font-weight: 700;
+}
 
 // 右栏
-.col-right { display: flex; flex-direction: column; gap: 12px; }
-.detail-card { background: $c-panel; border: 1px solid $c-border; border-radius: 8px; padding: 10px 12px; }
-.section-title { color: $c-gold; font-size: 13px; font-weight: 600; margin-bottom: 8px; border-bottom: 1px solid $c-border; padding-bottom: 4px; letter-spacing: 0.5px; }
-.section-title .count { color: $c-text-dim; font-weight: 400; font-size: 11px; }
+.col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-card {
+  background: $c-panel;
+  border: 1px solid $c-border;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.section-title {
+  color: $c-gold;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  border-bottom: 1px solid $c-border;
+  padding-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.section-title .count {
+  color: $c-text-dim;
+  font-weight: 400;
+  font-size: 11px;
+}
 
 // 心境
-.emotion-row { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
-.emotion-row .label { color: $c-text-dim; }
-.emotion-val { color: $c-gold; }
-.emotion-val.vulnerable-glow { color: $c-pink; font-weight: 700; text-shadow: 0 0 8px rgba(255, 93, 143, 0.6); animation: vuln-pulse 1.5s ease-in-out infinite; }
-@keyframes vuln-pulse { 0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(255, 93, 143, 0.6); } 50% { opacity: 0.75; text-shadow: 0 0 14px rgba(255, 93, 143, 0.9); } }
-.vulnerable-hint { display: flex; gap: 6px; align-items: center; padding: 5px 8px; background: rgba(255, 93, 143, 0.1); border: 1px solid rgba(255, 93, 143, 0.35); border-radius: 5px; font-size: 11px; color: $c-pink; margin-bottom: 6px; }
-.thought-bubble { font-size: 12px; color: #bbb; font-style: italic; margin-bottom: 4px; }
-.temperament { font-size: 11px; color: $c-text-dim; }
+.emotion-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.emotion-row .label {
+  color: $c-text-dim;
+}
+.emotion-val {
+  color: $c-gold;
+}
+.emotion-val.vulnerable-glow {
+  color: $c-pink;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
+  animation: vuln-pulse 1.5s ease-in-out infinite;
+}
+@keyframes vuln-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(255, 93, 143, 0.6);
+  }
+  50% {
+    opacity: 0.75;
+    text-shadow: 0 0 14px rgba(255, 93, 143, 0.9);
+  }
+}
+.vulnerable-hint {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 8px;
+  background: rgba(255, 93, 143, 0.1);
+  border: 1px solid rgba(255, 93, 143, 0.35);
+  border-radius: 5px;
+  font-size: 11px;
+  color: $c-pink;
+  margin-bottom: 6px;
+}
+.thought-bubble {
+  font-size: 12px;
+  color: #bbb;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+.temperament {
+  font-size: 11px;
+  color: $c-text-dim;
+}
 
 // 念头
-.empty { font-size: 12px; color: #444; text-align: center; padding: 8px 0; }
-.thought-item { background: $c-panel-light; border-radius: 6px; padding: 8px 10px; margin-bottom: 7px; border-left: 2px solid transparent; transition: border-color 0.2s; }
-.thought-item:hover { border-left-color: $c-gold-dim; }
-.thought-head { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
-.status-tag.growing { background: rgba(76, 175, 80, 0.25); color: $c-green; }
-.status-tag.pending { background: rgba(79, 195, 247, 0.25); color: $c-cyan; }
-.status-tag.rejected { background: rgba(196, 75, 75, 0.25); color: $c-red; }
-.status-tag.mature { background: rgba(212, 175, 55, 0.25); color: $c-gold; }
-.thought-type { font-size: 11px; color: $c-text-dim; }
-.thought-diff { font-size: 10px; color: $c-orange; padding: 1px 5px; border-radius: 3px; background: rgba(255, 152, 0, 0.1); }
-.thought-content { font-size: 13px; color: #ddd; margin-bottom: 5px; }
-.thought-progress { display: flex; align-items: center; gap: 8px; }
-.thought-progress .progress-bar { background: linear-gradient(90deg, $c-gold-dim, $c-gold); }
-.progress-text { font-size: 10px; color: $c-text-dim; white-space: nowrap; }
-.thought-reject { font-size: 11px; color: $c-red; display: flex; justify-content: space-between; align-items: center; }
-.mini-btn { font-size: 10px; padding: 2px 10px; background: transparent; border: 1px solid $c-red; border-radius: 3px; color: $c-red; cursor: pointer; transition: all 0.2s; }
-.mini-btn:hover { background: rgba(196, 75, 75, 0.2); }
+.empty {
+  font-size: 12px;
+  color: #444;
+  text-align: center;
+  padding: 8px 0;
+}
+.thought-item {
+  background: $c-panel-light;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 7px;
+  border-left: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+.thought-item:hover {
+  border-left-color: $c-gold-dim;
+}
+.thought-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.status-tag.growing {
+  background: rgba(76, 175, 80, 0.25);
+  color: $c-green;
+}
+.status-tag.pending {
+  background: rgba(79, 195, 247, 0.25);
+  color: $c-cyan;
+}
+.status-tag.rejected {
+  background: rgba(196, 75, 75, 0.25);
+  color: $c-red;
+}
+.status-tag.mature {
+  background: rgba(212, 175, 55, 0.25);
+  color: $c-gold;
+}
+.thought-type {
+  font-size: 11px;
+  color: $c-text-dim;
+}
+.thought-diff {
+  font-size: 10px;
+  color: $c-orange;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 152, 0, 0.1);
+}
+.thought-content {
+  font-size: 13px;
+  color: #ddd;
+  margin-bottom: 5px;
+}
+.thought-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.thought-progress .progress-bar {
+  background: linear-gradient(90deg, $c-gold-dim, $c-gold);
+}
+.progress-text {
+  font-size: 10px;
+  color: $c-text-dim;
+  white-space: nowrap;
+}
+.thought-reject {
+  font-size: 11px;
+  color: $c-red;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mini-btn {
+  font-size: 10px;
+  padding: 2px 10px;
+  background: transparent;
+  border: 1px solid $c-red;
+  border-radius: 3px;
+  color: $c-red;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mini-btn:hover {
+  background: rgba(196, 75, 75, 0.2);
+}
 
 // 习惯
-.habit-item { display: flex; justify-content: space-between; align-items: center; background: $c-panel-light; border-radius: 5px; padding: 6px 10px; margin-bottom: 5px; font-size: 13px; }
-.habit-text { color: $c-green; }
-.sell-btn { font-size: 10px; padding: 3px 10px; background: rgba(212, 175, 55, 0.15); border: 1px solid $c-gold-dim; border-radius: 4px; color: $c-gold; cursor: pointer; transition: all 0.2s; }
-.sell-btn:hover { background: rgba(212, 175, 55, 0.25); }
-.habit-full-tip { font-size: 11px; color: $c-orange; margin-top: 6px; padding: 4px 8px; background: rgba(255, 152, 0, 0.08); border-radius: 4px; }
+.habit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: $c-panel-light;
+  border-radius: 5px;
+  padding: 6px 10px;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.habit-text {
+  color: $c-green;
+}
+.sell-btn {
+  font-size: 10px;
+  padding: 3px 10px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid $c-gold-dim;
+  border-radius: 4px;
+  color: $c-gold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sell-btn:hover {
+  background: rgba(212, 175, 55, 0.25);
+}
+.habit-full-tip {
+  font-size: 11px;
+  color: $c-orange;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 152, 0, 0.08);
+  border-radius: 4px;
+}
 
 // 仪容
-.attire-tags { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-.mini-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(212, 175, 55, 0.1); color: $c-gold; }
-.mini-tag.outline { background: transparent; border: 1px solid $c-gold-dim; }
-.clothing-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
-.clothing-item { font-size: 12px; color: #ccc; }
-.clothing-item .cl { display: inline-block; width: 30px; color: $c-text-dim; font-size: 11px; }
-.makeup-line { font-size: 12px; color: $c-text-dim; padding-top: 4px; border-top: 1px solid #2a2a2a; }
+.attire-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.mini-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.1);
+  color: $c-gold;
+}
+.mini-tag.outline {
+  background: transparent;
+  border: 1px solid $c-gold-dim;
+}
+.clothing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.clothing-item {
+  font-size: 12px;
+  color: #ccc;
+}
+.clothing-item .cl {
+  display: inline-block;
+  width: 30px;
+  color: $c-text-dim;
+  font-size: 11px;
+}
+.makeup-line {
+  font-size: 12px;
+  color: $c-text-dim;
+  padding-top: 4px;
+  border-top: 1px solid #2a2a2a;
+}
 
 @media (max-width: 480px) {
-  .status-display { grid-template-columns: 1fr; }
+  .status-display {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

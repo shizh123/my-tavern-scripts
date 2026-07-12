@@ -84,11 +84,7 @@ function getEffectiveStage(data: SchemaType, currentFloor: number): number {
  * 植入念头（前端调用入口）
  * 乐观植入：立即收下，状态=判定中，分配 ID
  */
-export function implantThought(
-  data: SchemaType,
-  content: string,
-  currentFloor: number,
-): string {
+export function implantThought(data: SchemaType, content: string, currentFloor: number): string {
   const id = `念头_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const thought = {
     内容: content,
@@ -163,10 +159,7 @@ export function resolveThoughtType(
  * - 苏文在加速房 → 额外加速
  * - 进度 >= 需要楼数 → 成熟
  */
-export function tickThoughtProgress(
-  data: SchemaType,
-  currentFloor: number,
-): void {
+export function tickThoughtProgress(data: SchemaType, currentFloor: number): void {
   const character = data.秦璐状态;
   const thoughts = character.念头列表;
   const accelerating = isSuwenInAccelerationRoom(data.系统._苏文作息游标);
@@ -200,11 +193,7 @@ export function tickThoughtProgress(
  * - 对苏文依存↓（按对主角依存分档）
  * - 习惯上限 5，满了需玩家变卖腾位
  */
-function matureThought(
-  data: SchemaType,
-  thoughtId: string,
-  currentFloor: number,
-): void {
+function matureThought(data: SchemaType, thoughtId: string, currentFloor: number): void {
   const character = data.秦璐状态;
   const thought = character.念头列表[thoughtId];
   if (!thought) return;

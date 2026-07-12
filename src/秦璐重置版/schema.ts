@@ -62,9 +62,17 @@ const SuwenStatus = z.enum(['在家', '外出', '睡眠']);
  * 地点枚举（v2：删苏梦房间，加秦璐书房/庭院/交易所）
  */
 const Location = z.enum([
-  '客厅', '餐厅', '厨房', '主卧', '浴室',
-  '秦璐书房', '秦璐房间', '主角房间',
-  '庭院', '交易所', '外面',
+  '客厅',
+  '餐厅',
+  '厨房',
+  '主卧',
+  '浴室',
+  '秦璐书房',
+  '秦璐房间',
+  '主角房间',
+  '庭院',
+  '交易所',
+  '外面',
 ]);
 
 // ============================================
@@ -179,7 +187,8 @@ const CharacterState = z.object({
   阶段标题: StageTitle.default('掌控'),
 
   // ━━━━ 心理（AI 每轮更新） ━━━━
-  当前心理想法: z.string()
+  当前心理想法: z
+    .string()
     .default('交易所下个月的拍卖名单该定了。{{user}}最近的训练可以加点料——他太顺了。')
     .describe('80-150字第一人称内心独白，AI 每轮更新。必须冷、锋利、自我意识清晰'),
   当前情绪: z.string().default('冷静'),
@@ -217,7 +226,8 @@ const SuwenState = z.object({
   当前位置: Location.default('客厅').describe('脚本按楼层作息算出，AI 不要改'),
   当前情绪: z.string().default('疲惫'),
   /** 60-100字第一人称——被瞒在鼓里但隐约不安的丈夫视角 */
-  当前心理想法: z.string()
+  当前心理想法: z
+    .string()
     .default('今天的董事会又被她抢了话。算了——争不过。{{user}}最近好像和她走得更近了……应该是我的错觉。')
     .describe('AI 每轮更新，不论在不在场。被瞒在鼓里的丈夫视角，对家中微妙变化的感知与自我解释'),
 
@@ -267,9 +277,11 @@ const SystemState = z.object({
   当前角色: z.enum(['秦璐']).default('秦璐'),
 
   /** 在场角色追踪 */
-  在场角色: z.object({
-    秦璐: z.boolean().default(true),
-  }).prefault({}),
+  在场角色: z
+    .object({
+      秦璐: z.boolean().default(true),
+    })
+    .prefault({}),
 
   /** 念头植入日志（解决 ROLL 后注入丢失） */
   念头植入日志: z.array(ThoughtImplantLog).default([]),
