@@ -263,6 +263,23 @@ async function promoteUi() {
       return;
     }
     await Mvu.replaceMvuData(vars, { type: 'message', message_id: -1 });
+    // 晋阶镜像同步直写（v0.38补）：阶段是玩家手点的单调状态，chat 级镜像兜底——
+    // 即使脚本侧下一次快照捕获恰好读到坏数据，捕获时也会从镜像取大恢复
+    try {
+      const pm = (_.get(getVariables({ type: 'chat' }), '秦璐重置版_晋阶镜像') as any) ?? {};
+      void insertOrAssignVariables(
+        {
+          秦璐重置版_晋阶镜像: {
+            楼层: Math.max(pm.楼层 ?? 0, SillyTavern.chat?.length ?? 0),
+            秦璐: Math.max(pm.秦璐 ?? 1, d.秦璐状态?.当前阶段 ?? 1),
+            苏梦: Math.max(pm.苏梦 ?? 1, d.苏梦状态?.当前阶段 ?? 1),
+          },
+        },
+        { type: 'chat' },
+      );
+    } catch (e) {
+      console.error('[秦璐重置版] 晋阶镜像直写失败', e);
+    }
     showMsg(`${props.name}进入第${d[charKey.value].当前阶段}阶段「${d[charKey.value].阶段标题}」——下一轮她会呈现这次转变`, 'success');
   } catch (e) {
     console.error('[秦璐重置版] 晋阶失败', e);

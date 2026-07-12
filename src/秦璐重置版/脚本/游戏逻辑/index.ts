@@ -148,12 +148,36 @@ function captureProtectionSnapshot(data: SchemaType): void {
  * 每次捕获快照时并集回填再回写；玩家主动回档到镜像楼层之前则作废镜像（保留回档重演语义）。
  */
 const INTERRUPT_MIRROR_KEY = '秦璐重置版_打断镜像';
+/** 晋阶镜像（v0.38补）：当前阶段是玩家手点的单调状态，与打断标记同类——毒快照/
+ *  楼层重建等任何旧值路径都可能把它盖回去（玩家反馈"晋阶过一两楼被打回"）。
+ *  chat 级镜像取大兜底；回档到镜像楼层之前则作废（回档重演语义）。UI 晋阶时同步直写 */
+const PROMOTE_MIRROR_KEY = '秦璐重置版_晋阶镜像';
 
 function syncInterruptMirror(): void {
   if (!_protSnapshot?.系统) return;
   const sys = _protSnapshot.系统 as any;
   try {
     const floor = getCurrentFloor();
+    // ── 晋阶镜像：并入内存快照（rollback 会用快照值盖写 当前阶段）──
+    const pm = _.get(getVariables({ type: 'chat' }), PROMOTE_MIRROR_KEY) as
+      | { 楼层: number; 秦璐: number; 苏梦: number }
+      | undefined;
+    const snapQin = _protSnapshot.秦璐状态 as any;
+    const snapMeng = _protSnapshot.苏梦状态 as any;
+    if (pm && pm.楼层 <= floor) {
+      snapQin.当前阶段 = Math.max(snapQin.当前阶段 ?? 1, pm.秦璐 ?? 1);
+      snapMeng.当前阶段 = Math.max(snapMeng.当前阶段 ?? 1, pm.苏梦 ?? 1);
+    }
+    void insertOrAssignVariables(
+      {
+        [PROMOTE_MIRROR_KEY]: {
+          楼层: floor,
+          秦璐: snapQin.当前阶段 ?? 1,
+          苏梦: snapMeng.当前阶段 ?? 1,
+        },
+      },
+      { type: 'chat' },
+    ).catch((e: unknown) => console.error('[秦璐重置版] 晋阶镜像写入失败', e));
     const mirror = _.get(getVariables({ type: 'chat' }), INTERRUPT_MIRROR_KEY) as
       | {
           楼层: number;
